@@ -3,3 +3,6 @@ httpx==0.24.1
 httpcore==0.17.3
 anyio==3.7.1
 treys
+httpcore==0.17.3
+httpx==0.24.1
+python-telegram-bot==20.7
