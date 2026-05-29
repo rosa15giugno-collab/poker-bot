@@ -3,7 +3,9 @@ import time
 import json
 import os
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
+from telegram import InlineKeyboardButton
+from telegram import InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
