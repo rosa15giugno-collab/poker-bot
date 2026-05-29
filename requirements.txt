@@ -1,2 +1,5 @@
 python-telegram-bot==20.3
-treys
+httpx==0.24.1
+httpcore==0.17.3
+anyo==4.0.0
+treys==0.1.8
