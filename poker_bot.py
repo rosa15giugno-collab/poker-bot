@@ -34,7 +34,7 @@ AUTHORIZED_GROUPS = [
 
 OWNER_ID = 977247490
 
-async def check_group(update):
+async def check_access(update):
     chat = update.effective_chat
     user = update.effective_user
 
@@ -43,19 +43,18 @@ async def check_group(update):
         if user.id == OWNER_ID:
             return True
 
-        await
-update.message.reply_text(
+        await update.message.reply_text(
             "⛔ NON SEI AUTORIZZATO A USARE QUESTO BOT."
         )
-        returne False
+        return False
     
     # Gruppi
     if chat.type in ["group", "supergroup"]:
         if chat.id not in AUTHORIZED_GROUPS:
             await update.message.reply_text(
                 "⛔ QUESTO GRUPPO NON E' AUTORIZZATO."
-        )
-        return False
+            )
+            return False
 
     return True
 
@@ -64,8 +63,6 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_access(update):
         return
     
-    if not await check_access(update):
-        return
     user = update.effective_user
 
     if user.id not in players:
