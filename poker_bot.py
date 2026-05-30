@@ -692,7 +692,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text)
 
-app = current_updates(True).build()
+app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("poker", poker))
 app.add_handler(CommandHandler("saldo", saldo))
