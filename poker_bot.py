@@ -27,8 +27,45 @@ players = {}
 
 SAVE_FILE = "players.json"
 
+AUTHORIZED_GROUPS = [
+    -1003664350829, # ID SCACCO MATTO
+    -1002229066951, # ID MONOPOLI
+]
+
+OWNER_ID = 977247490
+
+async def check_group(update):
+    chat = update.effective_chat
+    user = update.effective_user
+
+    # Chat privata
+    if chat.type == "private":
+        if user.id == OWNER_ID:
+            return True
+
+        await
+update.message.reply_text(
+            "⛔ NON SEI AUTORIZZATO A USARE QUESTO BOT."
+        )
+        returne False
+    
+    # Gruppi
+    if chat.type in ["group", "supergroup"]:
+        if chat.id not in AUTHORIZED_GROUPS:
+            await update.message.reply_text(
+                "⛔ QUESTO GRUPPO NON E' AUTORIZZATO."
+        )
+        return False
+
+    return True
+
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if not await check_access(update):
+        return
+    
+    if not await check_access(update):
+        return
     user = update.effective_user
 
     if user.id not in players:
@@ -198,6 +235,9 @@ def game_keyboard():
 # POKER COMMAND
 # =========================
 async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await check_access(update):
+        return
 
     chat_id = update.effective_chat.id
 
@@ -592,6 +632,9 @@ async def showdown(query, game):
 # =========================
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if not await check_access(update):
+        return
+    
     user = update.effective_user
 
     if user.id not in players:
@@ -616,6 +659,9 @@ async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if not await check_access(update):
+        return
+
     text = (
         "🃏 COMANDI POKER\n\n"
         "/poker → crea tavolo\n"
@@ -631,6 +677,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await check_access(update):
+        return
 
     if not players:
         await update.message.reply_text("Nessun giocatore registrato.")
@@ -654,6 +703,9 @@ async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
 load_balances()
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await check_access(update):
+        return
 
     user = update.effective_user
 
