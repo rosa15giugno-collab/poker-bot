@@ -38,6 +38,10 @@ async def check_access(update):
     chat = update.effective_chat
     user = update.effective_user
 
+    print(
+        f"CHAT ID = {CHAT.ID} | TYPE = {chat.type} | USER = {user.id}"
+    )
+
     # Chat privata
     if chat.type == "private":
         if user.id == OWNER_ID:
