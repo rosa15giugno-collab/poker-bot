@@ -755,16 +755,9 @@ app.add_handler(CommandHandler("daily", daily))
 app.add_handler(CommandHandler("help", help_command))
 app.add_handler(CallbackQueryHandler(buttons))
 
-import asyncio
-
-async def main():
+def main():
     print("🃏 Poker Bot avviato!")
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
-    while True:
-        await asyncio.sleep(3600)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+if _name_ == "_main_":
+    main()
