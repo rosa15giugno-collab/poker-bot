@@ -757,7 +757,8 @@ app.add_handler(CallbackQueryHandler(buttons))
 
 def main():
     print("🃏 Poker Bot avviato!")
-    app.run_polling(drop_pending_updates=True)
 
-if _name_ == "_main_":
+app.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
     main()
