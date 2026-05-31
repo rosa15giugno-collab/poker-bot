@@ -755,6 +755,9 @@ app.add_handler(CommandHandler("daily", daily))
 app.add_handler(CommandHandler("help", help_command))
 app.add_handler(CallbackQueryHandler(buttons))
 
-print("🃏 Poker Bot avviato!")
-
-app.run_polling(drop_pending_updates=True)
+    if _name_ == "_main_":
+        print("🃏 Poker Bot avviato!")
+        app.run_polling(
+          drop_pending_updates=True,
+          close_loop=False
+    )
