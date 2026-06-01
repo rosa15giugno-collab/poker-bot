@@ -583,24 +583,26 @@ async def showdown(query, game):
 
     for player in game["players"]:
 
-            if player["folded"]:
+        if player["folded"]:
                 continue
 
-            hand = [Card.new(c) for c in player["hand"]]
+        hand = [Card.new(c) for c in player["hand"]]
 
-            score = evaluator.evaluate(board, hand)
+        score = evaluator.evaluate(board, hand)
 
-            cards = " ".join(pretty(c) for c in player["hand"])
+        cards = " ".join(pretty(c) for c in player["hand"])
 
-            text += f"{player['name']}: {cards}\n"
+        text += f"{player['name']}: {cards}\n"
 
-            if score < best_score:
-                best_score = score
-                winner = player
+        if score < best_score:
+            best_score = score
+            winner = player
 
 
     if winner is None:
-        await query.edit_message_text("❌ Nessun vincitore trovato.")
+        await query.edit_message_text("❌ Nessun vincitore trovato."
+        )
+        
         return
 
     winner["chips"] += game["pot"]
@@ -609,17 +611,17 @@ async def showdown(query, game):
     players[winner["id"]]["wins"] += 1
     players[winner["id"]]["games"] += 1
 
-for player in game["players"]:
-    if player["id"] != winner["id"]:
-        players[player["id"]]["losses"] += 1
-        players[player["id"]]["games"] += 1
+    for player in game["players"]:
+        if player["id"] != winner["id"]:
+            players[player["id"]]["losses"] += 1
+            players[player["id"]]["games"] += 1
 
-save_balances()
+    save_balances()
 
-text += f"\n🏆 Vince: {winner['name']}!"
-text += f"\n💰 Piatto vinto: {game['pot']} chips"
+    text += f"\n🏆 Vince: {winner['name']}!"
+    text += f"\n💰 Piatto vinto: {game['pot']} chips"
 
-await query.edit_message_text(text)
+    await query.edit_message_text(text)
 
 # =========================
 # SALDO
