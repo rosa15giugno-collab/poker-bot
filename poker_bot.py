@@ -581,22 +581,22 @@ async def showdown(query, game):
 
     text = "♠️ SHOWDOWN FINALE ♣️\n\n"
 
-   for player in game["players"]:
+    for player in game["players"]:
 
-    if player["folded"]:
-        continue
+            if player["folded"]:
+                continue
 
-    hand = [Card.new(c) for c in player["hand"]]
+            hand = [Card.new(c) for c in player["hand"]]
 
-    score = evaluator.evaluate(board, hand)
+            score = evaluator.evaluate(board, hand)
 
-    cards = " ".join(pretty(c) for c in player["hand"])
+            cards = " ".join(pretty(c) for c in player["hand"])
 
-    text += f"{player['name']}: {cards}\n"
+            text += f"{player['name']}: {cards}\n"
 
-    if score < best_score:
-        best_score = score
-        winner = player
+            if score < best_score:
+                best_score = score
+                winner = player
 
 
 if winner is None:
