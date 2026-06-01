@@ -599,15 +599,15 @@ async def showdown(query, game):
                 winner = player
 
 
-if winner is None:
-    await query.edit_message_text("❌ Nessun vincitore trovato.")
-    return
+    if winner is None:
+        await query.edit_message_text("❌ Nessun vincitore trovato.")
+        return
 
-winner["chips"] += game["pot"]
+    winner["chips"] += game["pot"]
 
-players[winner["id"]]["chips"] = winner["chips"]
-players[winner["id"]]["wins"] += 1
-players[winner["id"]]["games"] += 1
+    players[winner["id"]]["chips"] = winner["chips"]
+    players[winner["id"]]["wins"] += 1
+    players[winner["id"]]["games"] += 1
 
 for player in game["players"]:
     if player["id"] != winner["id"]:
