@@ -39,7 +39,7 @@ async def check_access(update):
     user = update.effective_user
 
     print(
-        f"CHAT ID = {CHAT.ID} | TYPE = {chat.type} | USER = {user.id}"
+        f"CHAT ID = {chad.id} | TYPE = {chat.type} | USER = {user.id}"
     )
 
     # Chat privata
@@ -303,17 +303,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "games": 0,
                 "last_daily": 0
             }
-
-        if user.id not in players:
-
-            players[user.id] = {
-                "name": user.first_name,
-                "chips": 5000,
-                "wins": 0,
-                "losses": 0,
-                "games": 0,
-                "last_daily": 0
-    }
 
         if "chips" not in players[user.id]:
             players[user.id]["chips"] = 5000
@@ -592,41 +581,45 @@ async def showdown(query, game):
 
     text = "♠️ SHOWDOWN FINALE ♣️\n\n"
 
-    for player in game["players"]:
+   for player in game["players"]:
 
-        if player["id"] != winner [id]:
-            players[player["id"]]["losses"] += 1
-            players[player["id"]]["games"] += 1
+    if player["folded"]:
+        continue
 
-        if player["folded"]:
-            continue
+    hand = [Card.new(c) for c in player["hand"]]
 
-        hand = [Card.new(c) for c in player["hand"]]
+    score = evaluator.evaluate(board, hand)
 
-        score = evaluator.evaluate(board, hand)
+    cards = " ".join(pretty(c) for c in player["hand"])
 
-        cards = " ".join(pretty(c) for c in player["hand"])
+    text += f"{player['name']}: {cards}\n"
 
-        text += f"{player['name']}: {cards}\n"
+    if score < best_score:
+        best_score = score
+        winner = player
 
-        if score < best_score:
-            best_score = score
-            winner = player
 
-    winner["chips"] += game["pot"]
-    players[winner["id"]]["chips"] = winner ["chips"]
-    players[winner["id"]]["wins"] += 1
-    players[winner["id"]]["games"] += 1
-    balances[winner["id"]] = winner["chips"]
-    save_balances()
+if winner is None:
+    await query.edit_message_text("❌ Nessun vincitore trovato.")
+    return
 
-    text += f"\n🏆 Vince: {winner['name']}!"
-    text += f"\n💰 Piato vinto: {game['pot']} chips"
+winner["chips"] += game["pot"]
 
-    save_balances()
+players[winner["id"]]["chips"] = winner["chips"]
+players[winner["id"]]["wins"] += 1
+players[winner["id"]]["games"] += 1
 
-    await query.edit_message_text(text)
+for player in game["players"]:
+    if player["id"] != winner["id"]:
+        players[player["id"]]["losses"] += 1
+        players[player["id"]]["games"] += 1
 
+save_balances()
+
+text += f"\n🏆 Vince: {winner['name']}!"
+text += f"\n💰 Piatto vinto: {game['pot']} chips"
+
+await query.edit_message_text(text)
 
 # =========================
 # SALDO
