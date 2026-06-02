@@ -4,14 +4,16 @@ import json
 import os
 import asyncio
 
-from telegram import Update,
+from telegram import (
+    Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup
+)
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ContextTypes,
+    ContextTypes
 )
 from treys import Card, Evaluator
 
