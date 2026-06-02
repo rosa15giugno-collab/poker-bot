@@ -205,6 +205,7 @@ async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 app = ApplicationBuilder().token(TOKEN).build()
 
+# HANDLERS
 app.add_handler(CommandHandler("poker", poker))
 app.add_handler(CommandHandler("saldo", saldo))
 app.add_handler(CommandHandler("stats", stats))
@@ -215,14 +216,21 @@ app.add_handler(CallbackQueryHandler(buttons))
 
 
 # =========================
-# MAIN
+# MAIN (RENDER STABLE)
 # =========================
 def main():
     print("🃏 Poker Bot avviato!")
 
-    app.run_polling(
-        drop_pending_updates=True
-    )
+    try:
+        app.run_polling(
+            drop_pending_updates=True
+        )
+    except Exception as e:
+        print("❌ ERRORE BOT:", e)
+        # evita crash definitivo del processo
+        import time
+        time.sleep(5)
+        main()
 
 if __name__ == "__main__":
     main()
