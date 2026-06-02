@@ -4,6 +4,23 @@ import json
 import os
 import asyncio
 
+from telegram import Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
+from treys import Card, Evaluator
+
+# =========================
+# TOKEN
+# =========================
+
+TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("poker", poker))
@@ -22,21 +39,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-from telegram import Update
-from telegram import InlineKeyboardButton
-from telegram import InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-)
-from treys import Card, Evaluator
-
-# =========================
-# TOKEN
-# =========================
-TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
 
 # =========================
 # GLOBALS
