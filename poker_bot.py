@@ -233,5 +233,5 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
