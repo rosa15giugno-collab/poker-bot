@@ -241,10 +241,9 @@ def main():
     print("🃏 Poker Bot avviato!")
 
     # avvia server web per Render
-    t=
-threading.Thread(target=run_web)
+    t = threading.Thread(target=run_web)
     t.daemon = True
-    r.start()
+    t.start()
 
     try:
 app.run_polling(drop_pending_updates=True)
