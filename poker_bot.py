@@ -15,7 +15,7 @@ from treys import Card, Evaluator
 # =========================
 # TOKEN
 # =========================
-TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
+TOKEN = "8081123271:AAG4roWz5LRsD0SvxBoezCWG2TDvj_9zG50"
 
 # =========================
 # GLOBALS
