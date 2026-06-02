@@ -245,19 +245,11 @@ def run_web():
 def main():
     print("🃏 Poker Bot avviato!")
 
-    # avvia server web per Render
-    t = threading.Thread(target=run_web)
-    t.daemon = True
-    t.start()
-
-    try:
-    app.run_polling(drop_pending_updates=True)
-    except Exception as e:
-        print("❌ ERRORE BOT:", e)
-        # evita crash definitivo del processo
-        import time
-        time.sleep(5)
-        main()
-
+    while True:
+        try:
+            app.run_polling(drop_pending_updates=True)
+        except Exception as e:
+            print("❌ ERRORE BOT:", e)
+            
 if __name__ == "__main__":
     main()
