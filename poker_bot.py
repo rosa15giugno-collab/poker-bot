@@ -242,14 +242,20 @@ def run_web():
 # =========================
 # MAIN (RENDER STABLE)
 # =========================
+import asyncio
+import sys
+
 def main():
     print("🃏 Poker Bot avviato!")
 
-    while True:
+    # 🔧 FIX EVENT LOOP (Render / Linux / Python 3.11+)
+    if sys.platform.startswith("linux"):
         try:
-            app.run_polling(drop_pending_updates=True)
+            asyncio.set_event_loop(asyncio.new_event_loop())
         except Exception as e:
-            print("❌ ERRORE BOT:", e)
+            print("loop fix error:", e)
+
+    app.run_polling(drop_pending_updates=True)
             
 if __name__ == "__main__":
     main()
