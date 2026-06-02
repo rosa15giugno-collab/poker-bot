@@ -201,36 +201,27 @@ async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
-# APP (DOPO FUNZIONI!)
+# MAIN + APP (DOPO FUNZIONI!)
 # =========================
-app = ApplicationBuilder().token(TOKEN).build()
-
-app.add_handler(CommandHandler("poker", poker))
-app.add_handler(CommandHandler("saldo", saldo))
-app.add_handler(CommandHandler("stats", stats))
-app.add_handler(CommandHandler("daily", daily))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("top", top))
-app.add_handler(CallbackQueryHandler(buttons))
-
-
-# =========================
-# MAIN
-# =========================
-
-import asyncio
-import sys
+from telegram.ext import ApplicationBuilder
 
 def main():
     print("🃏 Poker Bot avviato!")
 
-    # Fix solo se necessario su Linux/Render
-    if sys.platform.startswith("linux"):
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    # avvio bot
-    app.run_polling(
-        drop_pending_updates=True
-    )
+    # HANDLERS
+    app.add_handler(CommandHandler("poker", poker))
+    app.add_handler(CommandHandler("saldo", saldo))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("top", top))
+    app.add_handler(CallbackQueryHandler(buttons))
+
+    # AVVIO STABILE PER RENDER
+    app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
