@@ -10,7 +10,7 @@ from treys import Card, Evaluator
 # =========================
 # TOKEN
 # =========================
-TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
+TOKEN = "INSERISCI_TOKEN_QUI"
 
 # =========================
 # GLOBALS
@@ -189,4 +189,38 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📊 Stats OK")
 
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎁
+    await update.message.reply_text("🎁 Daily OK\n"
+                                    "Torna domani!"
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📌 Help OK")
+
+async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🏆 Top OK")
+
+
+# =========================
+# APP (DOPO FUNZIONI!)
+# =========================
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("poker", poker))
+app.add_handler(CommandHandler("saldo", saldo))
+app.add_handler(CommandHandler("stats", stats))
+app.add_handler(CommandHandler("daily", daily))
+app.add_handler(CommandHandler("help", help_command))
+app.add_handler(CommandHandler("top", top))
+app.add_handler(CallbackQueryHandler(buttons))
+
+
+# =========================
+# MAIN
+# =========================
+def main():
+    print("🃏 Poker Bot avviato!")
+    app.run_polling(drop_pending_updates=True)
+
+
+if __name__ == "__main__":
+    main()
