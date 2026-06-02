@@ -3,9 +3,14 @@ import time
 import json
 import os
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from treys import Card, Evaluator
+
+
 
 # =========================
 # TOKEN
@@ -214,6 +219,20 @@ app.add_handler(CommandHandler("help", help_command))
 app.add_handler(CommandHandler("top", top))
 app.add_handler(CallbackQueryHandler(buttons))
 
+# RUN  WEB
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot is running")
+
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    server.serve_forever()
+
+
 
 # =========================
 # MAIN (RENDER STABLE)
@@ -221,10 +240,14 @@ app.add_handler(CallbackQueryHandler(buttons))
 def main():
     print("🃏 Poker Bot avviato!")
 
+    # avvia server web per Render
+    t=
+threading.Thread(target=run_web)
+    t.daemon = True
+    r.start()
+
     try:
-        app.run_polling(
-            drop_pending_updates=True
-        )
+app.run_polling(drop_pending_updates=True)
     except Exception as e:
         print("❌ ERRORE BOT:", e)
         # evita crash definitivo del processo
