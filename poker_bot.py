@@ -226,7 +226,6 @@ def main():
 
     # Fix solo se necessario su Linux/Render
     if sys.platform.startswith("linux"):
-        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 
     # avvio bot
     app.run_polling(
