@@ -11,7 +11,7 @@ from treys import Card, Evaluator
 # =========================
 # TOKEN
 # =========================
-TOKEN = "INSERISCI_TOKEN_QUI"
+TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
 
 # =========================
 # APP
