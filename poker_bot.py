@@ -213,6 +213,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # APP
 # =========================
 app = ApplicationBuilder().token(TOKEN).build()
+print("TOKEN:", TOKEN[:15])
 
 # HANDLERS
 app.add_handler(CommandHandler("poker", poker))
@@ -242,6 +243,7 @@ def run_web():
 # =========================
 # MAIN (RENDER STABLE)
 # =========================
+print("BOT AVVIATO")
 import asyncio
 import sys
 
