@@ -95,8 +95,7 @@ def game_keyboard():
 # COMMAND: POKER
 # =========================
 async def poker(update: Update, context):
-    if not await 
-check_access(update):
+    if not await check_access(update):
         return
 
     chat_id = update.effective_chat.id
