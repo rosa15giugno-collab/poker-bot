@@ -2,6 +2,18 @@ import random
 import time
 import json
 import os
+import asyncio
+
+def main():
+    print("🃏 Poker Bot avviato!")
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    app.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
+    main()
 
 from telegram import Update
 from telegram import InlineKeyboardButton
