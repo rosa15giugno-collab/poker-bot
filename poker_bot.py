@@ -218,9 +218,20 @@ app.add_handler(CallbackQueryHandler(buttons))
 # MAIN
 # =========================
 
+import asyncio
+import sys
+
 def main():
     print("🃏 Poker Bot avviato!")
-    app.run_polling(drop_pending_updates=True, close_loop=False)
+
+    # Fix solo se necessario su Linux/Render
+    if sys.platform.startswith("linux"):
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+
+    # avvio bot
+    app.run_polling(
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
     main()
