@@ -4,11 +4,18 @@ import json
 import os
 import asyncio
 
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("poker", poker))
+app.add_handler(CommandHandler("saldo", saldo))
+app.add_handler(CommandHandler("top", top))
+app.add_handler(CommandHandler("stats", stats))
+app.add_handler(CommandHandler("daily", daily))
+app.add_handler(CommandHandler("help", help_command))
+app.add_handler(CallbackQueryHandler(buttons))
+
 def main():
     print("🃏 Poker Bot avviato!")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
     app.run_polling(drop_pending_updates=True)
 
@@ -51,7 +58,7 @@ async def check_access(update):
     user = update.effective_user
 
     print(
-        f"CHAT ID = {chad.id} | TYPE = {chat.type} | USER = {user.id}"
+        f"CHAT ID = {chat.id} | TYPE = {chat.type} | USER = {user.id}"
     )
 
     # Chat privata
@@ -754,13 +761,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("poker", poker))
-app.add_handler(CommandHandler("saldo", saldo))
-app.add_handler(CommandHandler("top", top))
-app.add_handler(CommandHandler("stats", stats))
-app.add_handler(CommandHandler("daily", daily))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CallbackQueryHandler(buttons))
 
 def main():
     print("🃏 Poker Bot avviato!")
