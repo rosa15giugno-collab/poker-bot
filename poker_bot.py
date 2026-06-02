@@ -218,17 +218,9 @@ app.add_handler(CallbackQueryHandler(buttons))
 # MAIN
 # =========================
 
-import asyncio
-
-async def main():
+def main():
     print("🃏 Poker Bot avviato!")
-
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-
-    while True:
-        await asyncio.sleep(3600)
+    app.run_polling(drop_pending_updates=True, close_loop=False)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
