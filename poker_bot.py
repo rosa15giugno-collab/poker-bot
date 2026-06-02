@@ -245,8 +245,7 @@ def main():
     t.daemon = True
     t.start()
 
-    try:
-app.run_polling(drop_pending_updates=True)
+    try:app.run_polling(drop_pending_updates=True)
     except Exception as e:
         print("❌ ERRORE BOT:", e)
         # evita crash definitivo del processo
