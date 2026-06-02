@@ -94,8 +94,9 @@ def game_keyboard():
 # =========================
 # COMMAND: POKER
 # =========================
-async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_access(update):
+async def poker(update: Update, context):
+    if not await 
+check_access(update):
         return
 
     chat_id = update.effective_chat.id
@@ -250,7 +251,8 @@ def main():
     t.daemon = True
     t.start()
 
-    try:app.run_polling(drop_pending_updates=True)
+    try:
+    app.run_polling(drop_pending_updates=True)
     except Exception as e:
         print("❌ ERRORE BOT:", e)
         # evita crash definitivo del processo
