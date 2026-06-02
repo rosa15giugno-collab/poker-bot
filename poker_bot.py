@@ -2,7 +2,6 @@ import random
 import time
 import json
 import os
-import asyncio
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -14,16 +13,10 @@ from treys import Card, Evaluator
 TOKEN = "8081123271:AAE347XgC8S0nsnujYMNnXdXwjARkJZHXN8"
 
 # =========================
-# APP
-# =========================
-app = ApplicationBuilder().token(TOKEN).build()
-
-# =========================
 # GLOBALS
 # =========================
 games = {}
 players = {}
-
 SAVE_FILE = "players.json"
 
 AUTHORIZED_GROUPS = [
@@ -33,11 +26,10 @@ AUTHORIZED_GROUPS = [
 
 OWNER_ID = 977247490
 
-
 # =========================
-# CHECK ACCESS
+# ACCESS CONTROL
 # =========================
-async def check_access(update):
+async def check_access(update: Update):
     chat = update.effective_chat
     user = update.effective_user
 
@@ -46,7 +38,6 @@ async def check_access(update):
     if chat.type == "private":
         if user.id == OWNER_ID:
             return True
-
         await update.message.reply_text("⛔ NON AUTORIZZATO")
         return False
 
@@ -56,6 +47,43 @@ async def check_access(update):
             return False
 
     return True
+
+
+# =========================
+# UTILITIES
+# =========================
+def create_deck():
+    suits = ['s', 'h', 'd', 'c']
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
+    deck = [r + s for r in ranks for s in suits]
+    random.shuffle(deck)
+    return deck
+
+
+def current_player(game):
+    return game["players"][game["turn_index"]]
+
+
+# =========================
+# KEYBOARD
+# =========================
+def game_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ ENTRA", callback_data="join"),
+            InlineKeyboardButton("🚪 ESCI", callback_data="leave"),
+        ],
+        [
+            InlineKeyboardButton("🎲 START", callback_data="start"),
+        ],
+        [
+            InlineKeyboardButton("➡️ NEXT", callback_data="next"),
+        ],
+        [
+            InlineKeyboardButton("❌ FOLD", callback_data="fold"),
+            InlineKeyboardButton("🔥 ALL-IN", callback_data="allin"),
+        ],
+    ])
 
 
 # =========================
@@ -77,42 +105,14 @@ async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "deck": [],
         "community": [],
         "pot": 0,
-        "phase": "lobby",
         "turn_index": 0,
         "current_bet": 0,
     }
 
     await update.message.reply_text(
-        "🃏 TEXAS HOLD'EM - Lobby",
+        "🃏 TEXAS HOLD'EM - LOBBY",
         reply_markup=game_keyboard()
     )
-
-
-# =========================
-# KEYBOARD
-# =========================
-def game_keyboard():
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("➕ ENTRA", callback_data="join"),
-            InlineKeyboardButton("🚪 ESCI", callback_data="leave"),
-        ],
-        [
-            InlineKeyboardButton("🎲 INIZIA", callback_data="start"),
-            InlineKeyboardButton("➡️ NEXT", callback_data="next"),
-        ],
-        [
-            InlineKeyboardButton("💵 BET", callback_data="bet"),
-            InlineKeyboardButton("📞 CALL", callback_data="call"),
-        ],
-        [
-            InlineKeyboardButton("👀 CHECK", callback_data="check"),
-            InlineKeyboardButton("❌ FOLD", callback_data="fold"),
-        ],
-        [
-            InlineKeyboardButton("🔥 ALL-IN", callback_data="allin"),
-        ],
-    ])
 
 
 # =========================
@@ -133,10 +133,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "join":
         if game["started"]:
-            return await query.answer("Gioco già iniziato")
+            return await query.answer("Partita già iniziata")
 
         if any(p["id"] == user.id for p in game["players"]):
-            return await query.answer("Già dentro")
+            return await query.answer("Sei già dentro")
 
         game["players"].append({
             "id": user.id,
@@ -146,15 +146,15 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "folded": False,
         })
 
-        await query.edit_message_text("Giocatore aggiunto")
+        await query.edit_message_text("✔️ Giocatore aggiunto")
 
     elif query.data == "leave":
         game["players"] = [p for p in game["players"] if p["id"] != user.id]
-        await query.edit_message_text("Sei uscito")
+        await query.edit_message_text("🚪 Uscito")
 
     elif query.data == "start":
         if len(game["players"]) < 2:
-            return await query.answer("Minimo 2 giocatori")
+            return await query.answer("Min 2 giocatori")
 
         game["started"] = True
         game["deck"] = create_deck()
@@ -162,76 +162,31 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for p in game["players"]:
             p["hand"] = [game["deck"].pop(), game["deck"].pop()]
 
-        await query.edit_message_text("Gioco iniziato")
+        await query.edit_message_text("🟢 Gioco iniziato")
 
     elif query.data == "next":
-        await query.edit_message_text("Next fase")
+        await query.edit_message_text("➡️ Next fase")
 
     elif query.data == "fold":
         player = current_player(game)
         player["folded"] = True
-        await query.edit_message_text("Fold")
+        await query.edit_message_text("❌ Fold")
 
     elif query.data == "allin":
         player = current_player(game)
         game["pot"] += player["chips"]
         player["chips"] = 0
-        await query.edit_message_text("ALL IN")
+        await query.edit_message_text("🔥 ALL-IN")
 
 
 # =========================
-# UTILS
-# =========================
-def create_deck():
-    suits = ['s', 'h', 'd', 'c']
-    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
-    deck = [r + s for r in ranks for s in suits]
-    random.shuffle(deck)
-    return deck
-
-
-def current_player(game):
-    return game["players"][game["turn_index"]]
-
-
-# =========================
-# OTHER COMMANDS (placeholder)
+# COMMANDS BASE
 # =========================
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Saldo OK")
+    await update.message.reply_text("💰 Saldo OK")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Stats OK")
+    await update.message.reply_text("📊 Stats OK")
 
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Daily OK")
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Help OK")
-
-async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Top OK")
-
-
-# =========================
-# HANDLERS (DOPO FUNZIONI)
-# =========================
-app.add_handler(CommandHandler("poker", poker))
-app.add_handler(CommandHandler("saldo", saldo))
-app.add_handler(CommandHandler("stats", stats))
-app.add_handler(CommandHandler("daily", daily))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("top", top))
-app.add_handler(CallbackQueryHandler(buttons))
-
-
-# =========================
-# MAIN
-# =========================
-def main():
-    print("🃏 Poker Bot avviato!")
-    app.run_polling(drop_pending_updates=True)
-
-
-if __name__ == "__main__":
-    main()
+    await update.message.reply_text("🎁
