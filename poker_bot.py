@@ -1,3 +1,4 @@
+raise Exception("TEST FILE CORRETTO")
 import random
 import os
 import json
