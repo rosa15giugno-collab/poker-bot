@@ -17,7 +17,7 @@ from treys import Card, Evaluator
 # CONFIG
 # =========================
 import os
-TOKEN = os.environ["8081123271:AAEzxf2OgJ-sG3DtRGEoEMzlUSlFMmHjf9A"] 
+TOKEN = os.environ["TOKEN"] 
 DATA_FILE = "casino_data.json"
 
 GRUPPI_AUTORIZZATI = [
