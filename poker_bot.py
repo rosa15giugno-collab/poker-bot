@@ -16,7 +16,7 @@ from treys import Card, Evaluator
 # =========================
 # CONFIG
 # =========================
-TOKEN = "8081123271:AAG4roWz5LRsD0SvxBoezCWG2TDvj_9zG50"
+TOKEN = "8081123271:AAFEMw6lrv7pl9YxH7CJGastlUzep_QJyf8"
 DATA_FILE = "casino_data.json"
 
 GRUPPI_AUTORIZZATI = [
