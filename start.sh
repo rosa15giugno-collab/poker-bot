@@ -1,1 +1,1 @@
-python3.11 poker_bot.py
+python3 poker_bot.py
