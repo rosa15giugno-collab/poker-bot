@@ -1,3 +1,6 @@
+import telegram.request
+telegram.request._httpxrequest.HTTPXRequest.TIMEOUT = 30
+
 import random
 import os
 import json
