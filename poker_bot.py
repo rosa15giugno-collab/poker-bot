@@ -182,7 +182,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN (FIX RENDER SAFE)
 # =========================
 def main():
-    print("######## BOT VERSIONE TEST 123 ########")
     print("🟢 BOT START")
 
     app = ApplicationBuilder().token(TOKEN).build()
@@ -191,12 +190,15 @@ def main():
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("top", top))
+
     app.add_handler(CallbackQueryHandler(buttons))
 
-    # 🔥 FIX CRASH RENDER: evita conflitti getUpdates
+    # FIX STABILE RENDER / TELEGRAM
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
+    )
     )
 
 if __name__ == "__main__":
