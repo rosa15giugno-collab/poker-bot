@@ -11,13 +11,10 @@ from telegram.ext import (
     ContextTypes
 )
 
-from treys import Card, Evaluator
-
 # =========================
 # CONFIG
 # =========================
-import os
-TOKEN = os.environ["TOKEN"] 
+TOKEN = os.environ.get("TOKEN")  # <-- NON crasha se manca
 DATA_FILE = "casino_data.json"
 
 GRUPPI_AUTORIZZATI = [
@@ -27,24 +24,25 @@ GRUPPI_AUTORIZZATI = [
 
 OWNER_ID = 977247490
 
-evaluator = Evaluator()
-
 # =========================
-# DB
+# DB SAFE LOAD
 # =========================
 def load():
     if not os.path.exists(DATA_FILE):
         return {"games": {}, "users": {}}
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    try:
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {"games": {}, "users": {}}
 
 def save(db):
     with open(DATA_FILE, "w") as f:
         json.dump(db, f)
 
 db = load()
-games = db["games"]
-users = db["users"]
+games = db.get("games", {})
+users = db.get("users", {})
 
 def save_all():
     db["games"] = games
@@ -83,7 +81,7 @@ def kb():
     ])
 
 # =========================
-# BASIC COMMANDS
+# COMMANDS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎰 Casino Poker Online ATTIVO")
@@ -109,6 +107,15 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("🎁 +1000 chips daily!")
 
+async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ranking = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
+
+    text = "🏆 TOP PLAYERS:\n\n"
+    for i, (uid, u) in enumerate(ranking, 1):
+        text += f"{i}. {u.get('name','User')} - {u['chips']} chips\n"
+
+    await update.message.reply_text(text)
+
 # =========================
 # POKER
 # =========================
@@ -126,7 +133,6 @@ async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     save_all()
-
     await update.message.reply_text("🃏 LOBBY APERTA", reply_markup=kb())
 
 # =========================
@@ -179,10 +185,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await q.edit_message_text("🟢 Partita iniziata")
 
 # =========================
-# MAIN (FIX RENDER SAFE)
+# MAIN
 # =========================
 def main():
     print("🟢 BOT START")
+
+    if not TOKEN:
+        print("❌ TOKEN mancante nelle environment variables")
+        return
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -191,13 +201,10 @@ def main():
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("top", top))
-
     app.add_handler(CallbackQueryHandler(buttons))
 
-    # FIX STABILE RENDER / TELEGRAM
     app.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES
+        drop_pending_updates=True
     )
 
 if __name__ == "__main__":
