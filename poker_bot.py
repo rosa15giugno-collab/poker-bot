@@ -336,23 +336,10 @@ def main():
 
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
-    except Exception:
-        print("❌ ERRORE COMPLETO:")
-        traceback.print_exc()
-
-    # =========================
-    # SAFE POLLING (RENDER FIX)
-    # =========================
-    print("🟢 Avvio polling sicuro...")
-
-    app.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES
-    )
+    except Exception as e:
+        print("❌ ERRORE:")
+        print(e)
 
 
 if __name__ == "__main__":
-     try:
-        main()
-    except Exception as e:
-        print("CRASH:", e)
+    main()
