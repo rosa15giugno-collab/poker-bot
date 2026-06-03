@@ -37,7 +37,7 @@ partite = {}
 
 
 # =========================
-# WEB SERVER (Render keep alive)
+# WEB SERVER (Render)
 # =========================
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -97,7 +97,7 @@ def tastiera():
 
 
 # =========================
-# ACCESS
+# ACCESSO
 # =========================
 async def check_access(update: Update):
     chat = update.effective_chat
@@ -110,12 +110,15 @@ async def check_access(update: Update):
 
 
 # =========================
-# COMMANDS
+# START
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🤖 Poker Bot Online")
 
 
+# =========================
+# LOBBY
+# =========================
 async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_access(update):
         await update.message.reply_text("⛔ NON AUTORIZZATO")
@@ -153,10 +156,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     partita = partite.get(chat_id)
 
     if not partita:
-        await q.edit_message_text("❌ Nessuna partita attiva")
-        return
+        return await q.edit_message_text("❌ Nessuna partita attiva")
 
-    # JOIN
+    # ================= ENTRA =================
     if q.data == "entra":
         if any(p["id"] == user.id for p in partita["giocatori"]):
             return await q.answer("Sei già dentro")
@@ -170,79 +172,84 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "puntata": 0
         })
 
-        await q.edit_message_text("✔️ Entrato")
-        return
+        return await q.edit_message_text("✔️ Entrato")
 
-    # LEAVE
+    # ================= ESCI =================
     if q.data == "esci":
         partita["giocatori"] = [g for g in partita["giocatori"] if g["id"] != user.id]
-        await q.edit_message_text("🚪 Uscito")
-        return
+        return await q.edit_message_text("🚪 Uscito")
 
-    # START
+    # ================= START =================
     if q.data == "start":
         if len(partita["giocatori"]) < 2:
             return await q.answer("Min 2 giocatori")
 
         partita["mazzo"] = crea_mazzo()
         partita["fase"] = "preflop"
+        partita["turno"] = 0
 
         for g in partita["giocatori"]:
             g["mano"] = [partita["mazzo"].pop(), partita["mazzo"].pop()]
             g["fold"] = False
             g["puntata"] = 0
 
-        await q.edit_message_text("🟢 Partita iniziata")
-        return
+        return await q.edit_message_text("🟢 Partita iniziata")
 
     player = giocatore_corrente(partita)
 
-    if not player or player["id"] != user.id:
+    if not player:
+        return await q.answer("Nessun giocatore attivo")
+
+    # AUTO-SKIP SE FOLD
+    if player.get("fold"):
+        turno_successivo(partita)
+        return await q.answer("Skip fold")
+
+    if player["id"] != user.id:
         return await q.answer("Non è il tuo turno")
 
-    # FOLD
+    # ================= PASSA =================
     if q.data == "passa":
         player["fold"] = True
         turno_successivo(partita)
-        await q.edit_message_text("❌ Fold")
-        return
+        return await q.edit_message_text("❌ Fold")
 
-    # CALL
+    # ================= CHIAMA =================
     if q.data == "chiama":
         diff = partita["puntata_corrente"] - player["puntata"]
+
         if diff > 0:
-            player["chips"] -= diff
+            player["chips"] = max(0, player["chips"] - diff)
             player["puntata"] += diff
             partita["piatto"] += diff
 
         turno_successivo(partita)
-        await q.edit_message_text("✔️ Chiama")
-        return
+        return await q.edit_message_text("✔️ Chiama")
 
-    # RAISE
+    # ================= RILANCIA =================
     if q.data == "rilancia":
         raise_amount = 100
         partita["puntata_corrente"] += raise_amount
 
         diff = partita["puntata_corrente"] - player["puntata"]
 
-        player["chips"] -= diff
+        player["chips"] = max(0, player["chips"] - diff)
         player["puntata"] += diff
         partita["piatto"] += diff
 
         turno_successivo(partita)
-        await q.edit_message_text("⬆️ Rilancio")
-        return
+        return await q.edit_message_text("⬆️ Rilancio")
 
-    # ALL IN
+    # ================= ALL IN =================
     if q.data == "allin":
         partita["piatto"] += player["chips"]
+        player["puntata"] += player["chips"]
         player["chips"] = 0
-        turno_successivo(partita)
-        await q.edit_message_text("🔥 ALL-IN")
-        return
 
-    # NEXT
+        turno_successivo(partita)
+        return await q.edit_message_text("🔥 ALL-IN")
+
+    # ================= NEXT =================
     if q.data == "next":
         if partita["fase"] == "preflop":
             partita["comune"] = [partita["mazzo"].pop() for _ in range(3)]
@@ -257,21 +264,23 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             partita["fase"] = "river"
 
         elif partita["fase"] == "river":
-            winner = max(partita["giocatori"], key=lambda g: len(g["mano"]))
-            winner["chips"] += partita["piatto"]
+            winner = max(
+                [g for g in partita["giocatori"] if not g["fold"]],
+                key=lambda g: len(g["mano"])
+            )
 
+            winner["chips"] += partita["piatto"]
             partita["piatto"] = 0
             partita["fase"] = "lobby"
 
-            await q.edit_message_text(f"🏆 Vince {winner['nome']}")
-            return
+            return await q.edit_message_text(f"🏆 Vince {winner['nome']}")
 
         turno_successivo(partita)
-        await q.edit_message_text(f"Fase: {partita['fase']}")
+        return await q.edit_message_text(f"Fase: {partita['fase']}")
 
 
 # =========================
-# MAIN (FIX DEFINITIVO RENDER)
+# MAIN
 # =========================
 def main():
     print("🃏 BOT AVVIATO")
@@ -284,14 +293,13 @@ def main():
 
     threading.Thread(target=run_web, daemon=True).start()
 
-    # IMPORTANTISSIMO: evita conflitti Render
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     try:
         main()
     except Exception:
