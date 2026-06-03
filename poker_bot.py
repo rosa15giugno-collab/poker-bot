@@ -319,7 +319,7 @@ def main():
     # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("poker", poker))
-    app.add_handler(CommandHandler("saldo", saldo))
+    # app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("help", help_command))
