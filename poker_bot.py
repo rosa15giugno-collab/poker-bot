@@ -267,21 +267,26 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN
 # =========================
 def main():
-    print("🎰 CASINO ONLINE AVVIATO")
+    import os
+
+    print("🟢 Bot avvio controllato")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("top", top))
-    app.add_handler(CommandHandler("slot", slot))
-    app.add_handler(CommandHandler("roulette", roulette))
-    app.add_handler(CommandHandler("poker", poker))
-
     app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_polling(drop_pending_updates=True)
+    # 🔥 IMPORTANTISSIMO: evita doppio polling crash
+    try:
+        app.stop()
+    except:
+        pass
 
-if __name__ == "__main__":
-    main()
+    app.run_polling(
+        drop_pending_updates=True,
+        close_loop=False
+    )
