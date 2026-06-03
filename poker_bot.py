@@ -12,7 +12,7 @@ from telegram.ext import (
 
 from treys import Card, Evaluator
 
-TOKEN = "MIO_TOKEN"
+TOKEN = "8081123271:AAG4roWz5LRsD0SvxBoezCWG2TDvj_9zG50"
 DATA_FILE = "partite.json"
 
 GRUPPI_AUTORIZZATI = [
