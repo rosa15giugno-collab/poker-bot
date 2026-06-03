@@ -3,6 +3,10 @@ telegram.request._httpxrequest.HTTPXRequest.TIMEOUT = 30
 
 import random
 import os
+
+if os.environ.get("RENDER"):
+    print("Render mode: single instance safe")
+    
 import json
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
