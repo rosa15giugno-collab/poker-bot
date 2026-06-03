@@ -1,7 +1,6 @@
 import random
 import json
 import os
-import asyncio
 import threading
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -27,7 +26,6 @@ TOKEN = "8081123271:AAG4roWz5LRsD0SvxBoezCWG2TDvj_9zG50"
 # =========================
 games = {}
 players = {}
-SAVE_FILE = "players.json"
 
 AUTHORIZED_GROUPS = [
     -1003664350829,
@@ -96,8 +94,11 @@ def game_keyboard():
 
 
 # =========================
-# COMMAND: POKER
+# COMMANDS
 # =========================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🤖 Bot online!")
+
 async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_access(update):
         return
@@ -119,6 +120,22 @@ async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     await update.message.reply_text("🃏 TEXAS HOLD'EM - LOBBY", reply_markup=game_keyboard())
+
+
+async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("💰 Saldo OK")
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📊 Stats OK")
+
+async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🎁 Daily OK\nTorna domani!")
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📌 Help OK")
+
+async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🏆 Top OK")
 
 
 # =========================
@@ -186,28 +203,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
-# COMMANDS
-# =========================
-async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💰 Saldo OK")
-
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📊 Stats OK")
-
-async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎁 Daily OK\nTorna domani!")
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📌 Help OK")
-
-async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏆 Top OK")
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot online!")
-
-
-# =========================
 # WEB SERVER (Render keep alive)
 # =========================
 def run_web():
@@ -232,19 +227,19 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     # handlers
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("top", top))
-    app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(buttons))
 
-    # web thread (Render)
+    # web server (Render)
     threading.Thread(target=run_web, daemon=True).start()
 
-    # IMPORTANT: NO DUPLICATE POLLING
+    # IMPORTANT: single polling only
     app.run_polling(drop_pending_updates=True)
 
 
