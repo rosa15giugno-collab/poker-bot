@@ -310,15 +310,31 @@ async def bottoni(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN
 # =========================
 def main():
-    print("🃏 CASINO POKER ITALIANO ONLINE")
+    print("🔥 TEXAS HOLD'EM CASINO LIVE - SERVER ONLINE 🔥")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # =========================
+    # HANDLERS
+    # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("poker", poker))
-    app.add_handler(CallbackQueryHandler(bottoni))
+    app.add_handler(CommandHandler("saldo", saldo))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("top", top))
+    app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_polling(drop_pending_updates=True)
+    # =========================
+    # SAFE POLLING (RENDER FIX)
+    # =========================
+    print("🟢 Avvio polling sicuro...")
+
+    app.run_polling(
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES
+    )
 
 
 if __name__ == "__main__":
