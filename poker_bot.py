@@ -181,6 +181,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN (FIX RENDER SAFE)
 # =========================
 def main():
+    print("######## BOT VERSIONE TEST 123 ########")
     print("🟢 BOT START")
 
     app = ApplicationBuilder().token(TOKEN).build()
