@@ -1,15 +1,20 @@
 import random
-import time
 import json
 import os
-
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import asyncio
 import threading
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from treys import Card, Evaluator
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
+
+from treys import Card, Evaluator
 
 
 # =========================
@@ -31,14 +36,13 @@ AUTHORIZED_GROUPS = [
 
 OWNER_ID = 977247490
 
+
 # =========================
 # ACCESS CONTROL
 # =========================
 async def check_access(update: Update):
     chat = update.effective_chat
     user = update.effective_user
-
-    print(f"CHAT ID = {chat.id} | TYPE = {chat.type} | USER = {user.id}")
 
     if chat.type == "private":
         if user.id == OWNER_ID:
@@ -94,7 +98,7 @@ def game_keyboard():
 # =========================
 # COMMAND: POKER
 # =========================
-async def poker(update: Update, context):
+async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_access(update):
         return
 
@@ -114,10 +118,7 @@ async def poker(update: Update, context):
         "current_bet": 0,
     }
 
-    await update.message.reply_text(
-        "🃏 TEXAS HOLD'EM - LOBBY",
-        reply_markup=game_keyboard()
-    )
+    await update.message.reply_text("🃏 TEXAS HOLD'EM - LOBBY", reply_markup=game_keyboard())
 
 
 # =========================
@@ -185,7 +186,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
-# COMMANDS BASE
+# COMMANDS
 # =========================
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("💰 Saldo OK")
@@ -194,9 +195,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📊 Stats OK")
 
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎁 Daily OK\n"
-                                    "Torna domani!"
-    )
+    await update.message.reply_text("🎁 Daily OK\nTorna domani!")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📌 Help OK")
@@ -205,27 +204,12 @@ async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🏆 Top OK")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("START RICEVUTO")
     await update.message.reply_text("🤖 Bot online!")
 
 
 # =========================
-# APP
+# WEB SERVER (Render keep alive)
 # =========================
-app = ApplicationBuilder().token(TOKEN).build()
-print("TOKEN:", TOKEN[:15])
-
-# HANDLERS
-app.add_handler(CommandHandler("poker", poker))
-app.add_handler(CommandHandler("saldo", saldo))
-app.add_handler(CommandHandler("stats", stats))
-app.add_handler(CommandHandler("daily", daily))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("top", top))
-app.add_handler(CallbackQueryHandler(buttons))
-app.add_handler(CommandHandler("start", start))
-
-# RUN  WEB
 def run_web():
     port = int(os.environ.get("PORT", 10000))
 
@@ -239,25 +223,30 @@ def run_web():
     server.serve_forever()
 
 
-
 # =========================
-# MAIN (RENDER STABLE)
+# MAIN
 # =========================
-print("BOT AVVIATO")
-import asyncio
-import sys
-
 def main():
     print("🃏 Poker Bot avviato!")
 
-    # 🔧 FIX EVENT LOOP (Render / Linux / Python 3.11+)
-    if sys.platform.startswith("linux"):
-        try:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-        except Exception as e:
-            print("loop fix error:", e)
+    app = ApplicationBuilder().token(TOKEN).build()
 
+    # handlers
+    app.add_handler(CommandHandler("poker", poker))
+    app.add_handler(CommandHandler("saldo", saldo))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("top", top))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(buttons))
+
+    # web thread (Render)
+    threading.Thread(target=run_web, daemon=True).start()
+
+    # IMPORTANT: NO DUPLICATE POLLING
     app.run_polling(drop_pending_updates=True)
-            
+
+
 if __name__ == "__main__":
     main()
