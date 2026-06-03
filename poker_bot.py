@@ -1,3 +1,4 @@
+import traceback
 import telegram.request
 telegram.request._httpxrequest.HTTPXRequest.TIMEOUT = 30
 
@@ -317,21 +318,27 @@ async def bottoni(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN
 # =========================
 def main():
-    print("🔥 TEXAS HOLD'EM CASINO LIVE - SERVER ONLINE 🔥")
+    try:
+        print("🃏 Poker Bot avviato!")
 
-    app = ApplicationBuilder().token(TOKEN).build()
+        app = ApplicationBuilder().token(TOKEN).build()
 
-    # =========================
-    # HANDLERS
-    # =========================
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("poker", poker))
-    # app.add_handler(CommandHandler("saldo", saldo))
-    app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CommandHandler("daily", daily))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("top", top))
-    app.add_handler(CallbackQueryHandler(buttons))
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("poker", poker))
+        app.add_handler(CommandHandler("saldo", saldo))
+        app.add_handler(CommandHandler("stats", stats))
+        app.add_handler(CommandHandler("daily", daily))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("top", top))
+        app.add_handler(CallbackQueryHandler(buttons))
+
+        threading.Thread(target=run_web, daemon=True).start()
+
+        app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+
+    except Exception:
+        print("❌ ERRORE COMPLETO:")
+        traceback.print_exc()
 
     # =========================
     # SAFE POLLING (RENDER FIX)
