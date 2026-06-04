@@ -188,16 +188,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # MAIN
 # =========================
-def main():
+async def main():
     print("🟢 BOT AVVIATO")
 
     if not TOKEN:
-        print("❌ TOKEN mancante nelle environment variables")
+        print("❌ TOKEN mancante")
         return
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.bot.delete_webhook(drop_pending_updates=True)
+    await app.bot.delete_webhook(drop_pending_updates=True)
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
@@ -206,7 +206,7 @@ def main():
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_polling(drop_pending_updates=True)
+    await app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
