@@ -15,12 +15,18 @@ from telegram.ext import (
 # CONFIG
 # =========================
 TOKEN = os.environ.get("TOKEN")
+
 DATA_FILE = "casino_data.json"
+
+GRUPPI_AUTORIZZATI = [
+    -1003664350829,
+    -1002229066951,
+]
 
 OWNER_ID = 977247490
 
 # =========================
-# DB
+# SAFE DB
 # =========================
 def load():
     if not os.path.exists(DATA_FILE):
@@ -57,14 +63,14 @@ def ensure_user(uid):
 # DECK
 # =========================
 def deck():
-    s = ['♠️', '♥️', '♦️', '♣️']
-    r = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
-    d = [x+y for x in r for y in s]
-    random.shuffle(d)
-    return d
+    suits = ['s', 'h', 'd', 'c']
+    ranks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A']
+    cards = [r+s for r in ranks for s in suits]
+    random.shuffle(cards)
+    return cards
 
 # =========================
-# TASTIERA
+# KEYBOARD
 # =========================
 def kb():
     return InlineKeyboardMarkup([
@@ -72,20 +78,20 @@ def kb():
             InlineKeyboardButton("➕ ENTRA", callback_data="join"),
             InlineKeyboardButton("🚪 ESCI", callback_data="leave"),
         ],
-        [InlineKeyboardButton("🎲 INIZIA PARTITA", callback_data="start")],
+        [InlineKeyboardButton("🎲 START", callback_data="start")],
     ])
 
 # =========================
-# COMANDI
+# COMMANDS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎰 Casinò Poker Online ATTIVO 🇮🇹")
+    await update.message.reply_text("🎰 Poker Bot ATTIVO")
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = ensure_user(update.effective_user.id)
-    await update.message.reply_text(f"💰 Hai {u['chips']} chips")
+    await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
-async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = ensure_user(update.effective_user.id)
 
     now = datetime.utcnow()
@@ -94,31 +100,31 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if last:
         last_time = datetime.fromisoformat(last)
         if now - last_time < timedelta(hours=24):
-            return await update.message.reply_text("⏳ Hai già preso il bonus oggi")
+            return await update.message.reply_text("⏳ Daily già preso")
 
     u["chips"] += 1000
     u["last_daily"] = now.isoformat()
     save_all()
 
-    await update.message.reply_text("🎁 Bonus giornaliero +1000 chips!")
+    await update.message.reply_text("🎁 +1000 chips!")
 
-async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ranking = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
 
-    text = "🏆 CLASSIFICA GIOCATORI:\n\n"
+    text = "🏆 TOP PLAYERS:\n\n"
     for i, (uid, u) in enumerate(ranking, 1):
-        text += f"{i}. {u.get('name','Player')} - {u['chips']} chips\n"
+        text += f"{i}. {u.get('name','User')} - {u['chips']} chips\n"
 
     await update.message.reply_text(text)
 
 # =========================
 # POKER
 # =========================
-async def gioca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
 
     if cid in games:
-        return await update.message.reply_text("⚠️ Partita già attiva")
+        return await update.message.reply_text("⚠️ Già attivo")
 
     games[cid] = {
         "players": [],
@@ -128,10 +134,10 @@ async def gioca(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     save_all()
-    await update.message.reply_text("🃏 Lobby aperta! Entra nella partita 🎲", reply_markup=kb())
+    await update.message.reply_text("🃏 Lobby aperta", reply_markup=kb())
 
 # =========================
-# CALLBACK BOTTONI
+# CALLBACK
 # =========================
 async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -141,13 +147,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = q.from_user
 
     if cid not in games:
-        return await q.edit_message_text("❌ Nessuna partita attiva")
+        return await q.edit_message_text("❌ Nessuna partita")
 
     g = games[cid]
 
     if q.data == "join":
         if any(p["id"] == user.id for p in g["players"]):
-            return await q.answer("Sei già dentro")
+            return await q.answer("Già dentro")
 
         g["players"].append({
             "id": user.id,
@@ -158,50 +164,47 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         })
 
         save_all()
-        return await q.edit_message_text("✔️ Sei entrato nella partita")
+        return await q.edit_message_text("✔️ Entrato")
 
     if q.data == "leave":
         g["players"] = [p for p in g["players"] if p["id"] != user.id]
         save_all()
-        return await q.edit_message_text("🚪 Sei uscito dalla partita")
+        return await q.edit_message_text("🚪 Uscito")
 
     if q.data == "start":
         if len(g["players"]) < 2:
-            return await q.answer("Servono almeno 2 giocatori")
+            return await q.answer("Min 2 player")
 
         g["deck"] = deck()
-        g["board"] = []
 
         for p in g["players"]:
             p["hand"] = [g["deck"].pop(), g["deck"].pop()]
             p["fold"] = False
 
         save_all()
-        return await q.edit_message_text("🟢 Partita iniziata!")
+        return await q.edit_message_text("🟢 Partita iniziata")
 
 # =========================
-# MAIN (WEBHOOK)
+# MAIN
 # =========================
 def main():
     print("🟢 BOT AVVIATO")
 
     if not TOKEN:
-        print("❌ TOKEN mancante")
+        print("❌ TOKEN mancante nelle environment variables")
         return
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # COMANDI ITALIANI
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("gioca", gioca))
     app.add_handler(CommandHandler("saldo", saldo))
-    app.add_handler(CommandHandler("bonus", bonus))
-    app.add_handler(CommandHandler("classifica", classifica))
-
+    app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("top", top))
+    app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CallbackQueryHandler(buttons))
 
-    # WEBHOOK (RENDER)
     app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
