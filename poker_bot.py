@@ -185,9 +185,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     print("🟢 BOT AVVIATO")
 
-    if not TOKEN or not APP_URL:
-        print("❌ TOKEN o APP_URL mancanti")
-        return
+    if not TOKEN:
+    print("❌ TOKEN mancante")
+    return
 
     app = ApplicationBuilder().token(TOKEN).build()
 
