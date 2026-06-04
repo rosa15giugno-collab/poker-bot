@@ -208,6 +208,6 @@ async def main():
 
     await app.run_polling(drop_pending_updates=True)
 
-
+import asyncio
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
