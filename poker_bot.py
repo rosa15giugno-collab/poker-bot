@@ -21,11 +21,6 @@ TOKEN = os.environ.get("TOKEN")
 
 DATA_FILE = "casino_data.json"
 
-GRUPPI_AUTORIZZATI = [
-    -1003664350829,
-    -1002229066951,
-]
-
 OWNER_ID = 977247490
 
 # =========================
@@ -186,9 +181,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await q.edit_message_text("🟢 Partita iniziata")
 
 # =========================
-# MAIN
+# MAIN (CORRETTO RENDER)
 # =========================
-async def main():
+def main():
     print("🟢 BOT AVVIATO")
 
     if not TOKEN:
@@ -197,7 +192,8 @@ async def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    await app.bot.delete_webhook(drop_pending_updates=True)
+    # IMPORTANTISSIMO: evita conflitti Telegram
+    app.bot.delete_webhook(drop_pending_updates=True)
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
@@ -206,8 +202,8 @@ async def main():
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CallbackQueryHandler(buttons))
 
-    await app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
-import asyncio
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
