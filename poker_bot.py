@@ -1,5 +1,6 @@
 import signal
 signal.signal(signal.SIGTERM, lambda *args: exit(0))
+
 import random
 import os
 import json
@@ -67,9 +68,7 @@ def ensure_user(uid):
 def deck():
     suits = ['s', 'h', 'd', 'c']
     ranks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A']
-    cards = [r+s for r in ranks for s in suits]
-    random.shuffle(cards)
-    return cards
+    return [r+s for r in ranks for s in suits]
 
 # =========================
 # KEYBOARD
@@ -198,6 +197,8 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
+    app.bot.delete_webhook(drop_pending_updates=True)
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("daily", daily))
@@ -205,12 +206,8 @@ def main():
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_polling(
-        drop_pending_updates=True,
-        close_loop=False
-    )
-    app.bot.delete_webhook(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-   
+    main()
