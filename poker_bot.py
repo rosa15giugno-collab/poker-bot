@@ -1,9 +1,24 @@
 import signal
 signal.signal(signal.SIGTERM, lambda *args: exit(0))
 
-import random
 import os
+
+# =========================
+# ANTI-DOPPIO AVVIO (LOCK)
+# =========================
+LOCK_FILE = "bot.lock"
+
+if os.path.exists(LOCK_FILE):
+    print("❌ BOT già avviato (lock attivo)")
+    exit()
+
+with open(LOCK_FILE, "w") as f:
+    f.write("running")
+
+
+import random
 import json
+from datetime import datetime, timedelta
 from datetime import datetime, timedelta
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
