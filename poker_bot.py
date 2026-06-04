@@ -20,7 +20,6 @@ from telegram.ext import (
 TOKEN = os.environ.get("TOKEN")
 
 DATA_FILE = "casino_data.json"
-
 OWNER_ID = 977247490
 
 # =========================
@@ -51,10 +50,14 @@ def save_all():
 # =========================
 # USER
 # =========================
-def ensure_user(uid):
+def ensure_user(uid, name=None):
     uid = str(uid)
     if uid not in users:
-        users[uid] = {"chips": 5000, "last_daily": None}
+        users[uid] = {
+            "chips": 5000,
+            "last_daily": None,
+            "name": name or "User"
+        }
     return users[uid]
 
 # =========================
@@ -63,7 +66,9 @@ def ensure_user(uid):
 def deck():
     suits = ['s', 'h', 'd', 'c']
     ranks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A']
-    return [r+s for r in ranks for s in suits]
+    cards = [r+s for r in ranks for s in suits]
+    random.shuffle(cards)
+    return cards
 
 # =========================
 # KEYBOARD
@@ -81,14 +86,15 @@ def kb():
 # COMMANDS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    u = ensure_user(update.effective_user.id, update.effective_user.first_name)
     await update.message.reply_text("🎰 Poker Bot ATTIVO")
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = ensure_user(update.effective_user.id)
+    u = ensure_user(update.effective_user.id, update.effective_user.first_name)
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = ensure_user(update.effective_user.id)
+    u = ensure_user(update.effective_user.id, update.effective_user.first_name)
 
     now = datetime.utcnow()
     last = u["last_daily"]
@@ -120,7 +126,7 @@ async def poker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
 
     if cid in games:
-        return await update.message.reply_text("⚠️ Già attivo")
+        return await update.message.reply_text("⚠️ Partita già attiva")
 
     games[cid] = {
         "players": [],
@@ -143,7 +149,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = q.from_user
 
     if cid not in games:
-        return await q.edit_message_text("❌ Nessuna partita")
+        return await q.edit_message_text("❌ Nessuna partita attiva")
 
     g = games[cid]
 
@@ -169,7 +175,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if q.data == "start":
         if len(g["players"]) < 2:
-            return await q.answer("Min 2 player")
+            return await q.answer("Minimo 2 giocatori")
 
         g["deck"] = deck()
 
@@ -181,7 +187,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await q.edit_message_text("🟢 Partita iniziata")
 
 # =========================
-# MAIN (CORRETTO RENDER)
+# MAIN STABLE (RENDER SAFE)
 # =========================
 def main():
     print("🟢 BOT AVVIATO")
@@ -192,7 +198,7 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # IMPORTANTISSIMO: evita conflitti Telegram
+    # 🔥 elimina webhook e blocca conflitti Telegram
     app.bot.delete_webhook(drop_pending_updates=True)
 
     app.add_handler(CommandHandler("start", start))
@@ -202,6 +208,7 @@ def main():
     app.add_handler(CommandHandler("poker", poker))
     app.add_handler(CallbackQueryHandler(buttons))
 
+    # 🔥 IMPORTANTISSIMO: SOLO polling, niente asyncio
     app.run_polling(drop_pending_updates=True)
 
 
