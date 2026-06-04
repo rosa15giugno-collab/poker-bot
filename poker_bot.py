@@ -186,8 +186,8 @@ def main():
     print("🟢 BOT AVVIATO")
 
     if not TOKEN:
-    print("❌ TOKEN mancante")
-    return
+        print("❌ TOKEN mancante")
+        return
 
     app = ApplicationBuilder().token(TOKEN).build()
 
