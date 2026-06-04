@@ -202,12 +202,7 @@ def main():
     app.add_handler(CallbackQueryHandler(buttons))
 
     # WEBHOOK (RENDER)
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        webhook_url=f"{APP_URL}/{TOKEN}",
-        drop_pending_updates=True
-    )
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
