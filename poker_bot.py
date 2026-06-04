@@ -199,7 +199,7 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     # 🔥 elimina webhook e blocca conflitti Telegram
-    app.bot.delete_webhook(drop_pending_updates=True)
+    app.post_init = lambda app: app.bot.delete_webhook(drop_pending_updates=True)
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
