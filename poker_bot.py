@@ -15,7 +15,6 @@ from telegram.ext import (
 # CONFIG
 # =========================
 TOKEN = os.environ.get("TOKEN")
-APP_URL = os.environ.get("APP_URL")
 DATA_FILE = "casino_data.json"
 
 OWNER_ID = 977247490
