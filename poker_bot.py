@@ -209,6 +209,8 @@ def main():
     app.add_handler(CallbackQueryHandler(buttons))
 
     # 🔥 IMPORTANTISSIMO: SOLO polling, niente asyncio
+    app.post_init = lambda app: app.bot.delete_webhook(drop_pending_updates=True)
+    
     app.run_polling(drop_pending_updates=True)
 
 
