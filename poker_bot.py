@@ -14,6 +14,16 @@ TOKEN = os.environ.get("BOT_TOKEN")
 DATA_FILE = "casino.json"
 
 # =========================
+# DECK
+# =========================
+def deck():
+    suits = ["♠️", "♥️", "♦️", "♣️"]
+    ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
+    cards = [r + s for r in ranks for s in suits]
+    random.shuffle(cards)
+    return cards
+
+# =========================
 # DATABASE
 # =========================
 def load():
@@ -68,14 +78,8 @@ def hand_value(hand):
     aces = 0
 
     for c in hand:
-        # Estrae il valore della carta ignorando il seme
-        if c.startswith("10"):
-            r = "10"
-        else:
-            r = c[0]
-
+        r = "10" if c.startswith("10") else c[0]
         total += values[r]
-
         if r == "A":
             aces += 1
 
@@ -89,7 +93,7 @@ def hand_value(hand):
 # COMMANDS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("START VERSIONE NUOVA")
+    await update.message.reply_text("🎰 CASINO BOT ONLINE")
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
@@ -107,7 +111,6 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # BLACKJACK
 # =========================
-#fix blackjack update
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
 
@@ -135,70 +138,64 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
     )
-   
 
 # =========================
-# CALLBACKS (FIXED)
+# CALLBACKS
 # =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        q = update.callback_query
-        await q.answer()
+    q = update.callback_query
+    await q.answer()
 
-        cid = str(q.message.chat.id)
+    cid = str(q.message.chat.id)
 
-        if cid not in games:
-            return await q.message.reply_text("❌ Nessun gioco attivo")
+    if cid not in games:
+        return await q.message.reply_text("❌ Nessun gioco attivo")
 
-        g = games[cid]
+    g = games[cid]
 
-        if g["type"] != "blackjack":
-            return
+    if g["type"] != "blackjack":
+        return
 
-        d = g["deck"]
-        p = g["player"]
-        dealer = g["dealer"]
+    d = g["deck"]
+    p = g["player"]
+    dealer = g["dealer"]
 
-        if q.data == "hit":
-            p.append(d.pop())
+    if q.data == "hit":
+        p.append(d.pop())
 
-            if hand_value(p) > 21:
-                games.pop(cid, None)
-                save_all()
-                return await q.message.reply_text(f"💥 Sballato!\n{p}")
-
-            save_all()
-
-            return await q.message.reply_text(
-                f"🃏 BLACKJACK\n\nTu: {p} ({hand_value(p)})"
-            )
-
-        if q.data == "stand":
-            while hand_value(dealer) < 17:
-                dealer.append(d.pop())
-
-            pv = hand_value(p)
-            dv = hand_value(dealer)
-
-            if dv > 21 or pv > dv:
-                result = "🎉 VINCI!"
-            elif pv == dv:
-                result = "🤝 PAREGGIO"
-            else:
-                result = "💀 PERDI"
-
+        if hand_value(p) > 21:
             games.pop(cid, None)
             save_all()
+            return await q.message.reply_text(f"💥 Sballato!\n{p}")
 
-            return await q.message.reply_text(
-                f"🃏 RISULTATO\n\n"
-                f"Tu: {p} ({pv})\n"
-                f"Dealer: {dealer} ({dv})\n\n"
-                f"{result}"
-            )
+        save_all()
+        return await q.message.reply_text(
+            f"🃏 BLACKJACK\n\nTu: {p} ({hand_value(p)})"
+        )
 
-    except Exception as e:
-        print("Callback error:", e)
+    if q.data == "stand":
+        while hand_value(dealer) < 17:
+            dealer.append(d.pop())
+
+        pv = hand_value(p)
+        dv = hand_value(dealer)
+
+        if dv > 21 or pv > dv:
+            result = "🎉 VINCI!"
+        elif pv == dv:
+            result = "🤝 PAREGGIO"
+        else:
+            result = "💀 PERDI"
+
+        games.pop(cid, None)
+        save_all()
+
+        return await q.message.reply_text(
+            f"🃏 RISULTATO\n\n"
+            f"Tu: {p} ({pv})\n"
+            f"Dealer: {dealer} ({dv})\n\n"
+            f"{result}"
+        )
 
 # =========================
 # MAIN
@@ -207,7 +204,7 @@ def main():
     print("🟢 CASINO BOT ONLINE")
 
     if not TOKEN:
-        raise ValueError("❌ BOT_TOKEN mancante nelle variabili ambiente")
+        raise ValueError("❌ BOT_TOKEN mancante")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -217,9 +214,7 @@ def main():
     app.add_handler(CommandHandler("blackjack", blackjack))
     app.add_handler(CallbackQueryHandler(cb))
 
-    # FIX IMPORTANTISSIMO
-    
-    app.bot.delete_webhook(drop_pending_updates=True)
+    # 🚀 FIX STABILE RAILWAY
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
