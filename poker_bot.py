@@ -106,32 +106,8 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # BLACKJACK
 # =========================
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cid = str(update.effective_chat.id)
-
-    d = deck()
-    player = [d.pop(), d.pop()]
-    dealer = [d.pop(), d.pop()]
-
-    games[cid] = {
-        "type": "blackjack",
-        "deck": d,
-        "player": player,
-        "dealer": dealer
-    }
-
-    save_all()
-
-    await update.message.reply_text(
-        f"🃏 BLACKJACK\n\n"
-        f"Tu: {player} ({hand_value(player)})\n"
-        f"Dealer: [{dealer[0]}, ?]",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("HIT", callback_data="hit"),
-                InlineKeyboardButton("STAND", callback_data="stand")
-            ]
-        ])
-    )
+    await update.message.reply_text("TEST BLACKJACK OK")
+   
 
 # =========================
 # CALLBACKS (FIXED)
