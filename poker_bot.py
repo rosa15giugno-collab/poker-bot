@@ -1,13 +1,8 @@
 import os
 import random
 import json
-import signal
-from datetime import datetime
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-
-signal.signal(signal.SIGTERM, lambda *args: exit(0))
 
 # =========================
 # CONFIG
@@ -32,8 +27,8 @@ def save(db):
         json.dump(db, f)
 
 db = load()
-users = db["users"]
-games = db["games"]
+users = db.get("users", {})
+games = db.get("games", {})
 
 def save_all():
     db["users"] = users
@@ -45,28 +40,35 @@ def save_all():
 # =========================
 def get_user(uid, name=None):
     uid = str(uid)
+
     if uid not in users:
         users[uid] = {
             "chips": 5000,
             "name": name or "Player"
         }
+        save_all()
+
     return users[uid]
 
 # =========================
 # CARDS
 # =========================
 def deck():
-    suits = ['♠️','♥️','♦️','♣️']
+    suits = ['♠️', '♥️', '♦️', '♣️']
     ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
-    cards = [r+s for r in ranks for s in suits]
+    cards = [r + s for r in ranks for s in suits]
     random.shuffle(cards)
     return cards
 
 # =========================
-# BLACKJACK
+# BLACKJACK LOGIC
 # =========================
 def hand_value(hand):
-    values = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10,'A':11}
+    values = {
+        '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
+        '10':10,'J':10,'Q':10,'K':10,'A':11
+    }
+
     total = 0
     aces = 0
 
@@ -97,13 +99,13 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
 
     msg = "🏆 CLASSIFICA\n\n"
-    for i,(uid,u) in enumerate(top,1):
+    for i, (uid, u) in enumerate(top, 1):
         msg += f"{i}. {u['name']} - {u['chips']}\n"
 
     await update.message.reply_text(msg)
 
 # =========================
-# BLACKJACK GAME
+# BLACKJACK
 # =========================
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
@@ -126,13 +128,15 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Tu: {player} ({hand_value(player)})\n"
         f"Dealer: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("HIT", callback_data="hit"),
-             InlineKeyboardButton("STAND", callback_data="stand")]
+            [
+                InlineKeyboardButton("HIT", callback_data="hit"),
+                InlineKeyboardButton("STAND", callback_data="stand")
+            ]
         ])
     )
 
 # =========================
-# CALLBACK
+# CALLBACKS
 # =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -141,7 +145,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(q.message.chat.id)
 
     if cid not in games:
-        return await q.edit_message_text("❌ Nessun gioco")
+        return await q.edit_message_text("❌ Nessun gioco attivo")
 
     g = games[cid]
 
@@ -156,7 +160,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         p.append(d.pop())
 
         if hand_value(p) > 21:
+            games.pop(cid, None)
+            save_all()
             return await q.edit_message_text(f"💥 Sballato!\n{p}")
+
+        save_all()
 
         return await q.edit_message_text(
             f"🃏 BLACKJACK\n\nTu: {p} ({hand_value(p)})"
@@ -176,6 +184,9 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             result = "💀 PERDI"
 
+        games.pop(cid, None)
+        save_all()
+
         return await q.edit_message_text(
             f"🃏 RISULTATO\n\n"
             f"Tu: {p} ({pv})\n"
@@ -190,8 +201,7 @@ def main():
     print("🟢 CASINO BOT ONLINE")
 
     if not TOKEN:
-        print("❌ BOT_TOKEN mancante")
-        return
+        raise ValueError("❌ BOT_TOKEN mancante nelle variabili ambiente")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
