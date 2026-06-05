@@ -2,7 +2,7 @@ import os
 import random
 import json
 
-print("VERSIONE 999")
+print("START SINGLE INSTANCE TEST")
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
