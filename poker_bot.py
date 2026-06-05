@@ -105,6 +105,7 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # BLACKJACK
 # =========================
+#fix blackjack update
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
 
