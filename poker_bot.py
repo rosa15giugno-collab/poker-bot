@@ -86,8 +86,7 @@ def hand_value(hand):
 # COMMANDS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    get_user(update.effective_user.id, update.effective_user.first_name)
-    await update.message.reply_text("🎰 Casino Bot ONLINE")
+    await update.message.reply_text("START VERSIONE NUOVA")
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
