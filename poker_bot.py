@@ -202,7 +202,8 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 def main():
     print("🟢 CASINO BOT ONLINE")
-
+    import os
+    print("PID:", os.getpid())
     if not TOKEN:
         raise ValueError("❌ BOT_TOKEN mancante")
 
