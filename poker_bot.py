@@ -60,9 +60,6 @@ def deck():
     random.shuffle(cards)
     return cards
 
-# =========================
-# BLACKJACK LOGIC
-# =========================
 def hand_value(hand):
     values = {
         '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
@@ -136,63 +133,67 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
-# CALLBACKS
+# CALLBACKS (FIXED)
 # =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    try:
+        q = update.callback_query
+        await q.answer()
 
-    cid = str(q.message.chat.id)
+        cid = str(q.message.chat.id)
 
-    if cid not in games:
-        return await q.edit_message_text("❌ Nessun gioco attivo")
+        if cid not in games:
+            return await q.message.reply_text("❌ Nessun gioco attivo")
 
-    g = games[cid]
+        g = games[cid]
 
-    if g["type"] != "blackjack":
-        return
+        if g["type"] != "blackjack":
+            return
 
-    d = g["deck"]
-    p = g["player"]
-    dealer = g["dealer"]
+        d = g["deck"]
+        p = g["player"]
+        dealer = g["dealer"]
 
-    if q.data == "hit":
-        p.append(d.pop())
+        if q.data == "hit":
+            p.append(d.pop())
 
-        if hand_value(p) > 21:
+            if hand_value(p) > 21:
+                games.pop(cid, None)
+                save_all()
+                return await q.message.reply_text(f"💥 Sballato!\n{p}")
+
+            save_all()
+
+            return await q.message.reply_text(
+                f"🃏 BLACKJACK\n\nTu: {p} ({hand_value(p)})"
+            )
+
+        if q.data == "stand":
+            while hand_value(dealer) < 17:
+                dealer.append(d.pop())
+
+            pv = hand_value(p)
+            dv = hand_value(dealer)
+
+            if dv > 21 or pv > dv:
+                result = "🎉 VINCI!"
+            elif pv == dv:
+                result = "🤝 PAREGGIO"
+            else:
+                result = "💀 PERDI"
+
             games.pop(cid, None)
             save_all()
-            return await q.edit_message_text(f"💥 Sballato!\n{p}")
 
-        save_all()
+            return await q.message.reply_text(
+                f"🃏 RISULTATO\n\n"
+                f"Tu: {p} ({pv})\n"
+                f"Dealer: {dealer} ({dv})\n\n"
+                f"{result}"
+            )
 
-        return await q.edit_message_text(
-            f"🃏 BLACKJACK\n\nTu: {p} ({hand_value(p)})"
-        )
-
-    if q.data == "stand":
-        while hand_value(dealer) < 17:
-            dealer.append(d.pop())
-
-        pv = hand_value(p)
-        dv = hand_value(dealer)
-
-        if dv > 21 or pv > dv:
-            result = "🎉 VINCI!"
-        elif pv == dv:
-            result = "🤝 PAREGGIO"
-        else:
-            result = "💀 PERDI"
-
-        games.pop(cid, None)
-        save_all()
-
-        return await q.edit_message_text(
-            f"🃏 RISULTATO\n\n"
-            f"Tu: {p} ({pv})\n"
-            f"Dealer: {dealer} ({dv})\n\n"
-            f"{result}"
-        )
+    except Exception as e:
+        print("Callback error:", e)
 
 # =========================
 # MAIN
@@ -213,5 +214,5 @@ def main():
 
     app.run_polling()
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
