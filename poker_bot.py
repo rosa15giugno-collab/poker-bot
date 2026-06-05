@@ -217,7 +217,10 @@ def main():
     app.add_handler(CommandHandler("blackjack", blackjack))
     app.add_handler(CallbackQueryHandler(cb))
 
-    app.run_polling()
+    # FIX IMPORTANTISSIMO
+    
+    app.bot.delete_webhook(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
