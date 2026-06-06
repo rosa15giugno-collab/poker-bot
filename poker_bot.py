@@ -2,7 +2,7 @@ import os
 import random
 import json
 
-print("TEST VERSIONE NUOVA123")
+print("TOKEN =", TOKEN)
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
