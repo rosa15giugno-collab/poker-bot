@@ -18,7 +18,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 DATA_FILE = "casino.json"
 
 print("🟢 CASINO BOT STARTING")
-print("TOKEN FINALE:", TOKEN[-10:])
+print("TOKEN FINALE:", TOKEN)
 
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
