@@ -17,14 +17,14 @@ from telegram.ext import (
 TOKEN = os.getenv("CASINO_TOKEN")
 DATA_FILE = "casino.json"
 
-print("🟢 CASINO BOT STARTING")
+print("🟢 CASINO PRO BOT STARTING")
 print("TOKEN:", "OK" if TOKEN else "MISSING")
 
 if not TOKEN:
-    raise ValueError("❌ CASINO_TOKEN mancante")
+    raise ValueError("CASINO_TOKEN mancante")
 
 # =========================
-# DATABASE
+# DB
 # =========================
 def load():
     if not os.path.exists(DATA_FILE):
@@ -40,13 +40,54 @@ def save(db):
         json.dump(db, f)
 
 db = load()
-users = db.get("users", {})
-games = db.get("games", {})
+users = db["users"]
+games = db["games"]
 
 def save_all():
     db["users"] = users
     db["games"] = games
     save(db)
+
+# =========================
+# EVENT SYSTEM (🔥 PRO)
+# =========================
+ACTIVE_EVENT = None
+EVENT_END = 0
+
+def trigger_event():
+    global ACTIVE_EVENT, EVENT_END
+
+    roll = random.randint(1, 100)
+
+    if roll < 70:
+        ACTIVE_EVENT = None
+        return None
+
+    if roll < 80:
+        ACTIVE_EVENT = ("💣 BLACKOUT", 0)   # niente vincite
+        EVENT_END = time.time() + 60
+
+    elif roll < 90:
+        ACTIVE_EVENT = ("⚡ DOUBLE CHIPS", 2)
+        EVENT_END = time.time() + 90
+
+    else:
+        ACTIVE_EVENT = ("🍀 LUCKY HOUR", 3)
+        EVENT_END = time.time() + 60
+
+    print("EVENT STARTED:", ACTIVE_EVENT)
+    return ACTIVE_EVENT
+
+def get_multiplier():
+    global ACTIVE_EVENT, EVENT_END
+
+    if ACTIVE_EVENT and time.time() > EVENT_END:
+        ACTIVE_EVENT = None
+
+    if not ACTIVE_EVENT:
+        return 1
+
+    return ACTIVE_EVENT[1]
 
 # =========================
 # USER SYSTEM
@@ -65,50 +106,19 @@ def get_user(uid, name="Player"):
     return users[uid]
 
 # =========================
-# CARDS
-# =========================
-def deck():
-    suits = ["♠️", "♥️", "♦️", "♣️"]
-    ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
-    cards = [r + s for r in ranks for s in suits]
-    random.shuffle(cards)
-    return cards
-
-def hand_value(hand):
-    values = {
-        "2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,
-        "10":10,"J":10,"Q":10,"K":10,"A":11
-    }
-
-    total = 0
-    aces = 0
-
-    for c in hand:
-        r = "10" if c.startswith("10") else c[0]
-        total += values[r]
-        if r == "A":
-            aces += 1
-
-    while total > 21 and aces:
-        total -= 10
-        aces -= 1
-
-    return total
-
-# =========================
 # START
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
-    await update.message.reply_text(
-        "🎰 CASINO BOT ONLINE\n\n"
-        "Comandi:\n"
-        "/blackjack\n"
-        "/slot\n"
-        "/saldo\n"
-        "/daily\n"
-        "/classifica"
-    )
+
+    msg = "🎰 CASINO PRO BOT ONLINE\n\n"
+
+    if ACTIVE_EVENT:
+        msg += f"🔥 EVENTO ATTIVO: {ACTIVE_EVENT[0]}\n\n"
+
+    msg += "Comandi:\n/start\n/saldo\n/daily\n/slot\n/blackjack"
+
+    await update.message.reply_text(msg)
 
 # =========================
 # SALDO
@@ -118,35 +128,23 @@ async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
 # =========================
-# CLASSIFICA
-# =========================
-async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
-
-    msg = "🏆 CLASSIFICA\n\n"
-    for i, (uid, u) in enumerate(top, 1):
-        msg += f"{i}. {u['name']} — {u['chips']}\n"
-
-    await update.message.reply_text(msg)
-
-# =========================
-# DAILY REWARD
+# DAILY
 # =========================
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
 
     now = int(time.time())
-
     if now - u["last_daily"] < 86400:
-        return await update.message.reply_text("⏳ Hai già preso il daily oggi!")
+        return await update.message.reply_text("⏳ Hai già preso il daily")
 
     reward = random.randint(500, 1500)
+    reward *= get_multiplier()
+
     u["chips"] += reward
     u["last_daily"] = now
-
     save_all()
 
-    await update.message.reply_text(f"🎁 Daily reward: +{reward} chips!")
+    await update.message.reply_text(f"🎁 Daily: +{reward} chips")
 
 # =========================
 # SLOT
@@ -155,7 +153,7 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
 
     if u["chips"] < 100:
-        return await update.message.reply_text("❌ Non hai abbastanza chips")
+        return await update.message.reply_text("❌ Non hai chips")
 
     u["chips"] -= 100
 
@@ -163,36 +161,66 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = [random.choice(symbols) for _ in range(3)]
 
     win = 0
-    if result[0] == result[1] == result[2]:
-        win = 2000
-    elif len(set(result)) == 2:
-        win = 500
+
+    if ACTIVE_EVENT and ACTIVE_EVENT[0] == "💣 BLACKOUT":
+        win = 0
+    else:
+        if result[0] == result[1] == result[2]:
+            win = 2000
+        elif len(set(result)) == 2:
+            win = 500
+
+        win *= get_multiplier()
 
     u["chips"] += win
     save_all()
 
-    await update.message.reply_text(
-        f"🎰 SLOT\n\n"
-        f"{result[0]} | {result[1]} | {result[2]}\n\n"
-        f"{'🎉 +' + str(win) if win else '💀 Perso'}"
-    )
+    msg = f"🎰 SLOT\n\n{result[0]} | {result[1]} | {result[2]}\n\n"
+
+    if ACTIVE_EVENT:
+        msg += f"🔥 EVENTO: {ACTIVE_EVENT[0]}\n\n"
+
+    msg += "🎉 VINTO +" + str(win) if win else "💀 PERSO"
+
+    await update.message.reply_text(msg)
 
 # =========================
-# BLACKJACK
+# BLACKJACK (base)
 # =========================
+def deck():
+    suits = ["♠️", "♥️", "♦️", "♣️"]
+    ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
+    cards = [r + s for r in ranks for s in suits]
+    random.shuffle(cards)
+    return cards
+
+def value(hand):
+    vals = {"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,
+            "10":10,"J":10,"Q":10,"K":10,"A":11}
+
+    total = 0
+    aces = 0
+
+    for c in hand:
+        r = "10" if c.startswith("10") else c[0]
+        total += vals[r]
+        if r == "A":
+            aces += 1
+
+    while total > 21 and aces:
+        total -= 10
+        aces -= 1
+
+    return total
+
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
 
     d = deck()
-    player = [d.pop(), d.pop()]
+    p = [d.pop(), d.pop()]
     dealer = [d.pop(), d.pop()]
 
-    games[cid] = {
-        "deck": d,
-        "player": player,
-        "dealer": dealer
-    }
-
+    games[cid] = {"deck": d, "p": p, "d": dealer}
     save_all()
 
     keyboard = [[
@@ -201,15 +229,10 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
 
     await update.message.reply_text(
-        f"🃏 BLACKJACK\n\n"
-        f"Tu: {player} ({hand_value(player)})\n"
-        f"Dealer: [{dealer[0]}, ?]",
+        f"🃏 BLACKJACK\n\nTu: {p} ({value(p)})\nDealer: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# =========================
-# CALLBACK
-# =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
@@ -217,32 +240,29 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(q.message.chat.id)
 
     if cid not in games:
-        return await q.message.reply_text("❌ Nessun gioco attivo")
+        return await q.message.reply_text("❌ Nessuna partita")
 
     g = games[cid]
     d = g["deck"]
-    p = g["player"]
-    dealer = g["dealer"]
+    p = g["p"]
+    dealer = g["d"]
 
     if q.data == "hit":
         p.append(d.pop())
 
-        if hand_value(p) > 21:
-            games.pop(cid, None)
+        if value(p) > 21:
+            games.pop(cid)
             save_all()
-            return await q.message.reply_text(f"💥 Sballato!\n{p}")
+            return await q.message.reply_text("💥 Sballato!")
 
-        save_all()
-        return await q.message.reply_text(
-            f"🃏 Tu: {p} ({hand_value(p)})"
-        )
+        return await q.message.reply_text(f"🃏 Tu: {p} ({value(p)})")
 
     if q.data == "stand":
-        while hand_value(dealer) < 17:
+        while value(dealer) < 17:
             dealer.append(d.pop())
 
-        pv = hand_value(p)
-        dv = hand_value(dealer)
+        pv = value(p)
+        dv = value(dealer)
 
         if dv > 21 or pv > dv:
             result = "🎉 VINCI"
@@ -251,15 +271,19 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             result = "💀 PERDI"
 
-        games.pop(cid, None)
+        games.pop(cid)
         save_all()
 
         return await q.message.reply_text(
-            f"🃏 RISULTATO\n\n"
-            f"Tu: {p} ({pv})\n"
-            f"Dealer: {dealer} ({dv})\n\n"
-            f"{result}"
+            f"🃏 RISULTATO\n\nTu: {p} ({pv})\nDealer: {dealer} ({dv})\n\n{result}"
         )
+
+# =========================
+# EVENT LOOP (🔥 IMPORTANT)
+# =========================
+def maybe_event():
+    if random.randint(1, 5) == 1:
+        trigger_event()
 
 # =========================
 # MAIN
@@ -269,16 +293,14 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
-    app.add_handler(CommandHandler("classifica", classifica))
-    app.add_handler(CommandHandler("blackjack", blackjack))
-    app.add_handler(CommandHandler("slot", slot))
     app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CommandHandler("slot", slot))
+    app.add_handler(CommandHandler("blackjack", blackjack))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO PRO BOT ONLINE")
+    print("🟢 CASINO PRO ONLINE")
 
     app.run_polling(drop_pending_updates=True)
-
 
 if __name__ == "__main__":
     main()
