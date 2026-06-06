@@ -23,7 +23,6 @@ print("TOKEN:", "OK" if TOKEN else "MISSING")
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
-
 # =========================
 # DATABASE
 # =========================
@@ -36,22 +35,18 @@ def load():
     except:
         return {"users": {}, "games": {}}
 
-
 def save(db):
     with open(DATA_FILE, "w") as f:
         json.dump(db, f)
-
 
 db = load()
 users = db.get("users", {})
 games = db.get("games", {})
 
-
 def save_all():
     db["users"] = users
     db["games"] = games
     save(db)
-
 
 # =========================
 # USER SYSTEM
@@ -69,7 +64,6 @@ def get_user(uid, name="Player"):
 
     return users[uid]
 
-
 # =========================
 # CARDS
 # =========================
@@ -79,7 +73,6 @@ def deck():
     cards = [r + s for r in ranks for s in suits]
     random.shuffle(cards)
     return cards
-
 
 def hand_value(hand):
     values = {
@@ -102,9 +95,8 @@ def hand_value(hand):
 
     return total
 
-
 # =========================
-# COMMANDS
+# START
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
@@ -114,15 +106,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/blackjack\n"
         "/slot\n"
         "/saldo\n"
-        "/daily"
+        "/daily\n"
+        "/classifica"
     )
 
-
+# =========================
+# SALDO
+# =========================
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
-
+# =========================
+# CLASSIFICA
+# =========================
 async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
 
@@ -132,6 +129,24 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg)
 
+# =========================
+# DAILY REWARD
+# =========================
+async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    u = get_user(update.effective_user.id, update.effective_user.first_name)
+
+    now = int(time.time())
+
+    if now - u["last_daily"] < 86400:
+        return await update.message.reply_text("⏳ Hai già preso il daily oggi!")
+
+    reward = random.randint(500, 1500)
+    u["chips"] += reward
+    u["last_daily"] = now
+
+    save_all()
+
+    await update.message.reply_text(f"🎁 Daily reward: +{reward} chips!")
 
 # =========================
 # SLOT
@@ -162,7 +177,6 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{'🎉 +' + str(win) if win else '💀 Perso'}"
     )
 
-
 # =========================
 # BLACKJACK
 # =========================
@@ -192,7 +206,6 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Dealer: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
 
 # =========================
 # CALLBACK
@@ -248,7 +261,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{result}"
         )
 
-
 # =========================
 # MAIN
 # =========================
@@ -265,7 +277,6 @@ def main():
 
     print("🟢 CASINO PRO BOT ONLINE")
 
-    # 🔥 IMPORTANTISSIMO: evita problemi aggiornamenti vecchi
     app.run_polling(drop_pending_updates=True)
 
 
