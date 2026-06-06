@@ -340,6 +340,7 @@ def main():
     app.add_handler(CallbackQueryHandler(cb))
 
     print("🟢 CASINO PRO BOT ONLINE")
+    app.bot.delete_webhook(drop_pending_updates=True)
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
