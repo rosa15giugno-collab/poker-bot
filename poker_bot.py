@@ -270,11 +270,11 @@ def main():
     print("🟢 CASINO BOT WEBHOOK ONLINE")
 
     app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
-    )
+    listen="0.0.0.0",
+    port=PORT,
+    url_path="webhook",
+    webhook_url=f"{WEBHOOK_URL}/webhook"
+)
 
 if __name__ == "__main__":
     main()
