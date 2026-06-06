@@ -3,9 +3,6 @@ import random
 import json
 import time
 
-import requests
-
-requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset=-1")
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
