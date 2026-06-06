@@ -16,7 +16,7 @@ from telegram.ext import (
 # =========================
 TOKEN = os.getenv("CASINO_TOKEN")
 
-print("🟢 CASINO BOT STARTING")
+print("TOKEN:", TOKEN[:10], "...", TOKEN[-10:])
 
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
