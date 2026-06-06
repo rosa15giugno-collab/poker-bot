@@ -10,7 +10,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 # =========================
 # CONFIG
 # =========================
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("CASINO_TOKEN")
 DATA_FILE = "casino.json"
 
 # =========================
@@ -205,7 +205,7 @@ def main():
     import os
     print("PID:", os.getpid())
     if not TOKEN:
-        raise ValueError("❌ BOT_TOKEN mancante")
+        raise ValueError("❌ CASINO_TOKEN mancante")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
