@@ -1,7 +1,7 @@
 import os
 import random
 import json
-
+TOKEN = os.getenv("CASINO_TOKEN")
 print("TOKEN =", TOKEN)
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
