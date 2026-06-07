@@ -20,7 +20,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
-print("🟢 CASINO PRO FINAL ONLINE")
+print("🟢 CASINO PRO FINAL ONLINE PID=", os.getpid())
 
 DATA_FILE = "casino.json"
 
