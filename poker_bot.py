@@ -268,7 +268,7 @@ def main():
 
     print("🟢 CASINO PRO BOT ONLINE")
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True, stop_signal=NONE))
 
 if __name__ == "__main__":
     main()
