@@ -1,32 +1,33 @@
 import os
+import json
+import random
+import time
 
-PORT = int(os.environ.get("PORT", 8080))
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
 
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("saldo", saldo))
-    app.add_handler(CommandHandler("classifica", classifica))
-    app.add_handler(CommandHandler("blackjack", blackjack))
-    app.add_handler(CommandHandler("slot", slot))
-    app.add_handler(CommandHandler("daily", daily))
-    app.add_handler(CallbackQueryHandler(cb))
-
-    print("🟢 CASINO PRO BOT ONLINE (WEBHOOK MODE)")
-
-    webhook_url = os.getenv("WEBHOOK_URL")
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=webhook_url + "/" + TOKEN,
-        drop_pending_updates=True
-    )
 # =========================
-# SAFE DB
+# CONFIG
 # =========================
+
+TOKEN = os.getenv("CASINO_TOKEN")
+DATA_FILE = "casino.json"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+
+if not TOKEN:
+    raise ValueError("❌ CASINO_TOKEN mancante")
+
+print("🟢 TOKEN OK")
+
+# =========================
+# DATABASE
+# =========================
+
 def load():
     if not os.path.exists(DATA_FILE):
         return {"users": {}, "games": {}}
@@ -52,6 +53,7 @@ def save_all():
 # =========================
 # USER SYSTEM
 # =========================
+
 def get_user(uid, name="Player"):
     uid = str(uid)
 
@@ -59,9 +61,7 @@ def get_user(uid, name="Player"):
         users[uid] = {
             "chips": 5000,
             "name": name,
-            "last_daily": 0,
-            "bj_win": 0,
-            "bj_lose": 0
+            "last_daily": 0
         }
         save_all()
 
@@ -70,6 +70,7 @@ def get_user(uid, name="Player"):
 # =========================
 # CARDS
 # =========================
+
 def deck():
     suits = ["♠️", "♥️", "♦️", "♣️"]
     ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
@@ -99,11 +100,11 @@ def hand_value(hand):
     return total
 
 # =========================
-# START
+# COMMANDS
 # =========================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
-
     await update.message.reply_text(
         "🎰 CASINO BOT ONLINE\n\n"
         "/blackjack\n"
@@ -113,16 +114,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/classifica"
     )
 
-# =========================
-# SALDO
-# =========================
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
-# =========================
-# CLASSIFICA
-# =========================
 async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
 
@@ -132,17 +127,13 @@ async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg)
 
-# =========================
-# DAILY
-# =========================
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
 
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        await update.message.reply_text("⏳ Daily già preso")
-        return
+        return await update.message.reply_text("⏳ Hai già preso il daily!")
 
     reward = random.randint(500, 1500)
     u["chips"] += reward
@@ -152,63 +143,39 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"🎁 +{reward} chips!")
 
-# =========================
-# SLOT (MIGLIORATO)
-# =========================
 async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
 
     if u["chips"] < 100:
-        await update.message.reply_text("❌ Non hai chips")
-        return
+        return await update.message.reply_text("❌ Non hai chips")
 
     u["chips"] -= 100
 
     symbols = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
-
     result = [random.choice(symbols) for _ in range(3)]
 
     win = 0
-
     if result[0] == result[1] == result[2]:
-        win = 2500
+        win = 2000
     elif len(set(result)) == 2:
-        win = 600
+        win = 500
 
     u["chips"] += win
     save_all()
 
     await update.message.reply_text(
-        f"🎰 SLOT\n"
-        f"{result[0]} | {result[1]} | {result[2]}\n\n"
+        f"{result[0]} | {result[1]} | {result[2]}\n"
         f"{'WIN +' + str(win) if win else 'LOSE'}"
     )
 
-# =========================
-# BLACKJACK START
-# =========================
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
-    uid = str(update.effective_user.id)
-
-    u = get_user(uid, update.effective_user.first_name)
-
-    if u["chips"] < 100:
-        await update.message.reply_text("❌ Non hai chips")
-        return
 
     d = deck()
     player = [d.pop(), d.pop()]
     dealer = [d.pop(), d.pop()]
 
-    games[cid] = {
-        "deck": d,
-        "player": player,
-        "dealer": dealer,
-        "uid": uid,
-        "bet": 100
-    }
-
+    games[cid] = {"deck": d, "player": player, "dealer": dealer}
     save_all()
 
     keyboard = [[
@@ -217,15 +184,11 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
 
     await update.message.reply_text(
-        f"🃏 BLACKJACK\n\n"
-        f"Tu: {player} ({hand_value(player)})\n"
+        f"🃏 TU: {player} ({hand_value(player)})\n"
         f"Dealer: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# =========================
-# CALLBACK FIXED
-# =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
@@ -233,33 +196,23 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(q.message.chat.id)
 
     if cid not in games:
-        await q.message.reply_text("❌ Nessun gioco attivo")
-        return
+        return await q.message.reply_text("❌ Nessun gioco attivo")
 
     g = games[cid]
     d = g["deck"]
     p = g["player"]
     dealer = g["dealer"]
-    uid = g["uid"]
-    bet = g["bet"]
-
-    u = users[uid]
 
     if q.data == "hit":
         p.append(d.pop())
 
         if hand_value(p) > 21:
-            u["chips"] -= bet
-            u["bj_lose"] += 1
             games.pop(cid, None)
             save_all()
-
-            await q.message.reply_text(f"💥 Sballato {p}")
-            return
+            return await q.message.reply_text(f"💥 Sballato {p}")
 
         save_all()
-        await q.message.reply_text(f"🃏 {p} ({hand_value(p)})")
-        return
+        return await q.message.reply_text(f"🃏 {p} ({hand_value(p)})")
 
     if q.data == "stand":
         while hand_value(dealer) < 17:
@@ -270,28 +223,26 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if pv > 21 or dv > pv:
             res = "PERDI"
-            u["chips"] -= bet
-            u["bj_lose"] += 1
         elif pv == dv:
             res = "PAREGGIO"
         else:
             res = "VINCI"
-            u["chips"] += bet
-            u["bj_win"] += 1
 
         games.pop(cid, None)
         save_all()
 
-        await q.message.reply_text(
+        return await q.message.reply_text(
             f"TU: {p} ({pv})\n"
             f"DEALER: {dealer} ({dv})\n\n"
             f"{res}"
         )
-        return
 
 # =========================
-# MAIN
+# MAIN (WEBHOOK MODE)
 # =========================
+
+PORT = int(os.environ.get("PORT", 8080))
+
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -303,9 +254,15 @@ def main():
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO PRO BOT ONLINE")
+    print("🟢 CASINO PRO BOT ONLINE (WEBHOOK MODE)")
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=WEBHOOK_URL + "/" + TOKEN,
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
     main()
