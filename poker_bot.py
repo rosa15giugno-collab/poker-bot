@@ -264,9 +264,9 @@ def main():
     print("🌐 WEBHOOK ATTIVO:", full_webhook)
 
     app.run_webhook(
-    listen="0.0.0.0",
-    port=PORT,
-    url_path="/",
-    webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
-    drop_pending_updates=True
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+    webhook_url=f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}",
+        drop_pending_updates=True
 )
