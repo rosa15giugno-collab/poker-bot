@@ -349,9 +349,12 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # MAIN
 # =========================
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder()\
+        .token(TOKEN)\
+        .build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
@@ -367,7 +370,9 @@ def main():
 
     print("🟢 CASINO PRO FINAL ONLINE")
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
     main()
