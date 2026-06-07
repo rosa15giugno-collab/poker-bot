@@ -266,7 +266,7 @@ def main():
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        url_path="/",
-        webhook_url=WEBHOOK_URL,
+        url_path=TOKEN,
+    webhook_url=f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}",
         drop_pending_updates=True
 )
