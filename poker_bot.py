@@ -16,13 +16,13 @@ from telegram.ext import (
 # =========================
 
 TOKEN = os.getenv("CASINO_TOKEN")
-DATA_FILE = "casino.json"
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
 print("🟢 TOKEN OK")
+
+DATA_FILE = "casino.json"
 
 # =========================
 # DATABASE
@@ -238,10 +238,8 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # =========================
-# MAIN (WEBHOOK MODE)
+# MAIN (POLLING MODE - RAILWAY SAFE)
 # =========================
-
-PORT = int(os.environ.get("PORT", 8080))
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
@@ -254,19 +252,9 @@ def main():
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO PRO BOT ONLINE (WEBHOOK MODE)")
+    print("🟢 CASINO PRO BOT ONLINE (POLLING MODE)")
 
-    if not WEBHOOK_URL:
-        raise ValueError("❌ WEBHOOK_URL mancante su Railway")
+    app.run_polling(drop_pending_updates=True)
 
-    full_webhook = f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}"
-
-    print("🌐 WEBHOOK ATTIVO:", full_webhook)
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-    webhook_url=f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}",
-        drop_pending_updates=True
-)
+if __name__ == "__main__":
+    main()
