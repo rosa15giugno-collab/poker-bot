@@ -24,7 +24,7 @@ print("🟢 TOKEN OK")
 DATA_FILE = "casino.json"
 
 # =========================
-# DATABASE
+# SAFE DB
 # =========================
 def load():
     if not os.path.exists(DATA_FILE):
@@ -58,7 +58,9 @@ def get_user(uid, name="Player"):
         users[uid] = {
             "chips": 5000,
             "name": name,
-            "last_daily": 0
+            "last_daily": 0,
+            "bj_win": 0,
+            "bj_lose": 0
         }
         save_all()
 
@@ -138,7 +140,7 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        await update.message.reply_text("⏳ Hai già preso il daily!")
+        await update.message.reply_text("⏳ Daily già preso")
         return
 
     reward = random.randint(500, 1500)
@@ -150,7 +152,7 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🎁 +{reward} chips!")
 
 # =========================
-# SLOT
+# SLOT (MIGLIORATO)
 # =========================
 async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
@@ -162,26 +164,33 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u["chips"] -= 100
 
     symbols = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
+
     result = [random.choice(symbols) for _ in range(3)]
 
     win = 0
+
     if result[0] == result[1] == result[2]:
-        win = 2000
+        win = 2500
+    elif len(set(result)) == 2:
+        win = 600
 
     u["chips"] += win
     save_all()
 
     await update.message.reply_text(
-        f"{result[0]} | {result[1]} | {result[2]}\n"
+        f"🎰 SLOT\n"
+        f"{result[0]} | {result[1]} | {result[2]}\n\n"
         f"{'WIN +' + str(win) if win else 'LOSE'}"
     )
 
 # =========================
-# BLACKJACK
+# BLACKJACK START
 # =========================
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
-    u = get_user(update.effective_user.id, update.effective_user.first_name)
+    uid = str(update.effective_user.id)
+
+    u = get_user(uid, update.effective_user.first_name)
 
     if u["chips"] < 100:
         await update.message.reply_text("❌ Non hai chips")
@@ -195,7 +204,8 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "deck": d,
         "player": player,
         "dealer": dealer,
-        "uid": str(update.effective_user.id)
+        "uid": uid,
+        "bet": 100
     }
 
     save_all()
@@ -206,13 +216,14 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
 
     await update.message.reply_text(
-        f"🃏 TU: {player} ({hand_value(player)})\n"
+        f"🃏 BLACKJACK\n\n"
+        f"Tu: {player} ({hand_value(player)})\n"
         f"Dealer: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 # =========================
-# CALLBACK (FIXED)
+# CALLBACK FIXED
 # =========================
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -229,6 +240,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p = g["player"]
     dealer = g["dealer"]
     uid = g["uid"]
+    bet = g["bet"]
 
     u = users[uid]
 
@@ -236,9 +248,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         p.append(d.pop())
 
         if hand_value(p) > 21:
-            u["chips"] -= 100
+            u["chips"] -= bet
+            u["bj_lose"] += 1
             games.pop(cid, None)
             save_all()
+
             await q.message.reply_text(f"💥 Sballato {p}")
             return
 
@@ -255,10 +269,14 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if pv > 21 or dv > pv:
             res = "PERDI"
+            u["chips"] -= bet
+            u["bj_lose"] += 1
         elif pv == dv:
             res = "PAREGGIO"
         else:
             res = "VINCI"
+            u["chips"] += bet
+            u["bj_win"] += 1
 
         games.pop(cid, None)
         save_all()
@@ -286,7 +304,7 @@ def main():
 
     print("🟢 CASINO PRO BOT ONLINE")
 
-    app.run_polling(drop_pending_updates=True, stop_signals=None)
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
