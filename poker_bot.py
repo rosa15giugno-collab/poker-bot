@@ -16,7 +16,6 @@ from telegram.ext import (
 # =========================
 TOKEN = os.getenv("CASINO_TOKEN")
 
-print("TOKEN:", TOKEN[:10], "...", TOKEN[-10:])
 
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
@@ -268,7 +267,10 @@ def main():
 
     print("🟢 CASINO PRO BOT ONLINE")
 
-    app.run_polling(drop_pending_updates=True, stop_signal=NONE))
+    app.run_polling(
+        drop_pending_updates=True, 
+        stop_signals=None
+    )
 
 if __name__ == "__main__":
     main()
