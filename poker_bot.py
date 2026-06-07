@@ -256,13 +256,17 @@ def main():
 
     print("🟢 CASINO PRO BOT ONLINE (WEBHOOK MODE)")
 
+    if not WEBHOOK_URL:
+        raise ValueError("❌ WEBHOOK_URL mancante su Railway")
+
+    full_webhook = f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}"
+
+    print("🌐 WEBHOOK ATTIVO:", full_webhook)
+
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
         url_path=TOKEN,
-        webhook_url=WEBHOOK_URL + "/" + TOKEN,
+        webhook_url=full_webhook,
         drop_pending_updates=True
     )
-
-if __name__ == "__main__":
-    main()
