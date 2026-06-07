@@ -1,28 +1,29 @@
 import os
-import json
-import random
-import time
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes
-)
+PORT = int(os.environ.get("PORT", 8080))
 
-# =========================
-# CONFIG
-# =========================
-TOKEN = os.getenv("CASINO_TOKEN")
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-if not TOKEN:
-    raise ValueError("❌ CASINO_TOKEN mancante")
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("saldo", saldo))
+    app.add_handler(CommandHandler("classifica", classifica))
+    app.add_handler(CommandHandler("blackjack", blackjack))
+    app.add_handler(CommandHandler("slot", slot))
+    app.add_handler(CommandHandler("daily", daily))
+    app.add_handler(CallbackQueryHandler(cb))
 
-print("🟢 TOKEN OK")
+    print("🟢 CASINO PRO BOT ONLINE (WEBHOOK MODE)")
 
-DATA_FILE = "casino.json"
+    webhook_url = os.getenv("WEBHOOK_URL")
 
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=webhook_url + "/" + TOKEN,
+        drop_pending_updates=True
+    )
 # =========================
 # SAFE DB
 # =========================
