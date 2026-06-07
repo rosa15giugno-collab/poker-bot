@@ -2,6 +2,7 @@ import os
 import json
 import random
 import time
+import tempfile
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -20,12 +21,12 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
-print("🟢 CASINO PRO FINAL ONLINE PID=", os.getpid())
-
 DATA_FILE = "casino.json"
 
+print("🟢 CASINO BOT ONLINE PID =", os.getpid())
+
 # =========================
-# DATABASE
+# SAFE DB
 # =========================
 
 def load():
@@ -38,12 +39,14 @@ def load():
         return {"users": {}, "games": {}}
 
 def save(db):
-    with open(DATA_FILE, "w") as f:
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(db, f)
+    os.replace(tmp, DATA_FILE)
 
 db = load()
-users = db.get("users", {})
-games = db.get("games", {})
+users = db["users"]
+games = db["games"]
 
 def save_all():
     db["users"] = users
@@ -51,7 +54,7 @@ def save_all():
     save(db)
 
 # =========================
-# USERS SYSTEM
+# USER
 # =========================
 
 def get_user(uid, name="Player"):
@@ -61,14 +64,17 @@ def get_user(uid, name="Player"):
         users[uid] = {
             "chips": 5000,
             "name": name,
-            "last_daily": 0
+            "last_daily": 0,
+            "wins": 0,
+            "losses": 0,
+            "best_win": 0
         }
         save_all()
 
     return users[uid]
 
 # =========================
-# CARDS ENGINE
+# CARDS
 # =========================
 
 def deck():
@@ -100,65 +106,51 @@ def hand_value(hand):
     return total
 
 # =========================
-# GAME STORAGE
+# GAME STATE
 # =========================
 
 def table(cid):
     cid = str(cid)
 
     if cid not in games:
-        games[cid] = {
-            "blackjack": None,
-            "texas": None
-        }
+        games[cid] = {"blackjack": {}}
 
-    if games[cid]["blackjack"] is None:
+    if "blackjack" not in games[cid]:
         games[cid]["blackjack"] = {}
-
-    if games[cid]["texas"] is None:
-        games[cid]["texas"] = {
-            "players": {},
-            "deck": [],
-            "board": [],
-            "started": False,
-            "pot": 0,
-            "stage": "WAITING",
-            "turn": []
-        }
 
     return games[cid]
 
 # =========================
-# BASIC COMMANDS
+# MENU
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
 
+    keyboard = [
+        [InlineKeyboardButton("🎰 SLOT", callback_data="menu_slot")],
+        [InlineKeyboardButton("🃏 BLACKJACK", callback_data="menu_bj")],
+        [InlineKeyboardButton("💰 SALDO", callback_data="menu_saldo")],
+        [InlineKeyboardButton("🎁 DAILY", callback_data="menu_daily")],
+        [InlineKeyboardButton("🏆 CLASSIFICA", callback_data="menu_top")]
+    ]
+
     await update.message.reply_text(
-        "🎰 CASINO PRO FINAL\n\n"
-        "/saldo\n"
-        "/daily\n"
-        "/slot\n"
-        "/blackjack\n"
-        "/texas_join\n"
-        "/texas_start\n"
-        "/texas_board\n"
-        "/classifica"
+        "🎰 CASINO PRO ULTIMATE\nScegli un gioco:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+# =========================
+# SALDO
+# =========================
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
-async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
-
-    msg = "🏆 CLASSIFICA\n\n"
-    for i, (_, u) in enumerate(top, 1):
-        msg += f"{i}. {u['name']} — {u['chips']}\n"
-
-    await update.message.reply_text(msg)
+# =========================
+# DAILY
+# =========================
 
 async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
@@ -166,58 +158,93 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        return await update.message.reply_text("⏳ Daily già preso")
+        return await update.message.reply_text("⏳ Hai già preso il daily")
 
-    reward = random.randint(500, 1500)
+    reward = random.randint(500, 2000)
     u["chips"] += reward
     u["last_daily"] = now
 
     save_all()
-
-    await update.message.reply_text(f"🎁 +{reward} chips")
+    await update.message.reply_text(f"🎁 Daily +{reward}")
 
 # =========================
-# SLOT MACHINE
+# SLOT (BET)
 # =========================
 
 async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id, update.effective_user.first_name)
 
-    if u["chips"] < 100:
-        return await update.message.reply_text("❌ Non hai chips")
+    bet = 100
+    if context.args:
+        try:
+            bet = int(context.args[0])
+        except:
+            bet = 100
 
-    u["chips"] -= 100
+    if bet <= 0 or u["chips"] < bet:
+        return await update.message.reply_text("❌ Puntata non valida")
+
+    u["chips"] -= bet
 
     symbols = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
     r = [random.choice(symbols) for _ in range(3)]
 
     win = 0
+
     if r[0] == r[1] == r[2]:
-        win = 2000
+        win = bet * 10
     elif len(set(r)) == 2:
-        win = 500
+        win = bet * 3
 
     u["chips"] += win
+
+    if win > u["best_win"]:
+        u["best_win"] = win
+
+    if win > 0:
+        u["wins"] += 1
+    else:
+        u["losses"] += 1
+
     save_all()
 
-    await update.message.reply_text(f"{r[0]} | {r[1]} | {r[2]}\n{'WIN +' + str(win) if win else 'LOSE'}")
+    await update.message.reply_text(
+        f"{r[0]} | {r[1]} | {r[2]}\n"
+        f"{'🎉 VINTO +' + str(win) if win else '💀 PERSO'}"
+    )
 
 # =========================
-# BLACKJACK
+# BLACKJACK (BET)
 # =========================
 
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
     t = table(cid)
 
+    u = get_user(update.effective_user.id, update.effective_user.first_name)
+
+    bet = 100
+    if context.args:
+        try:
+            bet = int(context.args[0])
+        except:
+            bet = 100
+
+    if bet <= 0 or u["chips"] < bet:
+        return await update.message.reply_text("❌ Puntata non valida")
+
+    u["chips"] -= bet
+
     d = deck()
+
     player = [d.pop(), d.pop()]
     dealer = [d.pop(), d.pop()]
 
-    t["blackjack"] = {
+    t["blackjack"][str(update.effective_user.id)] = {
         "deck": d,
         "player": player,
-        "dealer": dealer
+        "dealer": dealer,
+        "bet": bet
     }
 
     save_all()
@@ -228,86 +255,59 @@ async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
 
     await update.message.reply_text(
-        f"🃏 BLACKJACK\nTU: {player} ({hand_value(player)})\nDealer: [{dealer[0]}, ?]",
+        f"🃏 BLACKJACK\n"
+        f"TU: {player} ({hand_value(player)})\n"
+        f"Dealer: [{dealer[0]}, ?]\n"
+        f"💰 Bet: {bet}",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 # =========================
-# TEXAS POKER
+# CLASSIFICA
 # =========================
 
-async def texas_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cid = str(update.effective_chat.id)
-    t = table(cid)
+async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top = sorted(users.items(), key=lambda x: x[1]["chips"], reverse=True)[:10]
 
-    if t["texas"]["started"]:
-        return await update.message.reply_text("❌ Partita già iniziata")
+    msg = "🏆 TOP PLAYERS\n\n"
 
-    uid = str(update.effective_user.id)
+    for i, (_, u) in enumerate(top, 1):
+        msg += f"{i}. {u['name']} — {u['chips']} 💰\n"
 
-    t["texas"]["players"][uid] = {
-        "name": update.effective_user.first_name,
-        "hand": [],
-        "folded": False
-    }
-
-    save_all()
-
-    await update.message.reply_text(f"🟢 {update.effective_user.first_name} joined Texas")
-
-async def texas_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cid = str(update.effective_chat.id)
-    t = table(cid)
-
-    if len(t["texas"]["players"]) < 2:
-        return await update.message.reply_text("❌ Min 2 player")
-
-    t["texas"]["deck"] = deck()
-    t["texas"]["board"] = []
-    t["texas"]["started"] = True
-
-    for p in t["texas"]["players"].values():
-        p["hand"] = [t["texas"]["deck"].pop(), t["texas"]["deck"].pop()]
-
-    save_all()
-
-    await update.message.reply_text("🃏 TEXAS STARTED")
-
-async def texas_board(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cid = str(update.effective_chat.id)
-    t = table(cid)
-
-    if not t["texas"]["started"]:
-        return await update.message.reply_text("❌ Nessuna partita")
-
-    if len(t["texas"]["board"]) == 0:
-        t["texas"]["board"] = [t["texas"]["deck"].pop() for _ in range(3)]
-        stage = "FLOP"
-    elif len(t["texas"]["board"]) == 3:
-        t["texas"]["board"].append(t["texas"]["deck"].pop())
-        stage = "TURN"
-    elif len(t["texas"]["board"]) == 4:
-        t["texas"]["board"].append(t["texas"]["deck"].pop())
-        stage = "RIVER"
-    else:
-        stage = "END"
-
-    save_all()
-
-    await update.message.reply_text(f"🃏 {stage}\n{t['texas']['board']}")
+    await update.message.reply_text(msg)
 
 # =========================
-# CALLBACK BLACKJACK
+# CALLBACK MENU + BJ
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
+    uid = str(q.from_user.id)
     cid = str(q.message.chat.id)
+
     t = table(cid)
 
-    bj = t["blackjack"]
+    # MENU
+    if q.data == "menu_slot":
+        return await q.message.reply_text("🎰 Usa: /slot 100")
+
+    if q.data == "menu_bj":
+        return await q.message.reply_text("🃏 Usa: /blackjack 100")
+
+    if q.data == "menu_saldo":
+        u = get_user(uid)
+        return await q.message.reply_text(f"💰 {u['chips']}")
+
+    if q.data == "menu_daily":
+        return await daily(update, context)
+
+    if q.data == "menu_top":
+        return await classifica(update, context)
+
+    # BLACKJACK LOGIC
+    bj = t["blackjack"].get(uid)
 
     if not bj:
         return
@@ -315,14 +315,18 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     d = bj["deck"]
     p = bj["player"]
     dealer = bj["dealer"]
+    bet = bj["bet"]
+
+    u = get_user(uid)
 
     if q.data == "bj_hit":
         p.append(d.pop())
 
         if hand_value(p) > 21:
-            t["blackjack"] = {}
+            t["blackjack"].pop(uid)
+            u["losses"] += 1
             save_all()
-            return await q.message.reply_text("💥 Sballato")
+            return await q.message.reply_text("💥 BUST! Hai perso")
 
         save_all()
         return await q.message.reply_text(f"{p} ({hand_value(p)})")
@@ -335,42 +339,45 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dv = hand_value(dealer)
 
         if pv > 21 or dv > pv:
-            res = "PERDI"
+            result = "💀 PERSO"
+            u["losses"] += 1
         elif pv == dv:
-            res = "PAREGGIO"
+            result = "⚖️ PAREGGIO"
+            u["chips"] += bet
         else:
-            res = "VINCI"
+            win = bet * 2
+            u["chips"] += win
+            u["wins"] += 1
+            result = f"🎉 VINTO +{win}"
 
-        t["blackjack"] = {}
+        t["blackjack"].pop(uid)
         save_all()
 
-        return await q.message.reply_text(f"TU:{p}\nDEALER:{dealer}\n{res}")
+        return await q.message.reply_text(
+            f"TU: {p} ({pv})\n"
+            f"DEALER: {dealer} ({dv})\n"
+            f"{result}"
+        )
 
 # =========================
 # MAIN
 # =========================
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
 def main():
-    app = ApplicationBuilder()\
-        .token(TOKEN)\
-        .build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("slot", slot))
     app.add_handler(CommandHandler("blackjack", blackjack))
-    app.add_handler(CommandHandler("texas_join", texas_join))
-    app.add_handler(CommandHandler("texas_start", texas_start))
-    app.add_handler(CommandHandler("texas_board", texas_board))
     app.add_handler(CommandHandler("classifica", classifica))
 
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO PRO FINAL ONLINE")
+    print("🟢 CASINO PRO ULTIMATE ONLINE")
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling()
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
