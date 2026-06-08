@@ -2,9 +2,7 @@ import os
 import json
 import random
 import time
-import threading
 print ("MODULO MODIFICATO")
-from flask import Flask
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -19,14 +17,12 @@ from telegram.ext import (
 # =========================
 
 TOKEN = os.getenv("CASINO_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+
 PORT = int(os.getenv("PORT", 8080))
 
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
-if not WEBHOOK_URL:
-    raise ValueError("❌ WEBHOOK_URL mancante")
 
 DATA_FILE = "casino_db.json"
 
@@ -36,18 +32,7 @@ print("🟢 CASINO BOT ONLINE PID:", os.getpid())
 # HEALTH SERVER (RAILWAY FIX)
 # =========================
 
-app_web = Flask(_name_)
 
-@app_web.route("/")
-def home():
-    return "CASINO BOT ONLINE", 200
-
-@app_web.route("/health")
-def health():
-    return "OK", 200
-
-def run_health():
-    app_web.run(host="0.0.0.0", port=PORT)
 
 # =========================
 # DATABASE
@@ -333,7 +318,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
-
     threading.Thread(target=run_health, daemon=True).start()
 
     app = ApplicationBuilder().token(TOKEN).build()
@@ -347,14 +331,11 @@ def main():
     app.add_handler(CommandHandler("classifica", classifica))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 BOT IN AVVIO WEBHOOK")
+    print("🟢 BOT ONLINE")
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=WEBHOOK_URL,
-        drop_pending_updates=True
-    )
+app.run_polling(
+    drop_pending_updates=True
+)
 
 if __name__ == "__main__":
     main()
