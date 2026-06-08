@@ -2,7 +2,9 @@ import os
 import json
 import random
 import time
-print ("MODULO MODIFICATO")
+import threading
+
+from flask import Flask
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -23,7 +25,6 @@ PORT = int(os.getenv("PORT", 8080))
 if not TOKEN:
     raise ValueError("❌ CASINO_TOKEN mancante")
 
-
 DATA_FILE = "casino_db.json"
 
 print("🟢 CASINO BOT ONLINE PID:", os.getpid())
@@ -32,7 +33,18 @@ print("🟢 CASINO BOT ONLINE PID:", os.getpid())
 # HEALTH SERVER (RAILWAY FIX)
 # =========================
 
+app_web = Flask(_name_)
 
+@app_web.route("/")
+def home():
+    return "OK", 200
+
+@app_web.route("/health")
+def health():
+    return "OK", 200
+
+def run_health():
+    app_web.run(host="0.0.0.0", port=PORT)
 
 # =========================
 # DATABASE
@@ -92,14 +104,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎰 Slot Machine", callback_data="slot")],
         [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
         [InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
-        [InlineKeyboardButton("💰 Il mio saldo", callback_data="saldo")],
+        [InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
         [InlineKeyboardButton("🎁 Bonus giornaliero", callback_data="bonus")],
         [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ]
 
     await update.message.reply_text(
         "🎰 CASINO BOT PRO\n\nScegli un gioco:",
-        parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -109,7 +120,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(update.effective_user.id)
-    await update.message.reply_text(f"💰 Saldo: {u['chips']} chips", parse_mode="Markdown")
+    await update.message.reply_text(f"💰 Saldo: {u['chips']} chips")
 
 # =========================
 # BONUS
@@ -127,7 +138,7 @@ async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u["last_daily"] = now
     save_all()
 
-    await update.message.reply_text(f"🎁 Hai ricevuto {reward} chips!", parse_mode="Markdown")
+    await update.message.reply_text(f"🎁 Hai ricevuto {reward} chips!")
 
 # =========================
 # SLOT
@@ -158,14 +169,11 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u["chips"] += win
     save_all()
 
-    msg = (
-        "🎰 SLOT MACHINE\n\n"
-        f"{r[0]} | {r[1]} | {r[2]}\n\n"
-        + ("🎉 Hai vinto " + str(win) + " chips!" if win else "💀 Hai perso")
-        + f"\n💰 Saldo: {u['chips']} chips"
+    await update.message.reply_text(
+        f"🎰 SLOT\n\n{r[0]} | {r[1]} | {r[2]}\n"
+        f"{'🎉 Hai vinto ' + str(win) if win else '💀 Hai perso'}\n"
+        f"💰 Saldo: {u['chips']}"
     )
-
-    await update.message.reply_text(msg, parse_mode="Markdown")
 
 # =========================
 # BLACKJACK
@@ -204,11 +212,8 @@ async def blackjack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     bet = int(context.args[0]) if context.args else 100
 
-    if bet <= 0:
+    if bet <= 0 or u["chips"] < bet:
         return await update.message.reply_text("❌ Puntata non valida")
-
-    if u["chips"] < bet:
-        return await update.message.reply_text("❌ Non hai abbastanza chips")
 
     u["chips"] -= bet
 
@@ -224,12 +229,12 @@ async def blackjack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [[
-        InlineKeyboardButton("CARTA (HIT)", callback_data="hit"),
-        InlineKeyboardButton("STAI (STAND)", callback_data="stand")
+        InlineKeyboardButton("HIT", callback_data="hit"),
+        InlineKeyboardButton("STAND", callback_data="stand")
     ]]
 
     await update.message.reply_text(
-        f"🃏 BLACKJACK\n\nTU: {player} ({value(player)})\nMAZZIERE: [{dealer[0]}, ?]",
+        f"🃏 BLACKJACK\nTU: {player} ({value(player)})\nMAZZIERE: [{dealer[0]}, ?]",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -242,11 +247,8 @@ async def roulette(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     bet = int(context.args[0]) if context.args else 100
 
-    if bet <= 0:
+    if bet <= 0 or u["chips"] < bet:
         return await update.message.reply_text("❌ Puntata non valida")
-
-    if u["chips"] < bet:
-        return await update.message.reply_text("❌ Non hai abbastanza chips")
 
     u["chips"] -= bet
 
@@ -262,14 +264,11 @@ async def roulette(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u["chips"] += win
     save_all()
 
-    msg = (
-        "🎲 ROULETTE\n\n"
-        f"Numero uscito: {result}\n\n"
-        + ("🎉 Hai vinto " + str(win) + " chips!" if win else "💀 Hai perso")
-        + f"\n💰 Saldo: {u['chips']}"
+    await update.message.reply_text(
+        f"🎲 {result}\n"
+        f"{'🎉 Hai vinto ' + str(win) if win else '💀 Hai perso'}\n"
+        f"💰 {u['chips']}"
     )
-
-    await update.message.reply_text(msg, parse_mode="Markdown")
 
 # =========================
 # CLASSIFICA
@@ -278,12 +277,11 @@ async def roulette(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top = sorted(users.values(), key=lambda x: x["chips"], reverse=True)[:10]
 
-    msg = "🏆 CLASSIFICA TOP 10\n\n"
-
+    msg = "🏆 TOP 10\n\n"
     for i, u in enumerate(top, 1):
-        msg += f"{i}. {u['name']} — {u['chips']} chips\n"
+        msg += f"{i}. {u['name']} - {u['chips']}\n"
 
-    await update.message.reply_text(msg, parse_mode="Markdown")
+    await update.message.reply_text(msg)
 
 # =========================
 # CALLBACK
@@ -296,20 +294,15 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(q.from_user.id)
 
     if q.data == "saldo":
-        return await q.message.reply_text(f"💰 Saldo: {u['chips']} chips")
-
+        return await q.message.reply_text(f"💰 {u['chips']}")
     if q.data == "slot":
-        return await q.message.reply_text("🎰 Usa: /slot 100")
-
+        return await q.message.reply_text("/slot 100")
     if q.data == "blackjack":
-        return await q.message.reply_text("🃏 Usa: /blackjack 100")
-
+        return await q.message.reply_text("/blackjack 100")
     if q.data == "roulette":
-        return await q.message.reply_text("🎲 Usa: /roulette 100")
-
+        return await q.message.reply_text("/roulette 100")
     if q.data == "bonus":
         return await bonus(update, context)
-
     if q.data == "classifica":
         return await classifica(update, context)
 
@@ -318,6 +311,8 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
+
+    threading.Thread(target=run_health, daemon=True).start()
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -332,8 +327,11 @@ def main():
 
     print("🟢 BOT ONLINE")
 
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
     main()
+
+
+
