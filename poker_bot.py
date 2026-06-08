@@ -2,6 +2,9 @@ import os
 import random
 import sqlite3
 import time
+import threading
+
+lock = threading.Lock()
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -16,12 +19,10 @@ if not TOKEN:
 
 print("🟢 CASINO PRO BOT ONLINE")
 
-# =========================
-# DATABASE SQLITE
-# =========================
-
 conn = sqlite3.connect("casino.db", check_same_thread=False)
 cursor = conn.cursor()
+
+lock = threading.Lock()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
@@ -36,54 +37,68 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
+# =========================
+# GET USER
+# =========================
+
 def get_user(uid, name="Player"):
     uid = str(uid)
 
-    cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
-    row = cursor.fetchone()
+    with lock:
+        cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
+        row = cursor.fetchone()
 
-    if row is None:
-        cursor.execute("""
-        INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (uid, name, 5000, 0, 0, 0, 0))
-        conn.commit()
+        if row is None:
+            cursor.execute("""
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (uid, name, 5000, 0, 0, 0, 0))
+            conn.commit()
+
+            return {
+                "user_id": uid,
+                "name": name,
+                "chips": 5000,
+                "wins": 0,
+                "losses": 0,
+                "best_win": 0,
+                "last_daily": 0
+            }
 
         return {
-            "user_id": uid,
-            "name": name,
-            "chips": 5000,
-            "wins": 0,
-            "losses": 0,
-            "best_win": 0,
-            "last_daily": 0
+            "user_id": row[0],
+            "name": row[1],
+            "chips": row[2],
+            "wins": row[3],
+            "losses": row[4],
+            "best_win": row[5],
+            "last_daily": row[6]
         }
 
-    return {
-        "user_id": row[0],
-        "name": row[1],
-        "chips": row[2],
-        "wins": row[3],
-        "losses": row[4],
-        "best_win": row[5],
-        "last_daily": row[6]
-    }
+# =========================
+# UPDATE USER
+# =========================
 
 def update_user(u):
-    cursor.execute("""
-    UPDATE users SET
-        name=?,
-        chips=?,
-        wins=?,
-        losses=?,
-        best_win=?,
-        last_daily=?
-    WHERE user_id=?
-    """, (
-        u["name"], u["chips"], u["wins"], u["losses"],
-        u["best_win"], u["last_daily"], u["user_id"]
-    ))
-    conn.commit()
-
+    with lock:
+        cursor.execute("""
+        UPDATE users SET
+            name=?,
+            chips=?,
+            wins=?,
+            losses=?,
+            best_win=?,
+            last_daily=?
+        WHERE user_id=?
+        """, (
+            u["name"],
+            u["chips"],
+            u["wins"],
+            u["losses"],
+            u["best_win"],
+            u["last_daily"],
+            u["user_id"]
+        ))
+        conn.commit()
 # =========================
 # START
 # =========================
