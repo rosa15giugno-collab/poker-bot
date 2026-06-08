@@ -3,7 +3,7 @@ import json
 import random
 import time
 import threading
-
+print ("MODULO MODIFICATO")
 from flask import Flask
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
