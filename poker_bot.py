@@ -34,18 +34,9 @@ print("🟢 CASINO BOT ONLINE PID:", os.getpid())
 # HEALTH SERVER (RAILWAY FIX)
 # =========================
 
-app_web = Flask(_name_)
 
-@app_web.route("/")
-def home():
-    return "OK", 200
 
-@app_web.route("/health")
-def health():
-    return "OK", 200
 
-def run_health():
-    app_web.run(host="0.0.0.0", port=PORT)
 
 # =========================
 # DATABASE
@@ -313,7 +304,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
 
-    threading.Thread(target=run_health, daemon=True).start()
+    
 
     app = ApplicationBuilder().token(TOKEN).build()
 
