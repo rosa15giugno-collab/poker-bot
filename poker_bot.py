@@ -14,14 +14,15 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO CASINO PRO ONLINE")
+print("🟢 CASINO BOT ONLINE")
 
 # =========================
-# DATABASE SQLITE
+# DB SQLITE
 # =========================
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
 cursor = conn.cursor()
+
 lock = threading.Lock()
 
 cursor.execute("""
@@ -37,10 +38,6 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-# =========================
-# UTENTE
-# =========================
-
 def get_user(uid, name="Giocatore"):
     uid = str(uid)
 
@@ -50,7 +47,7 @@ def get_user(uid, name="Giocatore"):
 
         if row is None:
             cursor.execute("""
-                INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (uid, name, 5000, 0, 0, 0, 0))
             conn.commit()
 
@@ -86,34 +83,34 @@ def update_user(u):
             last_daily=?
         WHERE user_id=?
         """, (
-            u["name"],
-            u["chips"],
-            u["wins"],
-            u["losses"],
-            u["best_win"],
-            u["last_daily"],
-            u["user_id"]
+            u["name"], u["chips"], u["wins"], u["losses"],
+            u["best_win"], u["last_daily"], u["user_id"]
         ))
         conn.commit()
 
 # =========================
-# START MENU
+# MENU START
+# =========================
+
+def menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎰 Slot", callback_data="slot")],
+        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
+        [InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
+        [InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
+        [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+    ])
+
+# =========================
+# START
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = get_user(update.effective_user.id, update.effective_user.first_name)
-
-    keyboard = [
-        [InlineKeyboardButton("🎰 SLOT MACHINE", callback_data="menu_slot")],
-        [InlineKeyboardButton("🃏 BLACKJACK", callback_data="menu_blackjack")],
-        [InlineKeyboardButton("🎲 ROULETTE", callback_data="menu_roulette")],
-        [InlineKeyboardButton("💰 SALDO", callback_data="saldo")],
-        [InlineKeyboardButton("🏆 CLASSIFICA", callback_data="classifica")]
-    ]
+    get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_text(
-        f"🎰 CASINO ROYALE\n💰 Chips: {u['chips']}\n\nScegli un gioco:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        "🎰 CASINO BOT PRO\n\nScegli un gioco:",
+        reply_markup=menu()
     )
 
 # =========================
@@ -125,59 +122,26 @@ async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"💰 Hai {u['chips']} chips")
 
 # =========================
-# SLOT MENU
+# SLOT (DA TASTO)
 # =========================
 
-async def menu_slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+def play_slot(u):
+    symbols = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
+    r = [random.choice(symbols) for _ in range(3)]
 
-    keyboard = [
-        [InlineKeyboardButton("🎲 GIOCA 100", callback_data="slot_100")],
-        [InlineKeyboardButton("🎲 GIOCA 500", callback_data="slot_500")],
-        [InlineKeyboardButton("🎲 GIOCA 1000", callback_data="slot_1000")]
-    ]
-
-    await q.message.reply_text(
-        "🎰 SLOT MACHINE\nScegli la puntata:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-# =========================
-# SLOT GAME
-# =========================
-
-async def slot_play(update: Update, context: ContextTypes.DEFAULT_TYPE, bet: int):
-    q = update.callback_query
-    uid = str(q.from_user.id)
-    u = get_user(uid)
-
-    if u["chips"] < bet:
-        return await q.message.reply_text("❌ Non hai abbastanza chips")
-
-    u["chips"] -= bet
-
-    simboli = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
-    r = [random.choice(simboli) for _ in range(3)]
-
-    vincita = 0
+    win = 0
     if r[0] == r[1] == r[2]:
-        vincita = bet * 15
+        win = 1000
     elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
-        vincita = bet * 3
+        win = 300
 
-    u["chips"] += vincita
+    u["chips"] += win
     update_user(u)
 
-    await q.message.reply_text(
-        f"🎰 RISULTATO SLOT\n\n"
-        f"{r[0]} | {r[1]} | {r[2]}\n\n"
-        f"{'🎉 HAI VINTO +' + str(vincita) if vincita else '💀 HAI PERSO'}\n"
-        f"💰 Saldo: {u['chips']}"
-    )
+    return r, win
 
 # =========================
-# BLACKJACK (SEMPLICE)
+# BLACKJACK STATE
 # =========================
 
 games = {}
@@ -206,35 +170,8 @@ def value(hand):
 
     return v
 
-async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = str(update.effective_user.id)
-    u = get_user(uid)
-
-    bet = 100
-
-    if u["chips"] < bet:
-        return await update.message.reply_text("❌ Non hai chips")
-
-    u["chips"] -= bet
-
-    d = deck()
-    player = [d.pop(), d.pop()]
-    dealer = [d.pop(), d.pop()]
-
-    games[uid] = {"d": d, "p": player, "dl": dealer, "bet": bet}
-
-    keyboard = [[
-        InlineKeyboardButton("HIT", callback_data="hit"),
-        InlineKeyboardButton("STAND", callback_data="stand")
-    ]]
-
-    await update.message.reply_text(
-        f"🃏 BLACKJACK\n\nTU: {player} ({value(player)})\nMAZZIERE: [{dealer[0]}, ?]",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
 # =========================
-# CALLBACK
+# CALLBACK MENU
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -244,50 +181,87 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(q.from_user.id)
     u = get_user(uid)
 
-    data = q.data
+    # ================= SLOT =================
+    if q.data == "slot":
+        r, win = play_slot(u)
+        await q.message.reply_text(
+            f"🎰 SLOT\n{r[0]} | {r[1]} | {r[2]}\n"
+            f"{'🎉 +' + str(win) if win else '💀 Perso'}\n"
+            f"💰 {u['chips']}"
+        )
 
-    if data == "menu_slot":
-        return await menu_slot(update, context)
+    # ================= BLACKJACK START =================
+    elif q.data == "blackjack":
+        d = deck()
+        player = [d.pop(), d.pop()]
+        dealer = [d.pop(), d.pop()]
 
-    if data == "saldo":
-        return await q.message.reply_text(f"💰 {u['chips']}")
+        games[uid] = {"d": d, "p": player, "dl": dealer, "bet": 100}
 
-    if data == "classifica":
+        keyboard = [[
+            InlineKeyboardButton("🎯 HIT", callback_data="hit"),
+            InlineKeyboardButton("🛑 STAND", callback_data="stand")
+        ]]
+
+        await q.message.reply_text(
+            f"🃏 BLACKJACK\n\nTU: {player} ({value(player)})\nMAZZIERE: [{dealer[0]}, ?]",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ================= ROULETTE =================
+    elif q.data == "roulette":
+        result = random.randint(0, 36)
+
+        win = 0
+        if result == 0:
+            win = 1400
+        elif result % 2 == 0:
+            win = 200
+
+        u["chips"] += win
+        update_user(u)
+
+        await q.message.reply_text(
+            f"🎲 ROULETTE\nNumero: {result}\n"
+            f"{'🎉 +' + str(win) if win else '💀 Perso'}\n"
+            f"💰 {u['chips']}"
+        )
+
+    elif q.data == "saldo":
+        await q.message.reply_text(f"💰 {u['chips']} chips")
+
+    elif q.data == "classifica":
         cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
         top = cursor.fetchall()
 
-        msg = "🏆 CLASSIFICA TOP 10\n\n"
+        msg = "🏆 TOP 10\n\n"
         for i, (name, chips) in enumerate(top, 1):
             msg += f"{i}. {name} - {chips}\n"
 
-        return await q.message.reply_text(msg)
+        await q.message.reply_text(msg)
 
-    if data == "slot_100":
-        return await slot_play(update, context, 100)
+    # ================= BLACKJACK HIT =================
+    elif q.data == "hit":
+        g = games.get(uid)
+        if not g:
+            return
 
-    if data == "slot_500":
-        return await slot_play(update, context, 500)
-
-    if data == "slot_1000":
-        return await slot_play(update, context, 1000)
-
-    if uid not in games:
-        return
-
-    g = games[uid]
-
-    if data == "hit":
         g["p"].append(g["d"].pop())
 
         if value(g["p"]) > 21:
             games.pop(uid)
-            u["losses"] += 1
+            u["chips"] -= 100
             update_user(u)
-            return await q.message.reply_text("💀 Sballato")
+            return await q.message.reply_text("💀 Sballato!")
 
-        return await q.message.reply_text(f"{g['p']} ({value(g['p'])})")
+        await q.message.reply_text(f"TU: {g['p']} ({value(g['p'])})")
 
-    if data == "stand":
+    # ================= BLACKJACK STAND =================
+    elif q.data == "stand":
+        g = games.get(uid)
+        if not g:
+            return
+
         while value(g["dl"]) < 17:
             g["dl"].append(g["d"].pop())
 
@@ -295,32 +269,17 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dv = value(g["dl"])
 
         if pv > dv:
-            u["chips"] += g["bet"] * 2
-            msg = "🎉 HAI VINTO"
+            u["chips"] += 200
+            msg = "🎉 VINTO"
         elif pv == dv:
-            u["chips"] += g["bet"]
             msg = "⚖️ PAREGGIO"
         else:
-            msg = "💀 HAI PERSO"
+            msg = "💀 PERSO"
 
         update_user(u)
         games.pop(uid)
 
-        return await q.message.reply_text(msg)
-
-# =========================
-# CLASSIFICA
-# =========================
-
-async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
-    top = cursor.fetchall()
-
-    msg = "🏆 CLASSIFICA TOP 10\n\n"
-    for i, (name, chips) in enumerate(top, 1):
-        msg += f"{i}. {name} - {chips}\n"
-
-    await update.message.reply_text(msg)
+        await q.message.reply_text(msg)
 
 # =========================
 # MAIN
@@ -330,15 +289,14 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("slot", slot_play))
-    app.add_handler(CommandHandler("blackjack", blackjack))
     app.add_handler(CommandHandler("saldo", saldo))
-    app.add_handler(CommandHandler("classifica", classifica))
     app.add_handler(CallbackQueryHandler(cb))
 
     print("🟢 BOT ONLINE")
+
     app.run_polling()
 
 if __name__ == "__main__":
     main()
+
 
