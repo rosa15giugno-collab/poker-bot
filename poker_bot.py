@@ -108,10 +108,12 @@ def menu():
          InlineKeyboardButton("🎡 Ruota", callback_data="ruota")],
 
         [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-         InlineKeyboardButton("⚔️ Arena", callback_data="arena")],
+         InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
 
-        [InlineKeyboardButton("💰 Saldo", callback_data="saldo"),
-         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+        [InlineKeyboardButton("⚔️ Arena", callback_data="arena"),
+         InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
+
+        [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
 # =========================
@@ -143,6 +145,12 @@ async def slot(update, context):
         win = 300
 
     u["chips"] += win
+
+    if win > 0:
+        u["wins"] += 1
+    else:
+        u["losses"] += 1
+
     update_user(u)
 
     await update.message.reply_text(
@@ -166,6 +174,12 @@ async def roulette(update, context):
         win = 300
 
     u["chips"] += win
+
+    if win > 0:
+        u["wins"] += 1
+    else:
+        u["losses"] += 1
+        
     update_user(u)
 
     await update.message.reply_text(
@@ -184,6 +198,10 @@ async def ruota(update, context):
     win = random.choice(prizes)
 
     u["chips"] += win
+
+    if win > 0:
+        u["wins"] += 1
+
     update_user(u)
 
     await update.message.reply_text(
@@ -258,6 +276,40 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if q.data == "classifica":
         return await classifica(update, context)
+
+    
+
+    if q.data == "profilo":
+
+        uid = str(q.from_user.id)
+
+        u = get_user(uid, q.from_user.first_name)
+
+        partite = u["wins"] + u["losses"]
+
+        livello = max(1, partite // 10 + 1)
+
+        if livello < 5:
+            grado = "🥉 Bronzo"
+        elif livello < 10:
+            grado = "🥈 Argento"
+        elif livello < 20:
+            grado = "🥇 Oro"
+        else:
+            grado = "💎 Diamante"
+
+        await q.message.reply_text(
+            f"👤 PROFILO GIOCATORE\n\n"
+            f"🧑 Nome: {u['name']}\n"
+            f"💰 Chips: {u['chips']}\n"
+            f"🏆 Vittorie: {u['wins']}\n"
+            f"💀 Sconfitte: {u['losses']}\n"
+            f"🎮 Partite giocate: {partite}\n"
+            f"⭐ Livello: {livello}\n"
+            f"🎖️ Grado: {grado}",
+            reply_markup=menu()
+        )
+        return
 
     if q.data == "blackjack":
         await q.message.reply_text("🃏 Blackjack in arrivo upgrade")
