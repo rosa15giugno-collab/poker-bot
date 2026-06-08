@@ -1,13 +1,15 @@
 import os
 import random
 import sqlite3
-import time
 import threading
 
-lock = threading.Lock()
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
 
 # =========================
 # CONFIG
@@ -17,11 +19,14 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO PRO BOT ONLINE")
+print("🟢 CASINO BOT ONLINE")
+
+# =========================
+# DATABASE SQLITE
+# =========================
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
 cursor = conn.cursor()
-
 lock = threading.Lock()
 
 cursor.execute("""
@@ -38,7 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# GET USER
+# UTENTE
 # =========================
 
 def get_user(uid, name="Player"):
@@ -50,7 +55,7 @@ def get_user(uid, name="Player"):
 
         if row is None:
             cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (uid, name, 5000, 0, 0, 0, 0))
             conn.commit()
 
@@ -74,10 +79,6 @@ def get_user(uid, name="Player"):
             "last_daily": row[6]
         }
 
-# =========================
-# UPDATE USER
-# =========================
-
 def update_user(u):
     with lock:
         cursor.execute("""
@@ -99,6 +100,7 @@ def update_user(u):
             u["user_id"]
         ))
         conn.commit()
+
 # =========================
 # START
 # =========================
@@ -115,7 +117,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-        "🎰 CASINO PRO V2",
+        "🎰 CASINO PRO\nScegli un gioco:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -128,7 +130,7 @@ async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"💰 Chips: {u['chips']}")
 
 # =========================
-# SLOT MIGLIORATA
+# SLOT
 # =========================
 
 async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -158,12 +160,12 @@ async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"{r[0]} | {r[1]} | {r[2]}\n"
-        f"{'🎉 +' + str(win) if win else '💀 Perso'}\n"
-        f"💰 {u['chips']}"
+        f"{'🎉 VINTO +' + str(win) if win else '💀 PERSO'}\n"
+        f"💰 Saldo: {u['chips']}"
     )
 
 # =========================
-# BLACKJACK SEMPLIFICATO MA STABILE
+# BLACKJACK
 # =========================
 
 games = {}
@@ -174,7 +176,9 @@ def deck():
     return d
 
 def value(hand):
-    v, aces = 0, 0
+    v = 0
+    aces = 0
+
     for c in hand:
         if c in ["J","Q","K"]:
             v += 10
@@ -189,10 +193,6 @@ def value(hand):
         aces -= 1
 
     return v
-
-# =========================
-# BLACKJACK START
-# =========================
 
 async def blackjack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(update.effective_user.id)
@@ -233,7 +233,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(uid)
 
     if q.data == "saldo":
-        return await q.message.reply_text(f"{u['chips']}")
+        return await q.message.reply_text(f"💰 {u['chips']}")
 
     if uid not in games:
         return
@@ -249,7 +249,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             update_user(u)
             return await q.message.reply_text("💀 Sballato")
 
-        return await q.message.reply_text(f"{g['p']}")
+        return await q.message.reply_text(f"{g['p']} ({value(g['p'])})")
 
     if q.data == "stand":
         while value(g["dl"]) < 17:
@@ -297,12 +297,12 @@ def main():
     app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("slot", slot))
     app.add_handler(CommandHandler("blackjack", blackjack))
-    app.add_handler(CallbackQueryHandler(cb))
     app.add_handler(CommandHandler("classifica", classifica))
+    app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 BOT PRO ONLINE")
+    print("🟢 BOT ONLINE")
+
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-
