@@ -15,7 +15,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO PRO V3 ONLINE")
+print("🟢 CASINO PRO V3 FIXED ONLINE")
 
 # =========================
 # DATABASE
@@ -23,7 +23,6 @@ print("🟢 CASINO PRO V3 ONLINE")
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
 cursor = conn.cursor()
-
 lock = threading.Lock()
 
 cursor.execute("""
@@ -39,12 +38,6 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# ARENE
-# =========================
-
-arenas = {}
-
-# =========================
 # USER SYSTEM
 # =========================
 
@@ -57,7 +50,7 @@ def get_user(uid, name="Player"):
 
         if row is None:
             cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)
             """, (uid, name, 5000, 0, 0, 0))
             conn.commit()
 
@@ -90,8 +83,12 @@ def update_user(u):
             last_daily=?
         WHERE user_id=?
         """, (
-            u["name"], u["chips"], u["wins"], u["losses"],
-            u["last_daily"], u["user_id"]
+            u["name"],
+            u["chips"],
+            u["wins"],
+            u["losses"],
+            u["last_daily"],
+            u["user_id"]
         ))
         conn.commit()
 
@@ -124,7 +121,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_text(
-        "🎰 CASINO PRO V3\nScegli un gioco:",
+        "🎰 CASINO PRO V3 FIXED\nScegli un gioco:",
         reply_markup=menu()
     )
 
@@ -132,17 +129,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SLOT
 # =========================
 
-async def slot(update, context):
-    u = get_user(update.effective_user.id)
+async def slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    u = get_user(q.from_user.id, q.from_user.first_name)
+
+    bet = 500
+    u["chips"] -= bet
 
     symbols = ["🍒","🍋","🍇","💎","7️⃣"]
     r = [random.choice(symbols) for _ in range(3)]
 
-    win = 0
     if r[0] == r[1] == r[2]:
-        win = 1500
+        win = 3000
     elif r[0] == r[1] or r[1] == r[2]:
-        win = 300
+        win = 800
+    else:
+        win = 0
 
     u["chips"] += win
 
@@ -151,10 +153,17 @@ async def slot(update, context):
     else:
         u["losses"] += 1
 
+    if u["chips"] < 0:
+        u["chips"] = 0
+
     update_user(u)
 
-    await update.message.reply_text(
-        f"🎰 {r[0]} | {r[1]} | {r[2]}\n💰 +{win}",
+    await q.message.reply_text(
+        f"🎰 SLOT\n"
+        f"{r[0]} | {r[1]} | {r[2]}\n"
+        f"💸 Bet: -{bet}\n"
+        f"💰 Win: +{win}\n"
+        f"💳 Saldo: {u['chips']}",
         reply_markup=menu()
     )
 
@@ -162,16 +171,21 @@ async def slot(update, context):
 # ROULETTE
 # =========================
 
-async def roulette(update, context):
-    u = get_user(update.effective_user.id)
+async def roulette(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    u = get_user(q.from_user.id, q.from_user.first_name)
+
+    bet = 300
+    u["chips"] -= bet
 
     n = random.randint(0, 36)
 
-    win = 0
     if n == 0:
         win = 2000
     elif n % 2 == 0:
-        win = 300
+        win = 600
+    else:
+        win = 0
 
     u["chips"] += win
 
@@ -179,47 +193,54 @@ async def roulette(update, context):
         u["wins"] += 1
     else:
         u["losses"] += 1
-        
+
+    if u["chips"] < 0:
+        u["chips"] = 0
+
     update_user(u)
 
-    await update.message.reply_text(
-        f"🎲 Numero: {n}\n💰 +{win}",
+    await q.message.reply_text(
+        f"🎲 ROULETTE\nNumero: {n}\n💸 Bet: -{bet}\n💰 Win: +{win}\n💳 Saldo: {u['chips']}",
         reply_markup=menu()
     )
 
 # =========================
-# RUOTA BONUS
+# RUOTA
 # =========================
 
-async def ruota(update, context):
-    u = get_user(update.effective_user.id)
+async def ruota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    u = get_user(q.from_user.id, q.from_user.first_name)
 
-    prizes = [0, 100, 200, 500, 1000, 2000]
+    prizes = [0, 0, 100, 200, 500, 1000, 2000]
     win = random.choice(prizes)
 
     u["chips"] += win
 
     if win > 0:
         u["wins"] += 1
+    else:
+        u["losses"] += 1
 
     update_user(u)
 
-    await update.message.reply_text(
-        f"🎡 Ruota: +{win}",
+    await q.message.reply_text(
+        f"🎡 RUOTA\nPremio: +{win}\n💳 Saldo: {u['chips']}",
         reply_markup=menu()
     )
 
 # =========================
-# BONUS GIORNALIERO
+# BONUS
 # =========================
 
-async def bonus(update, context):
-    u = get_user(update.effective_user.id)
+async def bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    u = get_user(q.from_user.id, q.from_user.first_name)
 
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        return await update.message.reply_text("⏳ Bonus già preso oggi", reply_markup=menu())
+        return await q.message.reply_text("⏳ Bonus già preso oggi", reply_markup=menu())
 
     reward = random.randint(500, 2000)
 
@@ -228,8 +249,8 @@ async def bonus(update, context):
 
     update_user(u)
 
-    await update.message.reply_text(
-        f"🎁 Bonus +{reward}",
+    await q.message.reply_text(
+        f"🎁 BONUS +{reward}\n💳 Saldo: {u['chips']}",
         reply_markup=menu()
     )
 
@@ -237,11 +258,15 @@ async def bonus(update, context):
 # SALDO + CLASSIFICA
 # =========================
 
-async def saldo(update, context):
-    u = get_user(update.effective_user.id)
-    await update.message.reply_text(f"💰 {u['chips']}", reply_markup=menu())
+async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    u = get_user(q.from_user.id, q.from_user.first_name)
 
-async def classifica(update, context):
+    await q.message.reply_text(f"💰 SALDO: {u['chips']}", reply_markup=menu())
+
+async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+
     cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
     top = cursor.fetchall()
 
@@ -249,7 +274,7 @@ async def classifica(update, context):
     for i, (n, c) in enumerate(top, 1):
         msg += f"{i}. {n} - {c}\n"
 
-    await update.message.reply_text(msg, reply_markup=menu())
+    await q.message.reply_text(msg, reply_markup=menu())
 
 # =========================
 # CALLBACK
@@ -277,17 +302,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if q.data == "classifica":
         return await classifica(update, context)
 
-    
-
     if q.data == "profilo":
-
-        uid = str(q.from_user.id)
-
-        u = get_user(uid, q.from_user.first_name)
+        u = get_user(q.from_user.id, q.from_user.first_name)
 
         partite = u["wins"] + u["losses"]
-
-        livello = max(1, partite // 10 + 1)
+        livello = 1 + (partite // 20)
 
         if livello < 5:
             grado = "🥉 Bronzo"
@@ -299,12 +318,12 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             grado = "💎 Diamante"
 
         await q.message.reply_text(
-            f"👤 PROFILO GIOCATORE\n\n"
-            f"🧑 Nome: {u['name']}\n"
+            f"👤 PROFILO\n\n"
+            f"🧑 {u['name']}\n"
             f"💰 Chips: {u['chips']}\n"
-            f"🏆 Vittorie: {u['wins']}\n"
-            f"💀 Sconfitte: {u['losses']}\n"
-            f"🎮 Partite giocate: {partite}\n"
+            f"🏆 Win: {u['wins']}\n"
+            f"💀 Loss: {u['losses']}\n"
+            f"🎮 Partite: {partite}\n"
             f"⭐ Livello: {livello}\n"
             f"🎖️ Grado: {grado}",
             reply_markup=menu()
@@ -312,10 +331,10 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if q.data == "blackjack":
-        await q.message.reply_text("🃏 Blackjack in arrivo upgrade")
+        await q.message.reply_text("🃏 Blackjack in arrivo")
 
     if q.data == "arena":
-        await q.message.reply_text("⚔️ Arena in upgrade successivo")
+        await q.message.reply_text("⚔️ Arena in sviluppo")
 
 # =========================
 # MAIN
