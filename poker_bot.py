@@ -15,10 +15,10 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO ARENA BOT ONLINE")
+print("🟢 CASINO PRO V3 ONLINE")
 
 # =========================
-# DB
+# DATABASE
 # =========================
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
@@ -39,10 +39,9 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# ARENE + GAMES
+# ARENE
 # =========================
 
-games = {}
 arenas = {}
 
 # =========================
@@ -91,12 +90,8 @@ def update_user(u):
             last_daily=?
         WHERE user_id=?
         """, (
-            u["name"],
-            u["chips"],
-            u["wins"],
-            u["losses"],
-            u["last_daily"],
-            u["user_id"]
+            u["name"], u["chips"], u["wins"], u["losses"],
+            u["last_daily"], u["user_id"]
         ))
         conn.commit()
 
@@ -106,12 +101,17 @@ def update_user(u):
 
 def menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 Slot", callback_data="slot")],
-        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
-        [InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
-        [InlineKeyboardButton("⚔️ Arena PvP", callback_data="arena")],
-        [InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
-        [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+        [InlineKeyboardButton("🎰 Slot", callback_data="slot"),
+         InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
+
+        [InlineKeyboardButton("🎲 Roulette", callback_data="roulette"),
+         InlineKeyboardButton("🎡 Ruota", callback_data="ruota")],
+
+        [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
+         InlineKeyboardButton("⚔️ Arena", callback_data="arena")],
+
+        [InlineKeyboardButton("💰 Saldo", callback_data="saldo"),
+         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
 # =========================
@@ -122,97 +122,116 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_text(
-        "🎰 CASINO ARENA SYSTEM\nScegli un gioco:",
+        "🎰 CASINO PRO V3\nScegli un gioco:",
         reply_markup=menu()
     )
 
 # =========================
-# GAME HELPERS
+# SLOT
 # =========================
 
-def deck():
-    d = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] * 4
-    random.shuffle(d)
-    return d
+async def slot(update, context):
+    u = get_user(update.effective_user.id)
 
-def value(hand):
-    t = 0
-    a = 0
+    symbols = ["🍒","🍋","🍇","💎","7️⃣"]
+    r = [random.choice(symbols) for _ in range(3)]
 
-    for c in hand:
-        if c in ["J","Q","K"]:
-            t += 10
-        elif c == "A":
-            t += 11
-            a += 1
-        else:
-            t += int(c)
+    win = 0
+    if r[0] == r[1] == r[2]:
+        win = 1500
+    elif r[0] == r[1] or r[1] == r[2]:
+        win = 300
 
-    while t > 21 and a:
-        t -= 10
-        a -= 1
-
-    return t
-
-# =========================
-# ARENA SYSTEM
-# =========================
-
-def create_arena(owner, bet):
-    arena_id = str(random.randint(1000, 9999))
-
-    arenas[arena_id] = {
-        "owner": owner,
-        "bet": bet,
-        "players": [owner],
-        "created": time.time(),
-        "state": "waiting"
-    }
-
-    return arena_id
-
-
-def resolve_arena(arena_id):
-    arena = arenas.get(arena_id)
-    if not arena:
-        return "❌ Arena non valida"
-
-    players = arena["players"]
-
-    if len(players) < 2:
-        for p in players:
-            u = get_user(p)
-            u["chips"] += arena["bet"]
-            update_user(u)
-
-        arenas.pop(arena_id, None)
-        return "❌ Arena annullata (pochi giocatori)"
-
-    results = []
-
-    for p in players:
-        u = get_user(p)
-        score = random.randint(1, 100) + (u["wins"] // 5)
-        results.append((p, score))
-
-    results.sort(key=lambda x: x[1], reverse=True)
-
-    winner = results[0][0]
-    pot = arena["bet"] * len(players)
-
-    u = get_user(winner)
-    u["chips"] += pot
-    u["wins"] += 1
+    u["chips"] += win
     update_user(u)
 
-    for p, _ in results[1:]:
-        u2 = get_user(p)
-        u2["losses"] += 1
-        update_user(u2)
+    await update.message.reply_text(
+        f"🎰 {r[0]} | {r[1]} | {r[2]}\n💰 +{win}",
+        reply_markup=menu()
+    )
 
-    arenas.pop(arena_id, None)
+# =========================
+# ROULETTE
+# =========================
 
-    return f"🏆 VINCE {u['name']} +{pot} chips!"
+async def roulette(update, context):
+    u = get_user(update.effective_user.id)
+
+    n = random.randint(0, 36)
+
+    win = 0
+    if n == 0:
+        win = 2000
+    elif n % 2 == 0:
+        win = 300
+
+    u["chips"] += win
+    update_user(u)
+
+    await update.message.reply_text(
+        f"🎲 Numero: {n}\n💰 +{win}",
+        reply_markup=menu()
+    )
+
+# =========================
+# RUOTA BONUS
+# =========================
+
+async def ruota(update, context):
+    u = get_user(update.effective_user.id)
+
+    prizes = [0, 100, 200, 500, 1000, 2000]
+    win = random.choice(prizes)
+
+    u["chips"] += win
+    update_user(u)
+
+    await update.message.reply_text(
+        f"🎡 Ruota: +{win}",
+        reply_markup=menu()
+    )
+
+# =========================
+# BONUS GIORNALIERO
+# =========================
+
+async def bonus(update, context):
+    u = get_user(update.effective_user.id)
+
+    now = int(time.time())
+
+    if now - u["last_daily"] < 86400:
+        return await update.message.reply_text("⏳ Bonus già preso oggi", reply_markup=menu())
+
+    reward = random.randint(500, 2000)
+
+    u["chips"] += reward
+    u["last_daily"] = now
+
+    update_user(u)
+
+    await update.message.reply_text(
+        f"🎁 Bonus +{reward}",
+        reply_markup=menu()
+    )
+
+# =========================
+# SALDO + CLASSIFICA
+# =========================
+
+async def saldo(update, context):
+    u = get_user(update.effective_user.id)
+    await update.message.reply_text(f"💰 {u['chips']}", reply_markup=menu())
+
+async def classifica(update, context):
+    cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
+    top = cursor.fetchall()
+
+    msg = "🏆 TOP 10\n\n"
+    for i, (n, c) in enumerate(top, 1):
+        msg += f"{i}. {n} - {c}\n"
+
+    await update.message.reply_text(msg, reply_markup=menu())
 
 # =========================
 # CALLBACK
@@ -222,122 +241,29 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
-    u = get_user(uid, q.from_user.first_name)
-
-    # ================= SLOT =================
     if q.data == "slot":
-        r = [random.choice(["🍒","🍋","🍇","💎","7️⃣"]) for _ in range(3)]
+        return await slot(update, context)
 
-        win = 0
-        if r[0] == r[1] == r[2]:
-            win = 1500
-        elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
-            win = 300
+    if q.data == "roulette":
+        return await roulette(update, context)
 
-        u["chips"] += win
-        u["wins"] += int(win > 0)
-        update_user(u)
+    if q.data == "ruota":
+        return await ruota(update, context)
 
-        await q.message.reply_text(
-            f"🎰 {r[0]} | {r[1]} | {r[2]}\n💰 +{win}",
-            reply_markup=menu()
-        )
+    if q.data == "bonus":
+        return await bonus(update, context)
 
-    # ================= ROULETTE =================
-    elif q.data == "roulette":
-        n = random.randint(0, 36)
+    if q.data == "saldo":
+        return await saldo(update, context)
 
-        win = 0
-        if n == 0:
-            win = 2000
-        elif n % 2 == 0:
-            win = 300
+    if q.data == "classifica":
+        return await classifica(update, context)
 
-        u["chips"] += win
-        update_user(u)
+    if q.data == "blackjack":
+        await q.message.reply_text("🃏 Blackjack in arrivo upgrade")
 
-        await q.message.reply_text(
-            f"🎲 {n} → {'WIN +' + str(win) if win else 'LOSE'}",
-            reply_markup=menu()
-        )
-
-    # ================= SALDO =================
-    elif q.data == "saldo":
-        await q.message.reply_text(f"💰 {u['chips']}", reply_markup=menu())
-
-    # ================= CLASSIFICA =================
-    elif q.data == "classifica":
-        cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
-        top = cursor.fetchall()
-
-        msg = "🏆 TOP\n\n"
-        for i, (name, chips) in enumerate(top, 1):
-            msg += f"{i}. {name} - {chips}\n"
-
-        await q.message.reply_text(msg, reply_markup=menu())
-
-    # ================= ARENA CREATE =================
-    elif q.data == "arena":
-
-        bet = 500
-
-        if u["chips"] < bet:
-            return await q.message.reply_text("❌ Non hai chips")
-
-        u["chips"] -= bet
-        update_user(u)
-
-        arena_id = create_arena(uid, bet)
-        arenas[arena_id]["players"].append(uid)
-
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎮 Entra Arena", callback_data=f"join_{arena_id}")
-        ]])
-
-        await q.message.reply_text(
-            f"⚔️ ARENA APERTA\n💰 {bet} chips\n👥 2-4 player\n⏳ parte in 20s",
-            reply_markup=keyboard
-        )
-
-    # ================= JOIN ARENA =================
-    elif q.data.startswith("join_"):
-
-        arena_id = q.data.split("_")[1]
-        arena = arenas.get(arena_id)
-
-        if not arena:
-            return await q.message.reply_text("❌ Arena non esiste")
-
-        if uid in arena["players"]:
-            return await q.message.reply_text("⚠️ già dentro")
-
-        if len(arena["players"]) >= 4:
-            return await q.message.reply_text("❌ piena")
-
-        if u["chips"] < arena["bet"]:
-            return await q.message.reply_text("❌ non hai chips")
-
-        u["chips"] -= arena["bet"]
-        update_user(u)
-
-        arena["players"].append(uid)
-
-        await q.message.reply_text(f"✅ Entrato! ({len(arena['players'])}/4)")
-
-        # auto start semplice
-        if len(arena["players"]) >= 2:
-            result = resolve_arena(arena_id)
-
-            for p in arena["players"]:
-                try:
-                    await context.bot.send_message(
-                        chat_id=p,
-                        text=result,
-                        reply_markup=menu()
-                    )
-                except:
-                    pass
+    if q.data == "arena":
+        await q.message.reply_text("⚔️ Arena in upgrade successivo")
 
 # =========================
 # MAIN
@@ -349,7 +275,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 BOT READY")
+    print("🟢 BOT ONLINE")
     app.run_polling()
 
 if __name__ == "__main__":
