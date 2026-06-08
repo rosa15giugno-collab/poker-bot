@@ -28,6 +28,7 @@ if not TOKEN:
 DATA_FILE = "casino_db.json"
 
 print("TOKEN LETTO:", TOKEN)
+print("🔥🔥🔥 NUOVA VERSIONE ATTIVA 🔥🔥🔥")
 print("🟢 CASINO BOT ONLINE PID:", os.getpid())
 
 # =========================
