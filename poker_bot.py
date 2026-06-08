@@ -15,7 +15,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO UPGRADE 3 ONLINE")
+print("🟢 CASINO UPGRADE 4 ONLINE")
 
 # =========================
 # DATABASE
@@ -31,12 +31,11 @@ CREATE TABLE IF NOT EXISTS users (
     user_id TEXT PRIMARY KEY,
     name TEXT,
     chips INTEGER,
+    xp INTEGER,
+    level INTEGER,
     wins INTEGER,
     losses INTEGER,
-    best_win INTEGER,
-    last_daily INTEGER,
-    streak INTEGER,
-    vip INTEGER
+    last_daily INTEGER
 )
 """)
 conn.commit()
@@ -54,32 +53,30 @@ def get_user(uid, name="Player"):
 
         if row is None:
             cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (uid, name, 5000, 0, 0, 0, 0, 0, 0))
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (uid, name, 5000, 0, 1, 0, 0, 0))
             conn.commit()
 
             return {
                 "user_id": uid,
                 "name": name,
                 "chips": 5000,
+                "xp": 0,
+                "level": 1,
                 "wins": 0,
                 "losses": 0,
-                "best_win": 0,
-                "last_daily": 0,
-                "streak": 0,
-                "vip": 0
+                "last_daily": 0
             }
 
         return {
             "user_id": row[0],
             "name": row[1],
             "chips": row[2],
-            "wins": row[3],
-            "losses": row[4],
-            "best_win": row[5],
-            "last_daily": row[6],
-            "streak": row[7],
-            "vip": row[8]
+            "xp": row[3],
+            "level": row[4],
+            "wins": row[5],
+            "losses": row[6],
+            "last_daily": row[7]
         }
 
 def update_user(u):
@@ -88,25 +85,38 @@ def update_user(u):
         UPDATE users SET
             name=?,
             chips=?,
+            xp=?,
+            level=?,
             wins=?,
             losses=?,
-            best_win=?,
-            last_daily=?,
-            streak=?,
-            vip=?
+            last_daily=?
         WHERE user_id=?
         """, (
             u["name"],
             u["chips"],
+            u["xp"],
+            u["level"],
             u["wins"],
             u["losses"],
-            u["best_win"],
             u["last_daily"],
-            u["streak"],
-            u["vip"],
             u["user_id"]
         ))
         conn.commit()
+
+# =========================
+# LEVEL SYSTEM
+# =========================
+
+def add_xp(u, amount):
+    u["xp"] += amount
+
+    needed = u["level"] * 1000
+
+    if u["xp"] >= needed:
+        u["xp"] -= needed
+        u["level"] += 1
+        return True
+    return False
 
 # =========================
 # MENU
@@ -117,9 +127,7 @@ def menu():
         [InlineKeyboardButton("🎰 Slot", callback_data="slot")],
         [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
         [InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
-        [InlineKeyboardButton("🎁 Daily Bonus", callback_data="daily")],
-        [InlineKeyboardButton("💎 VIP", callback_data="vip")],
-        [InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
+        [InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
         [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
@@ -129,79 +137,35 @@ def menu():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
-    await update.message.reply_text("🎰 CASINO UPGRADE 3\nScegli:", reply_markup=menu())
-
-async def saldo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = get_user(update.effective_user.id)
-    await update.message.reply_text(
-        f"💰 Chips: {u['chips']}\n🔥 Streak: {u['streak']}\n💎 VIP: {u['vip']}"
-    )
+    await update.message.reply_text("🎰 CASINO UPGRADE 4\nScegli:", reply_markup=menu())
 
 async def classifica(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
+    cursor.execute("SELECT name, level, xp FROM users ORDER BY level DESC, xp DESC LIMIT 10")
     top = cursor.fetchall()
 
-    msg = "🏆 TOP 10\n\n"
-    for i, (name, chips) in enumerate(top, 1):
-        msg += f"{i}. {name} - {chips}\n"
+    msg = "🏆 TOP LIVELLI\n\n"
+    for i, (name, lvl, xp) in enumerate(top, 1):
+        msg += f"{i}. {name} - Lv.{lvl} ({xp} XP)\n"
 
     await update.message.reply_text(msg)
-
-# =========================
-# DAILY BONUS + STREAK
-# =========================
-
-def daily_bonus(u):
-    now = int(time.time())
-
-    if now - u["last_daily"] < 86400:
-        return 0, False
-
-    # streak system
-    if now - u["last_daily"] < 172800:
-        u["streak"] += 1
-    else:
-        u["streak"] = 1
-
-    base = random.randint(800, 2000)
-
-    bonus = base + (u["streak"] * 200)
-
-    if u["vip"] == 1:
-        bonus *= 2
-
-    u["chips"] += bonus
-    u["last_daily"] = now
-
-    return bonus, True
-
     
-    # ================= SLOT =================
 games = {}
 
-def deck():
-    d = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] * 4
-    random.shuffle(d)
-    return d
+# =========================
+# SLOT
+# =========================
 
-def value(hand):
-    v = 0
-    aces = 0
+def slot_game():
+    symbols = ["🍒","🍋","🍇","💎","7️⃣"]
+    r = [random.choice(symbols) for _ in range(3)]
 
-    for c in hand:
-        if c in ["J","Q","K"]:
-            v += 10
-        elif c == "A":
-            v += 11
-            aces += 1
-        else:
-            v += int(c)
+    win = 0
+    if r[0] == r[1] == r[2]:
+        win = 1200
+    elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
+        win = 300
 
-    while v > 21 and aces:
-        v -= 10
-        aces -= 1
-
-    return v
+    return r, win
 
 # =========================
 # CALLBACK
@@ -216,94 +180,87 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ================= SLOT =================
     if q.data == "slot":
-        r = [random.choice(["🍒","🍋","🍇","💎","7️⃣"]) for _ in range(3)]
 
-        win = 0
-        if r[0] == r[1] == r[2]:
-            win = 1200
-        elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
-            win = 400
-
-        if u["vip"] == 1:
-            win *= 2
+        r, win = slot_game()
 
         u["chips"] += win
-        u["wins"] += int(win > 0)
+
+        xp_gain = 120 if win > 0 else 40
+        leveled = add_xp(u, xp_gain)
+
+        if win > 0:
+            u["wins"] += 1
+        else:
+            u["losses"] += 1
 
         update_user(u)
 
-        await q.message.reply_text(
-            f"🎰 SLOT\n{r[0]} | {r[1]} | {r[2]}\n"
+        msg = (
+            f"🎰 SLOT\n{r[0]} | {r[1]} | {r[2]}\n\n"
             f"{'🎉 +' + str(win) if win else '💀 Perso'}\n"
-            f"💰 {u['chips']}",
-            reply_markup=menu()
+            f"⭐ +{xp_gain} XP\n"
+            f"💰 {u['chips']} | Lv.{u['level']}"
         )
+
+        if leveled:
+            msg += "\n🎉 LEVEL UP!"
+
+        await q.message.reply_text(msg, reply_markup=menu())
 
     # ================= ROULETTE =================
     elif q.data == "roulette":
+
         n = random.randint(0, 36)
 
-        win = 0
         if n == 0:
             win = 2000
         elif n % 2 == 0:
             win = 300
-
-        if u["vip"] == 1:
-            win = int(win * 1.5)
+        else:
+            win = 0
 
         u["chips"] += win
+
+        xp_gain = 100 if win > 0 else 30
+        leveled = add_xp(u, xp_gain)
+
         update_user(u)
 
-        await q.message.reply_text(
-            f"🎲 ROULETTE\nNumero: {n}\n"
+        msg = (
+            f"🎲 ROULETTE\nNumero: {n}\n\n"
             f"{'🎉 +' + str(win) if win else '💀 Perso'}\n"
-            f"💰 {u['chips']}",
-            reply_markup=menu()
+            f"⭐ +{xp_gain} XP\n"
+            f"💰 {u['chips']} | Lv.{u['level']}"
         )
 
-    # ================= DAILY =================
-    elif q.data == "daily":
-        bonus, ok = daily_bonus(u)
+        if leveled:
+            msg += "\n🎉 LEVEL UP!"
 
-        if not ok:
-            await q.message.reply_text("⏳ Daily già preso", reply_markup=menu())
-            return
+        await q.message.reply_text(msg, reply_markup=menu())
 
-        update_user(u)
+    # ================= PROFILO =================
+    elif q.data == "profilo":
 
         await q.message.reply_text(
-            f"🎁 DAILY BONUS +{bonus}\n🔥 Streak: {u['streak']}",
-            reply_markup=menu()
-        )
-
-    # ================= VIP =================
-    elif q.data == "vip":
-
-        if u["chips"] >= 20000:
-            u["vip"] = 1
-            u["chips"] -= 20000
-            update_user(u)
-
-            await q.message.reply_text("💎 SEI DIVENTATO VIP!", reply_markup=menu())
-        else:
-            await q.message.reply_text("❌ Servono 20000 chips per VIP", reply_markup=menu())
-
-    # ================= SALDO =================
-    elif q.data == "saldo":
-        await q.message.reply_text(
-            f"💰 {u['chips']}\n🔥 Streak: {u['streak']}\n💎 VIP: {u['vip']}",
+            f"👤 PROFILO\n\n"
+            f"Nome: {u['name']}\n"
+            f"💰 Chips: {u['chips']}\n"
+            f"⭐ XP: {u['xp']}\n"
+            f"📊 Livello: {u['level']}\n"
+            f"🏆 Vittorie: {u['wins']}\n"
+            f"💀 Sconfitte: {u['losses']}",
             reply_markup=menu()
         )
 
     # ================= CLASSIFICA =================
     elif q.data == "classifica":
-        cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
+
+        cursor.execute("SELECT name, level, xp FROM users ORDER BY level DESC, xp DESC LIMIT 10")
         top = cursor.fetchall()
 
-        msg = "🏆 TOP 10\n\n"
-        for i, (name, chips) in enumerate(top, 1):
-            msg += f"{i}. {name} - {chips}\n"
+        msg = "🏆 TOP PLAYERS\n\n"
+        for i, (name, lvl, xp) in enumerate(top, 1):
+            msg += f"{i}. {name} - Lv.{lvl} ({xp} XP)\n"
 
         await q.message.reply_text(msg, reply_markup=menu())
 
@@ -315,11 +272,10 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("saldo", saldo))
     app.add_handler(CommandHandler("classifica", classifica))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO FINAL UPGRADE ONLINE")
+    print("🟢 CASINO UPGRADE 4 ONLINE")
     app.run_polling()
 
 if __name__ == "__main__":
