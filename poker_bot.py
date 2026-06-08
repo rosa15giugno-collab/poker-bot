@@ -15,7 +15,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO UPGRADE 5 ONLINE")
+print("🟢 CASINO UPGRADE 6 ONLINE")
 
 # =========================
 # DB
@@ -40,6 +40,15 @@ CREATE TABLE IF NOT EXISTS users (
 )
 """)
 conn.commit()
+
+# =========================
+# LOBBY / JACKPOT GLOBAL
+# =========================
+
+jackpot = 5000
+lobby_pvp = []
+
+games = {}
 
 # =========================
 # USER SYSTEM
@@ -109,15 +118,14 @@ def update_user(u):
         conn.commit()
 
 # =========================
-# XP SYSTEM
+# XP
 # =========================
 
 def add_xp(u, amount):
     u["xp"] += amount
-    needed = u["level"] * 1000
-
-    if u["xp"] >= needed:
-        u["xp"] -= needed
+    need = u["level"] * 1000
+    if u["xp"] >= need:
+        u["xp"] -= need
         u["level"] += 1
         return True
     return False
@@ -131,42 +139,13 @@ def menu():
         [InlineKeyboardButton("🎰 Slot", callback_data="slot")],
         [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
         [InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
-        [InlineKeyboardButton("🏦 Banca", callback_data="bank")],
-        [InlineKeyboardButton("⚔️ PvP", callback_data="pvp")],
+        [InlineKeyboardButton("💰 Jackpot", callback_data="jackpot")],
+        [InlineKeyboardButton("⚔️ PvP Lobby", callback_data="lobby")],
+        [InlineKeyboardButton("🏦 Bank", callback_data="bank")],
         [InlineKeyboardButton("🎁 Daily", callback_data="daily")],
         [InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
         [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
-
-# =========================
-# BLACKJACK STATE
-# =========================
-
-games = {}
-
-def deck():
-    d = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] * 4
-    random.shuffle(d)
-    return d
-
-def value(hand):
-    total = 0
-    aces = 0
-
-    for c in hand:
-        if c in ["J","Q","K"]:
-            total += 10
-        elif c == "A":
-            total += 11
-            aces += 1
-        else:
-            total += int(c)
-
-    while total > 21 and aces:
-        total -= 10
-        aces -= 1
-
-    return total
 
 # =========================
 # START
@@ -174,7 +153,7 @@ def value(hand):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
-    await update.message.reply_text("🎰 CASINO UPGRADE 5\nScegli:", reply_markup=menu())
+    await update.message.reply_text("🎰 CASINO UPGRADE 6\nEntra nella lobby:", reply_markup=menu())
 
 # =========================
 # DAILY
@@ -185,21 +164,48 @@ async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        return await update.message.reply_text("⏳ già preso")
+        return await update.message.reply_text("⏳ Daily già preso", reply_markup=menu())
 
-    reward = random.randint(1000, 3000)
+    reward = random.randint(1000, 3500)
     u["chips"] += reward
     u["last_daily"] = now
 
     update_user(u)
 
-    await update.message.reply_text(f"🎁 +{reward}", reply_markup=menu())
+    await update.message.reply_text(f"🎁 +{reward} chips", reply_markup=menu())
+
+# =========================
+# BLACKJACK
+# =========================
+
+def deck():
+    d = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] * 4
+    random.shuffle(d)
+    return d
+
+def value(hand):
+    t, a = 0, 0
+    for c in hand:
+        if c in ["J","Q","K"]:
+            t += 10
+        elif c == "A":
+            t += 11
+            a += 1
+        else:
+            t += int(c)
+
+    while t > 21 and a:
+        t -= 10
+        a -= 1
+    return t
 
 # =========================
 # CALLBACK
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global jackpot
+
     q = update.callback_query
     await q.answer()
 
@@ -212,142 +218,88 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         win = 0
         if r[0] == r[1] == r[2]:
-            win = 1500
+            win = 2000
         elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
-            win = 400
+            win = 500
 
+        jackpot += 50
         u["chips"] += win
-        add_xp(u, 120 if win else 40)
-        u["wins"] += int(win > 0)
-        u["losses"] += int(win == 0)
 
-        update_user(u)
-
-        await q.message.reply_text(
-            f"🎰 {r[0]} | {r[1]} | {r[2]}\n{'🎉 +'+str(win) if win else '💀 Perso'}",
-            reply_markup=menu()
-        )
-
-    # ================= ROULETTE =================
-    elif q.data == "roulette":
-        n = random.randint(0, 36)
-
-        if n == 0:
-            win = 2500
-        elif n % 2 == 0:
-            win = 400
-        else:
-            win = 0
-
-        u["chips"] += win
         add_xp(u, 100 if win else 30)
-
         update_user(u)
 
         await q.message.reply_text(
-            f"🎲 {n} | {'WIN' if win else 'LOSE'} +{win}",
+            f"🎰 {r[0]} | {r[1]} | {r[2]}\n💰 +{win}\n💎 Jackpot: {jackpot}",
             reply_markup=menu()
         )
+
+    # ================= JACKPOT =================
+    elif q.data == "jackpot":
+        roll = random.randint(1, 1000)
+
+        if roll == 7:
+            u["chips"] += jackpot
+            msg = f"💥 JACKPOT VINTO: {jackpot}"
+            jackpot = 5000
+        else:
+            msg = "❌ Non hai vinto"
+
+        update_user(u)
+
+        await q.message.reply_text(msg, reply_markup=menu())
+
+    # ================= LOBBY PVP =================
+    elif q.data == "lobby":
+        lobby_pvp.append(uid)
+
+        if len(lobby_pvp) >= 2:
+            p1 = lobby_pvp.pop(0)
+            p2 = lobby_pvp.pop(0)
+
+            w1 = random.randint(1, 100)
+            w2 = random.randint(1, 100)
+
+            if w1 > w2:
+                winner = p1
+            else:
+                winner = p2
+
+            if winner == uid:
+                u["chips"] += 1500
+                update_user(u)
+                msg = "🏆 VINTO PVP LOBBY +1500"
+            else:
+                msg = "💀 HAI PERSO PVP"
+
+            await q.message.reply_text(msg, reply_markup=menu())
+        else:
+            await q.message.reply_text("⏳ In attesa player...", reply_markup=menu())
 
     # ================= BANK =================
     elif q.data == "bank":
-        deposit = min(1000, u["chips"])
+        deposit = min(1500, u["chips"])
         u["chips"] -= deposit
         u["bank"] += deposit
-        update_user(u)
-
-        await q.message.reply_text(
-            f"🏦 Deposito automatico: {deposit}\nBank: {u['bank']}",
-            reply_markup=menu()
-        )
-
-    # ================= PVP =================
-    elif q.data == "pvp":
-        enemy = random.randint(1, 100)
-        player = random.randint(1, 100)
-
-        if player > enemy:
-            u["chips"] += 1000
-            result = "🏆 VINTO PvP +1000"
-        else:
-            result = "💀 PERSO PvP"
 
         update_user(u)
 
-        await q.message.reply_text(result, reply_markup=menu())
-
-    # ================= PROFILO =================
-    elif q.data == "profilo":
-        await q.message.reply_text(
-            f"👤 {u['name']}\n💰 {u['chips']}\n🏦 {u['bank']}\n⭐ Lv.{u['level']}\nXP {u['xp']}",
-            reply_markup=menu()
-        )
+        await q.message.reply_text(f"🏦 +{deposit} in banca", reply_markup=menu())
 
     # ================= CLASSIFICA =================
     elif q.data == "classifica":
         cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
         top = cursor.fetchall()
 
-        msg = "🏆 TOP\n\n"
+        msg = "🏆 TOP PLAYERS\n\n"
         for i, (name, chips) in enumerate(top, 1):
             msg += f"{i}. {name} - {chips}\n"
 
         await q.message.reply_text(msg, reply_markup=menu())
 
-    # ================= BLACKJACK =================
-    elif q.data == "blackjack":
-        d = deck()
-        p = [d.pop(), d.pop()]
-        dl = [d.pop(), d.pop()]
-
-        games[uid] = {"d": d, "p": p, "dl": dl}
-
+    # ================= PROFILO =================
+    elif q.data == "profilo":
         await q.message.reply_text(
-            f"🃏 {p} ({value(p)}) vs [{dl[0]}, ?]",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("HIT", callback_data="hit"),
-                InlineKeyboardButton("STAND", callback_data="stand")
-            ]])
-        )
-
-    elif q.data == "hit":
-        g = games.get(uid)
-        if not g:
-            return
-
-        g["p"].append(g["d"].pop())
-
-        if value(g["p"]) > 21:
-            games.pop(uid)
-            await q.message.reply_text("💀 Sballato", reply_markup=menu())
-            return
-
-        await q.message.reply_text(f"{g['p']} ({value(g['p'])})")
-
-    elif q.data == "stand":
-        g = games.get(uid)
-        if not g:
-            return
-
-        while value(g["dl"]) < 17:
-            g["dl"].append(g["d"].pop())
-
-        pv = value(g["p"])
-        dv = value(g["dl"])
-
-        if pv > dv:
-            u["chips"] += 1200
-            msg = "🏆 VINTO"
-        elif pv == dv:
-            msg = "⚖️ PAREGGIO"
-        else:
-            msg = "💀 PERSO"
-
-        update_user(u)
-        games.pop(uid)
-
-        await q.message.reply_text(
-            f"{msg}\nTu:{pv} Banco:{dv}",
+            f"👤 {u['name']}\n💰 {u['chips']}\n🏦 {u['bank']}\n⭐ Lv.{u['level']}\nXP {u['xp']}",
             reply_markup=menu()
         )
 
@@ -357,11 +309,12 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 BOT ONLINE")
+    print("🟢 BOT ONLINE UPGRADE 6")
     app.run_polling()
 
 if __name__ == "__main__":
