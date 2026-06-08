@@ -3,8 +3,6 @@ import json
 import random
 import time
 
-import telegram
-telegram._bot._BotBase._get_updates = lambda *args, **kwargs: []
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
