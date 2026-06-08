@@ -318,7 +318,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
-    threading.Thread(target=run_health, daemon=True).start()
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -333,9 +332,8 @@ def main():
 
     print("🟢 BOT ONLINE")
 
-app.run_polling(
-    drop_pending_updates=True
-)
+    app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
