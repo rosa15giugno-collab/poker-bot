@@ -402,7 +402,7 @@ async def stand(update, context):
     )
 
 # =========================
-# PVT BLACKJACK PRO
+# PVP BLACKJACK PRO FIXED
 # =========================
 
 async def pvp_create(update, context):
@@ -420,20 +420,23 @@ async def pvp_create(update, context):
         "started": False,
         "turn": 0,
 
-        # 🔥 PRO
-        "last_action": 0,
+        "last_action": time.time(),
         "turn_timeout": 20,
         "afk": {}
     }
 
     await q.message.reply_text(
-        f"🃏 TAVOLO {table_id}\n💰 Puntata ingresso: 1000",
+        f"🃏 TAVOLO {table_id}\n💰 Ingresso: 1000",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("➕ Entra (1000)", callback_data=f"pvp_join_{table_id}")],
             [InlineKeyboardButton("🚀 Avvia partita", callback_data=f"pvp_start_{table_id}")]
         ])
     )
 
+
+# =========================
+# JOIN
+# =========================
 
 async def pvp_join(update, context):
     q = update.callback_query
@@ -462,12 +465,13 @@ async def pvp_join(update, context):
     await q.answer("🎮 Sei entrato nella partita!")
 
     await q.message.reply_text(
-        f"🃏 NUOVO GIOCATORE\n"
-        f"🎯 Tavolo: {tid}\n"
-        f"👥 Giocatori: {len(t['players'])}\n"
-        f"💰 Pot: {t['pot']}"
+        f"🃏 NUOVO GIOCATORE\n🎯 Tavolo: {tid}\n👥 Players: {len(t['players'])}\n💰 Pot: {t['pot']}"
     )
 
+
+# =========================
+# START
+# =========================
 
 async def pvp_start(update, context):
     q = update.callback_query
@@ -479,18 +483,23 @@ async def pvp_start(update, context):
         return await q.answer("❌ Non autorizzato", show_alert=True)
 
     if len(t["players"]) < 2:
-        return await q.answer("❌ Servono almeno 2 giocatori", show_alert=True)
+        return await q.answer("❌ Minimo 2 giocatori", show_alert=True)
 
     t["started"] = True
     t["turn"] = 0
+    t["last_action"] = time.time()
 
     for p in t["players"]:
         t["hands"][p] = [carta(), carta()]
 
-    await send_turn(q, tid)
+    await send_turn(context, tid)
 
 
-async def send_turn(q, tid):
+# =========================
+# SEND TURN (FIXED)
+# =========================
+
+async def send_turn(context, tid):
     t = pvp_tables.get(tid)
     if not t:
         return
@@ -500,32 +509,34 @@ async def send_turn(q, tid):
         hand = t["hands"].get(p, [])
         score = calcola_mano(hand)
 
-        # skip bust
         if score > 21:
             t["turn"] += 1
             continue
 
-        await q.message.reply_text(
-            f"""
-🎯 TURNO DI {p}
+        t["last_action"] = time.time()
+
+        await context.bot.send_message(
+            chat_id=p,
+            text=f"""
+🎯 TURNO
 🃏 Mano: {hand} = {score}
 💰 Pot: {t['pot']}
 
-⏱️ Hai 20 secondi
+⏱️ 20 secondi
 """,
-            
-reply_markup=InlineKeyboardMarkup([
+            reply_markup=InlineKeyboardMarkup([
                 [
-InlineKeyboardButton("🎯 Pesca carta", callback_data=f"pvp_hit_{tid}"),
-InlineKeyboardButton("🛑 Sto", callback_data=f"pvp_stand_{tid}")
+                    InlineKeyboardButton("🎯 HIT", callback_data=f"pvp_hit_{tid}"),
+                    InlineKeyboardButton("🛑 STAND", callback_data=f"pvp_stand_{tid}")
                 ]
             ])
         )
-        t["last_action"] = time.time()
-asyncio.create_task(turn_timer(context,tid))
+
+        asyncio.create_task(turn_timer(context, tid))
         return
 
-     await finish(context, tid)
+    await finish(context, tid)
+
 
 # =========================
 # HIT
@@ -557,6 +568,7 @@ async def pvp_hit(update, context):
     else:
         await q.message.reply_text(f"🃏 Mano: {t['hands'][uid]} = {score}")
 
+
 # =========================
 # STAND
 # =========================
@@ -576,9 +588,10 @@ async def pvp_stand(update, context):
     t["last_action"] = time.time()
 
     await q.answer("🛑 Turno passato")
-    t["turn"] += 1
 
+    t["turn"] += 1
     await send_turn(context, tid)
+
 
 # =========================
 # TIMER AFK
@@ -591,20 +604,21 @@ async def turn_timer(context, tid):
     if not t or not t["started"]:
         return
 
+    if time.time() - t["last_action"] < 20:
+        return
+
     current = t["players"][t["turn"]]
     hand = t["hands"][current]
     score = calcola_mano(hand)
 
-    if time.time() - t["last_action"] < 20:
-        return
-
     await context.bot.send_message(
         chat_id=current,
-        text=f"⏱️ AFK! Auto-stand\n🃏 Mano: {hand} = {score}"
+        text=f"⏱️ AFK → AUTO STAND\n🃏 {hand} = {score}"
     )
 
     t["turn"] += 1
     await send_turn(context, tid)
+
 
 # =========================
 # FINISH
@@ -628,7 +642,7 @@ async def finish(context, tid):
     for p, s in scores:
         text += f"{p} → {s}\n"
 
-    text += f"\n💰 Vincitori: {winners}\n💸 +{payout}"
+    text += f"\n💰 Winners: {winners}\n💸 +{payout}"
 
     for w in winners:
         u = get_user(w)
@@ -637,7 +651,10 @@ async def finish(context, tid):
 
     del pvp_tables[tid]
 
-    await context.bot.send_message(chat_id=winners[0] if winners else t["owner"], text=text)
+    await context.bot.send_message(
+        chat_id=winners[0] if winners else t["owner"],
+        text=text
+    )
 #==========================
 # ROULETTE
 #==========================
