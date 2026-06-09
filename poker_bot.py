@@ -182,9 +182,21 @@ async def slot(update, context):
     update_user(u)
 
     await q.message.reply_text(
-        f"🎰 SLOT\n{r[0]} | {r[1]} | {r[2]}\n💰 Vincita: {win}",
-        reply_markup=menu()
-    )
+    f"""
+╔═════════════════╗
+║   🎰 SLOT 🎰   ║
+╚═════════════════╝
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ {r[0]} │ {r[1]} │ {r[2]} ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+💰 Vincita: {win}
+🏦 Jackpot: {jackpot}
+💳 Saldo: {u['chips']}
+""",
+    reply_markup=menu()
+)
 
 # =========================
 # BLACKJACK BOT
@@ -249,6 +261,161 @@ async def stand(update, context):
         reply_markup=menu()
     )
 
+#==========================
+# ROULETTE
+#==========================
+
+async def roulette(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    numero = random.randint(0, 36)
+
+    win = 1000 if numero == 0 else 300 if numero % 2 == 0 else 0
+
+    u["chips"] += win
+
+    if win > 0:
+        u["wins"] += 1
+    else:
+        u["losses"] += 1
+
+    update_user(u)
+
+    await q.message.reply_text(
+        f"🎲 Roulette\nNumero uscito: {numero}\n💰 Vincita: {win}",
+        reply_markup=menu()
+    )
+
+
+async def ruota(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    premi = [
+        ("💀", 0),
+        ("🥉", 100),
+        ("🥈", 250),
+        ("🥇", 500),
+        ("💎", 1000),
+        ("👑", 2000)
+    ]
+
+    simbolo, premio = random.choice(premi)
+
+    u["chips"] += premio
+
+    if premio > 0:
+        u["wins"] += 1
+    else:
+        u["losses"] += 1
+
+    update_user(u)
+
+    await q.message.reply_text(
+        f"""
+╔═════════════════╗
+║ 🎡 SUPER RUOTA ║
+╚═════════════════╝
+
+      {simbolo}
+
+💰 Premio: {premio}
+💳 Saldo: {u['chips']}
+""",
+        reply_markup=menu()
+    )
+
+async def bonus(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    now = int(time.time())
+
+    if now - u["last_bonus"] < 86400:
+        ore = (86400 - (now - u["last_bonus"])) // 3600
+
+        return await q.message.reply_text(
+            f"⏳ Bonus già ritirato.\nTorna tra circa {ore} ore.",
+            reply_markup=menu()
+        )
+
+    premio = random.randint(500, 2000)
+
+    u["chips"] += premio
+    u["last_bonus"] = now
+
+    update_user(u)
+
+    await q.message.reply_text(
+        f"🎁 Bonus giornaliero\n💰 +{premio}",
+        reply_markup=menu()
+    )
+
+
+async def saldo(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    await q.message.reply_text(
+        f"💰 Saldo: {u['chips']} chips",
+        reply_markup=menu()
+    )
+
+
+async def profilo(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    partite = u["wins"] + u["losses"]
+
+    await q.message.reply_text(
+    f"""
+╔════════════════╗
+║ 👤 PROFILO 👤 ║
+╚════════════════╝
+
+🧑 Nome: {u['name']}
+💰 Chips: {u['chips']}
+🏆 Vittorie: {u['wins']}
+💀 Sconfitte: {u['losses']}
+🎮 Partite: {partite}
+
+⭐ Livello: {max(1, partite // 10 + 1)}
+""",
+    reply_markup=menu()
+)
+
+
+async def classifica(update, context):
+    q = update.callback_query
+
+    cursor.execute(
+        "SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10"
+    )
+
+    top = cursor.fetchall()
+
+    testo = "🏆 CLASSIFICA TOP 10 🏆\n\n"
+
+medaglie = ["🥇","🥈","🥉"]
+
+for i, (nome, chips) in enumerate(top, start=1):
+    if i <= 3:
+        pos = medaglie[i-1]
+    else:
+        pos = f"{i}️⃣"
+
+    testo += f"{pos} {nome}\n💰 {chips} chips\n\n"
+
+    await q.message.reply_text(
+        testo,
+        reply_markup=menu()
+    )
+
+
+
+
 # =========================
 # CALLBACK
 # =========================
@@ -263,16 +430,34 @@ async def cb(update, context):
     d = q.data
 
     if d == "slot":
-        return await slot(update, context)
+    return await slot(update, context)
 
-    if d == "blackjack":
-        return await blackjack_start(update, context)
+if d == "blackjack":
+    return await blackjack_start(update, context)
 
-    if d == "hit":
-        return await hit(update, context)
+if d == "hit":
+    return await hit(update, context)
 
-    if d == "stand":
-        return await stand(update, context)
+if d == "stand":
+    return await stand(update, context)
+
+if d == "roulette":
+    return await roulette(update, context)
+
+if d == "ruota":
+    return await ruota(update, context)
+
+if d == "bonus":
+    return await bonus(update, context)
+
+if d == "saldo":
+    return await saldo(update, context)
+
+if d == "profilo":
+    return await profilo(update, context)
+
+if d == "classifica":
+    return await classifica(update, context)
 
 # =========================
 # MAIN
