@@ -45,6 +45,26 @@ cursor = conn.cursor()
 lock = threading.Lock()
 
 # =========================
+# TABLE INIT (OBBLIGATORIO)
+# =========================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id TEXT PRIMARY KEY,
+    name TEXT,
+    chips INTEGER,
+    wins INTEGER,
+    losses INTEGER,
+    last_bonus INTEGER,
+    xp INTEGER,
+    streak INTEGER,
+    last_daily INTEGER
+)
+""")
+
+conn.commit()
+
+# =========================
 # GAME STATE
 # =========================
 
