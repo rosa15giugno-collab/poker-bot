@@ -42,7 +42,8 @@ def autorizzato(update):
         return True
 
     return chat.id in GRUPPI_AUTORIZZATI
-
+    
+is_allowed = autorizzato
 # =========================
 # DATABASE
 # =========================
