@@ -51,7 +51,10 @@ CREATE TABLE IF NOT EXISTS users (
     chips INTEGER,
     wins INTEGER,
     losses INTEGER,
-    last_bonus INTEGER
+    last_bonus INTEGER,
+    xp INTEGER,
+    streak INTEGER,
+    last_daily INTEGER
 )
 """)
 conn.commit()
@@ -86,10 +89,22 @@ def get_user(uid, name="Player"):
         r = cursor.fetchone()
 
         if not r:
-            cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
-                           (uid, name, 5000, 0, 0, 0))
+            cursor.execute("""
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (uid, name, 5000, 0, 0, 0, 0, 0, 0))
             conn.commit()
-            return {"user_id": uid, "name": name, "chips": 5000, "wins": 0, "losses": 0, "last_bonus": 0}
+
+            return {
+                "user_id": uid,
+                "name": name,
+                "chips": 5000,
+                "wins": 0,
+                "losses": 0,
+                "last_bonus": 0,
+                "xp": 0,
+                "streak": 0,
+                "last_daily": 0
+            }
 
         return {
             "user_id": r[0],
@@ -97,7 +112,10 @@ def get_user(uid, name="Player"):
             "chips": r[2],
             "wins": r[3],
             "losses": r[4],
-            "last_bonus": r[5]
+            "last_bonus": r[5],
+            "xp": r[6],
+            "streak": r[7],
+            "last_daily": r[8]
         }
 
 def update_user(u):
@@ -113,6 +131,7 @@ def update_user(u):
 
 def get_user(uid, name="Player"):
     uid = str(uid)
+
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
@@ -157,6 +176,28 @@ def update_user(u):
             u["losses"], u["last_bonus"], u["user_id"]
         ))
         conn.commit()
+
+# =========================
+# XP SYSTEM
+# =========================
+
+def add_xp(u, amount):
+    u["xp"] += amount
+    update_user(u)
+
+# =========================
+# RANK SYSTEM
+# =========================
+def get_rank(xp):
+    if xp >= 5000:
+        return "👑 LEGEND"
+    if xp >= 2500:
+        return "💎 PRO"
+    if xp >= 1000:
+        return "⭐ SEMI PRO"
+    if xp >= 300:
+        return "🎲 PLAYER"
+    return "🪙 NEW"
 
 # =========================
 # MENU
@@ -518,13 +559,28 @@ async def bonus(update, context):
 
     now = int(time.time())
 
-    if now - u["last_bonus"] < 86400:
-        ore = (86400 - (now - u["last_bonus"])) // 3600
+    if now - u["last_daily"] < 86400:
+        return await q.message.reply_text("⏳ Hai già preso il bonus oggi")
 
-        return await q.message.reply_text(
-            f"⏳ Bonus già ritirato.\nTorna tra circa {ore} ore.",
-            reply_markup=menu()
-        )
+    # streak system
+    if now - u["last_daily"] < 172800:
+        u["streak"] += 1
+    else:
+        u["streak"] = 1
+
+    base = random.randint(500, 2000)
+    reward = base + (u["streak"] * 100)
+
+    u["chips"] += reward
+    u["last_daily"] = now
+    u["xp"] += 50
+
+    update_user(u)
+
+    await q.message.reply_text(
+        f"🎁 BONUS PRO MAX\n+{reward}\n🔥 Streak: {u['streak']}",
+        reply_markup=menu()
+    )
 
     premio = random.randint(500, 2000)
 
@@ -553,51 +609,60 @@ async def profilo(update, context):
     q = update.callback_query
     u = get_user(q.from_user.id)
 
-    partite = u["wins"] + u["losses"]
+    total = u["wins"] + u["losses"]
+    winrate = round((u["wins"] / total) * 100, 2) if total else 0
 
-    await q.message.reply_text(
-    f"""
-╔══════════════╗
-║    👤 PROFILO 👤         ║
-╚══════════════╝
+    rank = get_rank(u["xp"])
 
-🧑 Nome: {u['name']}
+    badges = []
+
+    if u["chips"] > 20000:
+        badges.append("💎 VIP")
+    if winrate > 60:
+        badges.append("🔥 LUCKY")
+    if u["wins"] > u["losses"]:
+        badges.append("🏆 WINNER")
+    if u["streak"] >= 5:
+        badges.append("⚡ HOT STREAK")
+    if u["xp"] > 1000:
+        badges.append("🎮 GRINDER")
+
+    if not badges:
+        badges.append("🆕 NEW")
+
+    await q.message.reply_text(f"""
+╔══════════════════╗
+║   👤 CASINO PRO MAX   ║
+╚══════════════════╝
+
+🧑 {u['name']}
 💰 Chips: {u['chips']}
-🏆 Vittorie: {u['wins']}
-💀 Sconfitte: {u['losses']}
-🎮 Partite: {partite}
+🏆 Rank: {rank}
 
-⭐ Livello: {max(1, partite // 10 + 1)}
-""",
-    reply_markup=menu()
-)
+📊 Stats:
+✔️ Wins: {u['wins']}
+❌ Losses: {u['losses']}
+🎮 Winrate: {winrate}%
 
+⭐ XP: {u['xp']}
+🔥 Streak: {u['streak']}
+
+🏅 Badge:
+{" | ".join(badges)}
+""", reply_markup=menu())
 
 async def classifica(update, context):
     q = update.callback_query
 
-    cursor.execute(
-        "SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10"
-    )
-
+    cursor.execute("SELECT name, chips, xp FROM users ORDER BY chips DESC LIMIT 10")
     top = cursor.fetchall()
 
-    testo = "🏆 CLASSIFICA TOP 10 🏆\n\n"
+    text = "🏆 TOP CASINO PLAYERS\n\n"
 
-    medaglie = ["🥇","🥈","🥉"]
+    for i, (name, chips, xp) in enumerate(top, 1):
+        text += f"{i}. {name}\n💰 {chips} | ⭐ {xp}\n\n"
 
-    for i, (nome, chips) in enumerate(top, start=1):
-        if i <= 3:
-            pos = medaglie[i-1]
-        else:
-            pos = f"{i}️⃣"
-
-        testo += f"{pos} {nome}\n💰 {chips} chips\n\n"
-
-    await q.message.reply_text(
-        testo,
-        reply_markup=menu()
-    )
+    await q.message.reply_text(text, reply_markup=menu())
 
 #==========================
 # CALLBACK
