@@ -44,25 +44,6 @@ conn = sqlite3.connect("casino.db", check_same_thread=False)
 cursor = conn.cursor()
 lock = threading.Lock()
 
-cursor.execute("""
-INSERT INTO users (
-    user_id, name, chips, wins, losses,
-    last_bonus, xp, streak, last_daily
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-""", (
-    uid,
-    name,
-    5000,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-))
-""")
-conn.commit()
-
 # =========================
 # GAME STATE
 # =========================
@@ -71,9 +52,10 @@ blackjack_data = {}
 pvt_tables = {}
 jackpot = 0
 
-#========================
-#UTILS
-#========================
+# =========================
+# UTILS
+# =========================
+
 def carta():
     return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
 
@@ -85,6 +67,10 @@ def calc(hand):
         aces -= 1
     return s
 
+# =========================
+# USER SYSTEM (9 COLONNE FIXED)
+# =========================
+
 def get_user(uid, name="Player"):
     uid = str(uid)
 
@@ -94,8 +80,12 @@ def get_user(uid, name="Player"):
 
         if not r:
             cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (
+                user_id, name, chips, wins, losses,
+                last_bonus, xp, streak, last_daily
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (uid, name, 5000, 0, 0, 0, 0, 0, 0))
+
             conn.commit()
 
             return {
@@ -125,62 +115,29 @@ def get_user(uid, name="Player"):
 def update_user(u):
     with lock:
         cursor.execute("""
-        UPDATE users SET name=?, chips=?, wins=?, losses=?, last_bonus=? WHERE user_id=?
-        """, (u["name"], u["chips"], u["wins"], u["losses"], u["last_bonus"], u["user_id"]))
-        conn.commit()
-
-# =========================
-# USER SYSTEM
-# =========================
-
-def get_user(uid, name="Player"):
-    uid = str(uid)
-
-
-    with lock:
-        cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
-        row = cursor.fetchone()
-
-        if row is None:
-            cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)
-            """, (uid, name, 5000, 0, 0, 0))
-            conn.commit()
-
-            return {
-                "user_id": uid,
-                "name": name,
-                "chips": 5000,
-                "wins": 0,
-                "losses": 0,
-                "last_bonus": 0
-            }
-
-        return {
-            "user_id": row[0],
-            "name": row[1],
-            "chips": row[2],
-            "wins": row[3],
-            "losses": row[4],
-            "last_bonus": row[5]
-        }
-
-def update_user(u):
-    with lock:
-        cursor.execute("""
         UPDATE users SET
             name=?,
             chips=?,
             wins=?,
             losses=?,
-            last_bonus=?
+            last_bonus=?,
+            xp=?,
+            streak=?,
+            last_daily=?
         WHERE user_id=?
         """, (
-            u["name"], u["chips"], u["wins"],
-            u["losses"], u["last_bonus"], u["user_id"]
+            u["name"],
+            u["chips"],
+            u["wins"],
+            u["losses"],
+            u["last_bonus"],
+            u["xp"],
+            u["streak"],
+            u["last_daily"],
+            u["user_id"]
         ))
-        conn.commit()
 
+        conn.commit()
 # =========================
 # XP SYSTEM
 # =========================
