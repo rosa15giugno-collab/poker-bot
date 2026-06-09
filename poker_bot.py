@@ -15,7 +15,7 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟡 CASINO ULTRA ORO 4.0 ONLINE")
+print("🟢 CASINO WHITELIST FINAL ONLINE")
 
 # =========================
 # GRUPPI AUTORIZZATI
@@ -31,14 +31,13 @@ def is_allowed(update):
     if not chat:
         return False
 
-    # privato sempre ok (se vuoi puoi togliere questa riga)
     if chat.type == "private":
         return True
 
     return chat.id in ALLOWED_GROUPS
 
 # =========================
-# DB
+# DATABASE
 # =========================
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
@@ -58,20 +57,17 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# GLOBAL STATE
+# GAME STATE
 # =========================
 
-blackjack = {}
-tavoli = {}
+blackjack_data = {}
 jackpot = 0
-
-TURN_TIME = 20
 
 def carta():
     return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
 
 # =========================
-# UTENTE
+# USER SYSTEM
 # =========================
 
 def get_user(uid, name="Player"):
@@ -79,12 +75,14 @@ def get_user(uid, name="Player"):
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
-        r = cursor.fetchone()
+        row = cursor.fetchone()
 
-        if r is None:
-            cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
-                           (uid, name, 5000, 0, 0, 0))
+        if row is None:
+            cursor.execute("""
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)
+            """, (uid, name, 5000, 0, 0, 0))
             conn.commit()
+
             return {
                 "user_id": uid,
                 "name": name,
@@ -95,12 +93,12 @@ def get_user(uid, name="Player"):
             }
 
         return {
-            "user_id": r[0],
-            "name": r[1],
-            "chips": r[2],
-            "wins": r[3],
-            "losses": r[4],
-            "last_bonus": r[5]
+            "user_id": row[0],
+            "name": row[1],
+            "chips": row[2],
+            "wins": row[3],
+            "losses": row[4],
+            "last_bonus": row[5]
         }
 
 def update_user(u):
@@ -120,14 +118,6 @@ def update_user(u):
         conn.commit()
 
 # =========================
-# SEND SAFE
-# =========================
-
-async def send(update, context, text, markup=None):
-    q = update.callback_query
-    await context.bot.send_message(q.message.chat_id, text, reply_markup=markup)
-
-# =========================
 # MENU
 # =========================
 
@@ -143,25 +133,23 @@ def menu():
          InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
 
         [InlineKeyboardButton("💰 Saldo", callback_data="saldo"),
-         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")],
-
-        [InlineKeyboardButton("🎯 PvP Blackjack", callback_data="crea_tavolo")]
+         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
 # =========================
-# START (WHITELIST)
+# START
 # =========================
 
 async def start(update, context):
     if not is_allowed(update):
         if update.message:
-            await update.message.reply_text("❌ Questo gruppo non è autorizzato.")
+            await update.message.reply_text("❌ Gruppo non autorizzato.")
         return
 
     get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_text(
-        "🟡 CASINO ULTRA ORO 4.0\n🎮 Benvenuto!",
+        "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
         reply_markup=menu()
     )
 
@@ -177,7 +165,7 @@ async def slot(update, context):
 
     bet = 500
     if u["chips"] < bet:
-        return await send(update, context, "❌ Chips insufficienti", menu())
+        return await q.message.reply_text("❌ Chips insufficienti")
 
     u["chips"] -= bet
     jackpot += 50
@@ -190,19 +178,17 @@ async def slot(update, context):
         u["chips"] += win + jackpot
         jackpot = 0
 
-    u["wins" if win>0 else "losses"] += 1
+    u["wins" if win > 0 else "losses"] += 1
     update_user(u)
 
-    await send(update, context,
-        f"🎰 SLOT\n{r[0]}|{r[1]}|{r[2]}\n💥 JACKPOT {jackpot}",
-        menu()
+    await q.message.reply_text(
+        f"🎰 SLOT\n{r[0]} | {r[1]} | {r[2]}\n💰 Vincita: {win}",
+        reply_markup=menu()
     )
 
 # =========================
 # BLACKJACK BOT
 # =========================
-
-blackjack_data = {}
 
 async def blackjack_start(update, context):
     q = update.callback_query
@@ -213,38 +199,38 @@ async def blackjack_start(update, context):
 
     blackjack_data[uid] = {"mano": mano, "dealer": dealer}
 
-    await send(update, context,
+    await q.message.reply_text(
         f"🃏 MANO: {mano} = {sum(mano)}\n🎩 Dealer: [{dealer[0]}, ?]",
-        InlineKeyboardMarkup([
-            [InlineKeyboardButton("🎯 PESCA", callback_data="pesca"),
-             InlineKeyboardButton("🛑 STAI", callback_data="stai")]
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🎯 Pesca", callback_data="hit"),
+             InlineKeyboardButton("🛑 Stai", callback_data="stand")]
         ])
     )
 
-async def pesca(update, context):
+async def hit(update, context):
     q = update.callback_query
     uid = str(q.from_user.id)
 
     g = blackjack_data.get(uid)
     if not g:
-        return await send(update, context, "❌ Nessuna partita", menu())
+        return await q.message.reply_text("❌ Nessuna partita")
 
     g["mano"].append(carta())
     s = sum(g["mano"])
 
     if s > 21:
         del blackjack_data[uid]
-        return await send(update, context, f"💥 Sballato {s}", menu())
+        return await q.message.reply_text(f"💥 Sballato {s}", reply_markup=menu())
 
-    await send(update, context, f"🎯 {g['mano']} = {s}")
+    await q.message.reply_text(f"🎯 {g['mano']} = {s}")
 
-async def stai(update, context):
+async def stand(update, context):
     q = update.callback_query
     uid = str(q.from_user.id)
 
     g = blackjack_data.get(uid)
     if not g:
-        return await send(update, context, "❌ Nessuna partita", menu())
+        return await q.message.reply_text("❌ Nessuna partita")
 
     p = sum(g["mano"])
     d = g["dealer"]
@@ -254,17 +240,17 @@ async def stai(update, context):
 
     ds = sum(d)
 
-    res = "🏆 VINTO" if (ds>21 or p>ds) else "💀 PERSO" if p<ds else "🤝 PARI"
+    res = "🏆 VINTO" if (ds > 21 or p > ds) else "💀 PERSO" if p < ds else "🤝 PARI"
 
     del blackjack_data[uid]
 
-    await send(update, context,
-        f"🃏 RISULTATO\n👤 {p}\n🎩 {ds}\n\n{res}",
-        menu()
+    await q.message.reply_text(
+        f"🃏 RISULTATO\nTu: {p}\nDealer: {ds}\n\n{res}",
+        reply_markup=menu()
     )
 
 # =========================
-# CALLBACK (WHITELIST ATTIVA)
+# CALLBACK
 # =========================
 
 async def cb(update, context):
@@ -276,10 +262,17 @@ async def cb(update, context):
 
     d = q.data
 
-    if d == "slot": return await slot(update,context)
-    if d == "blackjack": return await blackjack_start(update,context)
-    if d == "pesca": return await pesca(update,context)
-    if d == "stai": return await stai(update,context)
+    if d == "slot":
+        return await slot(update, context)
+
+    if d == "blackjack":
+        return await blackjack_start(update, context)
+
+    if d == "hit":
+        return await hit(update, context)
+
+    if d == "stand":
+        return await stand(update, context)
 
 # =========================
 # MAIN
@@ -290,8 +283,8 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟡 CASINO ULTRA ORO 4.0 ONLINE")
+    print("🟢 CASINO WHITELIST FINAL ONLINE")
     app.run_polling()
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
