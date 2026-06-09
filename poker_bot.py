@@ -430,34 +430,34 @@ async def cb(update, context):
     d = q.data
 
     if d == "slot":
-    return await slot(update, context)
+        return await slot(update, context)
 
-if d == "blackjack":
-    return await blackjack_start(update, context)
+    if d == "blackjack":
+        return await blackjack_start(update, context)
 
-if d == "hit":
-    return await hit(update, context)
+    if d == "hit":
+        return await hit(update, context)
 
-if d == "stand":
-    return await stand(update, context)
+    if d == "stand":
+        return await stand(update, context)
 
-if d == "roulette":
-    return await roulette(update, context)
+    if d == "roulette":
+        return await roulette(update, context)
 
-if d == "ruota":
-    return await ruota(update, context)
+    if d == "ruota":
+        return await ruota(update, context)
 
-if d == "bonus":
-    return await bonus(update, context)
+    if d == "bonus":
+        return await bonus(update, context)
 
-if d == "saldo":
-    return await saldo(update, context)
+    if d == "saldo":
+        return await saldo(update, context)
 
-if d == "profilo":
-    return await profilo(update, context)
+    if d == "profilo":
+        return await profilo(update, context)
 
-if d == "classifica":
-    return await classifica(update, context)
+    if d == "classifica":
+        return await classifica(update, context)
 
 # =========================
 # MAIN
