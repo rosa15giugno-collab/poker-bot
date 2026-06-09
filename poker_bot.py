@@ -61,10 +61,51 @@ conn.commit()
 # =========================
 
 blackjack_data = {}
+pvt_tables = {}
 jackpot = 0
 
+#========================
+#UTILS
+#========================
 def carta():
     return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
+
+def calc(hand):
+    s = sum(hand)
+    aces = hand.count(11)
+    while s > 21 and aces:
+        s -= 10
+        aces -= 1
+    return s
+
+def get_user(uid, name="Player"):
+    uid = str(uid)
+
+    with lock:
+        cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
+        r = cursor.fetchone()
+
+        if not r:
+            cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
+                           (uid, name, 5000, 0, 0, 0))
+            conn.commit()
+            return {"user_id": uid, "name": name, "chips": 5000, "wins": 0, "losses": 0, "last_bonus": 0}
+
+        return {
+            "user_id": r[0],
+            "name": r[1],
+            "chips": r[2],
+            "wins": r[3],
+            "losses": r[4],
+            "last_bonus": r[5]
+        }
+
+def update_user(u):
+    with lock:
+        cursor.execute("""
+        UPDATE users SET name=?, chips=?, wins=?, losses=?, last_bonus=? WHERE user_id=?
+        """, (u["name"], u["chips"], u["wins"], u["losses"], u["last_bonus"], u["user_id"]))
+        conn.commit()
 
 # =========================
 # USER SYSTEM
@@ -124,16 +165,18 @@ def update_user(u):
 def menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 Slot", callback_data="slot"),
-         InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
+         InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
 
-        [InlineKeyboardButton("🎲 Roulette", callback_data="roulette"),
-         InlineKeyboardButton("🎡 Ruota", callback_data="ruota")],
+        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
+         InlineKeyboardButton("🃏 PvP Blackjack", callback_data="pvp_create")],
 
-        [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-         InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
+        [InlineKeyboardButton("🎡 Ruota", callback_data="ruota"),
+         InlineKeyboardButton("🎁 Bonus", callback_data="bonus")],
 
-        [InlineKeyboardButton("💰 Saldo", callback_data="saldo"),
-         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+        [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
+         InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
+
+        [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
 # =========================
@@ -244,13 +287,13 @@ async def stand(update, context):
     if not g:
         return await q.message.reply_text("❌ Nessuna partita")
 
-    p = sum(g["mano"])
+    p = calc(g["mano"])
     d = g["dealer"]
 
-    while sum(d) < 17:
+    while calc(d) < 17:
         d.append(carta())
 
-    ds = sum(d)
+    ds = calc(d)
 
     res = "🏆 VINTO" if (ds > 21 or p > ds) else "💀 PERSO" if p < ds else "🤝 PARI"
 
@@ -260,6 +303,149 @@ async def stand(update, context):
         f"🃏 RISULTATO\nTu: {p}\nDealer: {ds}\n\n{res}",
         reply_markup=menu()
     )
+
+# =========================
+# PVT BLACKJACK pro
+# =========================
+
+async def pvp_create(update, context):
+    q = update.callback_query
+    uid = str(q.from_user.id)
+
+    table_id = str(random.randint(1000, 9999))
+
+    pvp_tables[table_id] = {
+        "owner": uid,
+        "players": [uid],
+        "hands": {},
+        "chips": {},
+        "pot": 0,
+        "started": False,
+        "turn": 0
+    }
+
+    await q.message.reply_text(
+        f"🃏 TABLE {table_id}\n💰 Buy-in 1000",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("JOIN 1000", callback_data=f"pvp_join_{table_id}")],
+            [InlineKeyboardButton("START", callback_data=f"pvp_start_{table_id}")]
+        ])
+    )
+
+async def pvp_join(update, context):
+    q = update.callback_query
+    uid = str(q.from_user.id)
+    tid = q.data.split("_")[-1]
+
+    t = pvp_tables.get(tid)
+    if not t or t["started"]:
+        return
+
+    u = get_user(uid)
+
+    if u["chips"] < 1000:
+        return await q.message.reply_text("❌ No chips")
+
+    if uid in t["players"]:
+        return
+
+    u["chips"] -= 1000
+    update_user(u)
+
+    t["players"].append(uid)
+    t["chips"][uid] = 1000
+    t["pot"] += 1000
+
+    await q.message.reply_text(f"✅ Join {tid} | Pot {t['pot']}")
+
+async def pvp_start(update, context):
+    q = update.callback_query
+    uid = str(q.from_user.id)
+    tid = q.data.split("_")[-1]
+
+    t = pvp_tables.get(tid)
+    if not t or t["owner"] != uid:
+        return
+
+    if len(t["players"]) < 2:
+        return await q.message.reply_text("❌ Min 2 players")
+
+    t["started"] = True
+
+    for p in t["players"]:
+        t["hands"][p] = [carta(), carta()]
+
+    await send_turn(q, tid)
+
+async def send_turn(q, tid):
+    t = pvp_tables[tid]
+    p = t["players"][t["turn"]]
+
+    await q.message.reply_text(
+        f"🎯 TURN {p}\n{t['hands'][p]} = {calc(t['hands'][p])}\n💰 {t['pot']}",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("HIT", callback_data=f"pvp_hit_{tid}"),
+             InlineKeyboardButton("STAND", callback_data=f"pvp_stand_{tid}")]
+        ])
+    )
+
+async def pvp_hit(update, context):
+    q = update.callback_query
+    uid = str(q.from_user.id)
+    tid = q.data.split("_")[-1]
+
+    t = pvp_tables[tid]
+
+    if t["players"][t["turn"]] != uid:
+        return
+
+    t["hands"][uid].append(carta())
+
+    if calc(t["hands"][uid]) > 21:
+        await next_turn(q, tid)
+    else:
+        await q.message.reply_text(str(t["hands"][uid]))
+
+async def pvp_stand(update, context):
+    q = update.callback_query
+    tid = q.data.split("_")[-1]
+    await next_turn(q, tid)
+
+async def next_turn(q, tid):
+    t = pvp_tables[tid]
+    t["turn"] += 1
+
+    if t["turn"] >= len(t["players"]):
+        return await finish(q, tid)
+
+    await send_turn(q, tid)
+
+async def finish(q, tid):
+    t = pvp_tables[tid]
+
+    scores = [(p, calc(t["hands"][p])) for p in t["players"]]
+    scores.sort(key=lambda x: x[1], reverse=True)
+
+    best = scores[0][1]
+    winners = [p for p, s in scores if s == best and s <= 21]
+
+    payout = t["pot"] // len(winners) if winners else 0
+
+    text = "🏆 RESULT\n\n"
+
+    for p, s in scores:
+        text += f"{p} {s}\n"
+
+    text += f"\nWIN {winners} +{payout}"
+
+    for w in winners:
+        u = get_user(w)
+        u["chips"] += payout
+        update_user(u)
+
+    del pvp_tables[tid]
+
+    await q.message.reply_text(text, reply_markup=menu())
 
 #==========================
 # ROULETTE
@@ -413,51 +599,34 @@ async def classifica(update, context):
         reply_markup=menu()
     )
 
-
-
-
-# =========================
+#==========================
 # CALLBACK
-# =========================
+#========================
+
 
 async def cb(update, context):
-    if not is_allowed(update):
-        return
-
     q = update.callback_query
     await q.answer()
 
     d = q.data
 
-    if d == "slot":
-        return await slot(update, context)
+    if d == "slot": return await slot(update, context)
+    if d == "roulette": return await roulette(update, context)
+    if d == "ruota": return await ruota(update, context)
+    if d == "bonus": return await bonus(update, context)
+    if d == "saldo": return await saldo(update, context)
+    if d == "profilo": return await profilo(update, context)
+    if d == "classifica": return await classifica(update, context)
 
-    if d == "blackjack":
-        return await blackjack_start(update, context)
+    if d == "blackjack": return await blackjack_start(update, context)
+    if d == "hit": return await hit(update, context)
+    if d == "stand": return await stand(update, context)
 
-    if d == "hit":
-        return await hit(update, context)
-
-    if d == "stand":
-        return await stand(update, context)
-
-    if d == "roulette":
-        return await roulette(update, context)
-
-    if d == "ruota":
-        return await ruota(update, context)
-
-    if d == "bonus":
-        return await bonus(update, context)
-
-    if d == "saldo":
-        return await saldo(update, context)
-
-    if d == "profilo":
-        return await profilo(update, context)
-
-    if d == "classifica":
-        return await classifica(update, context)
+    if d == "pvp_create": return await pvp_create(update, context)
+    if d.startswith("pvp_join_"): return await pvp_join(update, context)
+    if d.startswith("pvp_start_"): return await pvp_start(update, context)
+    if d.startswith("pvp_hit_"): return await pvp_hit(update, context)
+    if d.startswith("pvp_stand_"): return await pvp_stand(update, context)
 
 # =========================
 # MAIN
@@ -468,8 +637,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO WHITELIST FINAL ONLINE")
+    print("🟢 ONLINE")
     app.run_polling()
-
 if __name__ == "__main__":
     main()
