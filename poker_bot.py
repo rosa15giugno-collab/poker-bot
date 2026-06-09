@@ -184,7 +184,7 @@ async def slot(update, context):
     await q.message.reply_text(
     f"""
 ╔══════════════╗
-║      🎰 SLOT 🎰           ║
+║       🎰 SLOT 🎰           ║
 ╚══════════════╝
 
 ┏━━━━━━━━━━━━━┓
@@ -372,7 +372,7 @@ async def profilo(update, context):
     await q.message.reply_text(
     f"""
 ╔══════════════╗
-║   👤 PROFILO 👤         ║
+║    👤 PROFILO 👤         ║
 ╚══════════════╝
 
 🧑 Nome: {u['name']}
