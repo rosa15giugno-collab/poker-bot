@@ -521,7 +521,7 @@ InlineKeyboardButton("🛑 Sto", callback_data=f"pvp_stand_{tid}")
                 ]
             ])
         )
-        t["last_action"* = time.time()
+        t["last_action"] = time.time()
 asyncio.create_task(turn_timer(context,tid))
         return
 
