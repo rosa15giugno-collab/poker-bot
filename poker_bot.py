@@ -27,8 +27,13 @@ GRUPPI_AUTORIZZATI = [
     -1002229066951
 ]
 
-def is_allowed(update):
-    chat = update.effective_chat
+def autorizzato(update):
+    chat = None
+
+    if update.effective_chat:
+        chat = update.effective_chat
+    elif update.callback_query:
+        chat = update.callback_query.message.chat
 
     if not chat:
         return False
