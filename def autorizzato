@@ -1,3 +1,4 @@
+
 import os
 import random
 import sqlite3
@@ -15,26 +16,27 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-print("🟢 CASINO WHITELIST FINAL ONLINE")
+print("🟢 CASINO PRO MAX ONLINE")
 
 # =========================
 # GRUPPI AUTORIZZATI
 # =========================
 
-ALLOWED_GROUPS = [
+GRUPPI_AUTORIZZATI = [
     -1003664350829,
     -1002229066951
 ]
 
 def is_allowed(update):
     chat = update.effective_chat
+
     if not chat:
         return False
 
     if chat.type == "private":
         return True
 
-    return chat.id in ALLOWED_GROUPS
+    return chat.id in GRUPPI_AUTORIZZATI
 
 # =========================
 # DATABASE
@@ -45,7 +47,7 @@ cursor = conn.cursor()
 lock = threading.Lock()
 
 # =========================
-# TABLE INIT (OBBLIGATORIO)
+# CREAZIONE TABELLA UTENTI
 # =========================
 
 cursor.execute("""
@@ -65,46 +67,77 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# GAME STATE
+# STATO GIOCHI
 # =========================
 
 blackjack_data = {}
-pvt_tables = {}
+
+# Tavoli Blackjack PvP
+pvp_tables = {}
+
 jackpot = 0
 
 # =========================
-# UTILS
+# FUNZIONI UTILI
 # =========================
 
 def carta():
-    return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
+    return random.choice([
+        2, 3, 4, 5, 6, 7, 8, 9,
+        10, 10, 10, 10, 11
+    ])
 
-def calc(hand):
-    s = sum(hand)
-    aces = hand.count(11)
-    while s > 21 and aces:
-        s -= 10
-        aces -= 1
-    return s
+def calc(mano):
+    totale = sum(mano)
+    assi = mano.count(11)
+
+    while totale > 21 and assi:
+        totale -= 10
+        assi -= 1
+
+    return totale
 
 # =========================
-# USER SYSTEM (9 COLONNE FIXED)
+# SISTEMA UTENTE
 # =========================
 
 def get_user(uid, name="Player"):
     uid = str(uid)
 
     with lock:
-        cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
+        cursor.execute(
+            "SELECT * FROM users WHERE user_id=?",
+            (uid,)
+        )
+
         r = cursor.fetchone()
 
         if not r:
+
             cursor.execute("""
             INSERT INTO users (
-                user_id, name, chips, wins, losses,
-                last_bonus, xp, streak, last_daily
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (uid, name, 5000, 0, 0, 0, 0, 0, 0))
+                user_id,
+                name,
+                chips,
+                wins,
+                losses,
+                last_bonus,
+                xp,
+                streak,
+                last_daily
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                uid,
+                name,
+                5000,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ))
 
             conn.commit()
 
@@ -134,6 +167,7 @@ def get_user(uid, name="Player"):
 
 def update_user(u):
     with lock:
+
         cursor.execute("""
         UPDATE users SET
             name=?,
@@ -158,8 +192,9 @@ def update_user(u):
         ))
 
         conn.commit()
+
 # =========================
-# XP SYSTEM
+# SISTEMA XP
 # =========================
 
 def add_xp(u, amount):
@@ -167,19 +202,25 @@ def add_xp(u, amount):
     update_user(u)
 
 # =========================
-# RANK SYSTEM
+# SISTEMA RANK
 # =========================
-def get_rank(xp):
-    if xp >= 5000:
-        return "👑 LEGEND"
-    if xp >= 2500:
-        return "💎 PRO"
-    if xp >= 1000:
-        return "⭐ SEMI PRO"
-    if xp >= 300:
-        return "🎲 PLAYER"
-    return "🪙 NEW"
 
+def get_rank(xp):
+
+    if xp >= 5000:
+        return "👑 LEGGENDA"
+
+    if xp >= 2500:
+        return "💎 PROFESSIONISTA"
+
+    if xp >= 1000:
+        return "⭐ ESPERTO"
+
+    if xp >= 300:
+        return "🎲 GIOCATORE"
+
+    return "🪙 PRINCIPIANTE"
+    
 # =========================
 # MENU
 # =========================
@@ -192,8 +233,8 @@ def menu():
         [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
          InlineKeyboardButton("🃏 PvP Blackjack", callback_data="pvp_create")],
 
-        [InlineKeyboardButton("🎡 Ruota", callback_data="ruota"),
-         InlineKeyboardButton("🎁 Bonus", callback_data="bonus")],
+        [InlineKeyboardButton("🎡 Ruota della fortuna", callback_data="ruota"),
+         InlineKeyboardButton("🎁 Bonus giornaliero", callback_data="bonus")],
 
         [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
          InlineKeyboardButton("💰 Saldo", callback_data="saldo")],
@@ -347,10 +388,10 @@ async def pvp_create(update, context):
     }
 
     await q.message.reply_text(
-        f"🃏 TABLE {table_id}\n💰 Buy-in 1000",
+        f"🃏 TAVOLO {table_id}\n💰 Puntata ingresso: 1000",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("JOIN 1000", callback_data=f"pvp_join_{table_id}")],
-            [InlineKeyboardButton("START", callback_data=f"pvp_start_{table_id}")]
+    [InlineKeyboardButton("➕ Entra (1000)", callback_data=f"pvp_join_{table_id}")],
+    [InlineKeyboardButton("🚀 Avvia partita", callback_data=f"pvp_start_{table_id}")]
         ])
     )
 
@@ -366,7 +407,7 @@ async def pvp_join(update, context):
     u = get_user(uid)
 
     if u["chips"] < 1000:
-        return await q.message.reply_text("❌ No chips")
+        return await q.message.reply_text("❌ Chips insufficienti")
 
     if uid in t["players"]:
         return
@@ -390,7 +431,7 @@ async def pvp_start(update, context):
         return
 
     if len(t["players"]) < 2:
-        return await q.message.reply_text("❌ Min 2 players")
+        return await q.message.reply_text("❌ Servono almeno 2 giocatori")
 
     t["started"] = True
 
@@ -404,10 +445,10 @@ async def send_turn(q, tid):
     p = t["players"][t["turn"]]
 
     await q.message.reply_text(
-        f"🎯 TURN {p}\n{t['hands'][p]} = {calc(t['hands'][p])}\n💰 {t['pot']}",
+        f"🎯 TURNO DI {p}\n{t['hands'][p]} = {calc(t['hands'][p])}\n💰 {t['pot']}",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("HIT", callback_data=f"pvp_hit_{tid}"),
-             InlineKeyboardButton("STAND", callback_data=f"pvp_stand_{tid}")]
+             [InlineKeyboardButton("🎯 Pesca carta", callback_data=f"pvp_hit_{tid}"),
+             InlineKeyboardButton("🛑 Sto", callback_data=f"pvp_stand_{tid}")]
         ])
     )
 
@@ -468,7 +509,6 @@ async def finish(q, tid):
     del pvp_tables[tid]
 
     await q.message.reply_text(text, reply_markup=menu())
-
 #==========================
 # ROULETTE
 #==========================
