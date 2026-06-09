@@ -279,14 +279,21 @@ def menu():
 # =========================
 # START
 # =========================
-
 async def start(update, context):
+
+    print("CHAT ID =", update.effective_chat.id)
+
     if not is_allowed(update):
         if update.message:
-            await update.message.reply_text("❌ Gruppo non autorizzato.")
+            await update.message.reply_text(
+                f"❌ Gruppo non autorizzato.\nID gruppo: {update.effective_chat.id}"
+            )
         return
 
-    get_user(update.effective_user.id, update.effective_user.first_name)
+    get_user(
+        update.effective_user.id,
+        update.effective_user.first_name
+    )
 
     await update.message.reply_text(
         "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
@@ -838,6 +845,14 @@ async def classifica(update, context):
 
 async def cb(update, context):
     q = update.callback_query
+
+    if not is_allowed(update):
+        await q.answer(
+            "❌ Gruppo non autorizzato",
+            show_alert=True
+        )
+        return
+
     await q.answer()
 
     d = q.data
