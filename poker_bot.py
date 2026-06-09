@@ -183,13 +183,13 @@ async def slot(update, context):
 
     await q.message.reply_text(
     f"""
-╔═════════════════╗
+╔══════════════╗
 ║   🎰 SLOT 🎰   ║
-╚═════════════════╝
+╚══════════════╝
 
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┏━━━━━━━━━━━━━┓
 ┃ {r[0]} │ {r[1]} │ {r[2]} ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┗━━━━━━━━━━━━━┛
 
 💰 Vincita: {win}
 🏦 Jackpot: {jackpot}
@@ -314,9 +314,9 @@ async def ruota(update, context):
 
     await q.message.reply_text(
         f"""
-╔═════════════════╗
+╔══════════════╗
 ║ 🎡 SUPER RUOTA ║
-╚═════════════════╝
+╚══════════════╝
 
       {simbolo}
 
@@ -371,9 +371,9 @@ async def profilo(update, context):
 
     await q.message.reply_text(
     f"""
-╔════════════════╗
+╔══════════════╗
 ║ 👤 PROFILO 👤 ║
-╚════════════════╝
+╚══════════════╝
 
 🧑 Nome: {u['name']}
 💰 Chips: {u['chips']}
