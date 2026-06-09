@@ -45,17 +45,21 @@ cursor = conn.cursor()
 lock = threading.Lock()
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    name TEXT,
-    chips INTEGER,
-    wins INTEGER,
-    losses INTEGER,
-    last_bonus INTEGER,
-    xp INTEGER,
-    streak INTEGER,
-    last_daily INTEGER
-)
+INSERT INTO users (
+    user_id, name, chips, wins, losses,
+    last_bonus, xp, streak, last_daily
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    uid,
+    name,
+    5000,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+))
 """)
 conn.commit()
 
