@@ -425,7 +425,13 @@ async def pvp_join(update, context):
     t["chips"][uid] = 1000
     t["pot"] += 1000
 
-    await q.message.reply_text(f"✅ Join {tid} | Pot {t['pot']}")
+    await q.message.reply_text(
+    f"🃏 SEI ENTRATO IN PARTITA\n"
+    f"🎯 Tavolo: {tid}\n"
+    f"👥 Giocatori: {len(t['players'])}\n"
+    f"💰 Pot: {t['pot']}",
+    reply_markup=menu()
+)
 
 async def pvp_start(update, context):
     q = update.callback_query
@@ -659,7 +665,7 @@ async def profilo(update, context):
 
     await q.message.reply_text(f"""
 ╔══════════════════╗
-║   👤 CASINO PRO MAX   ║
+║   👤 LA TUA CLASSIFICA   ║
 ╚══════════════════╝
 
 🧑 {u['name']}
@@ -684,7 +690,7 @@ async def classifica(update, context):
     cursor.execute("SELECT name, chips, xp FROM users ORDER BY chips DESC LIMIT 10")
     top = cursor.fetchall()
 
-    text = "🏆 TOP CASINO PLAYERS\n\n"
+    text = "🏆 TOP CLASSIFICA GENERALE\n\n"
 
     for i, (name, chips, xp) in enumerate(top, 1):
         text += f"{i}. {name}\n💰 {chips} | ⭐ {xp}\n\n"
