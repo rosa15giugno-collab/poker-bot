@@ -184,11 +184,11 @@ async def slot(update, context):
     await q.message.reply_text(
     f"""
 ╔══════════════╗
-║     🎰 SLOT 🎰           ║
+║      🎰 SLOT 🎰           ║
 ╚══════════════╝
 
 ┏━━━━━━━━━━━━━┓
-┃   {r[0]} │ {r[1]} │ {r[2]}         ┃
+┃    {r[0]} │ {r[1]} │ {r[2]}         ┃
 ┗━━━━━━━━━━━━━┛
 
 💰 Vincita: {win}
@@ -372,7 +372,7 @@ async def profilo(update, context):
     await q.message.reply_text(
     f"""
 ╔══════════════╗
-║  👤 PROFILO 👤         ║
+║   👤 PROFILO 👤         ║
 ╚══════════════╝
 
 🧑 Nome: {u['name']}
