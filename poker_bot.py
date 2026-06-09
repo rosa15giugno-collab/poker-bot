@@ -398,15 +398,15 @@ async def classifica(update, context):
 
     testo = "🏆 CLASSIFICA TOP 10 🏆\n\n"
 
-medaglie = ["🥇","🥈","🥉"]
+    medaglie = ["🥇","🥈","🥉"]
 
-for i, (nome, chips) in enumerate(top, start=1):
-    if i <= 3:
-        pos = medaglie[i-1]
-    else:
-        pos = f"{i}️⃣"
+    for i, (nome, chips) in enumerate(top, start=1):
+        if i <= 3:
+            pos = medaglie[i-1]
+        else:
+            pos = f"{i}️⃣"
 
-    testo += f"{pos} {nome}\n💰 {chips} chips\n\n"
+        testo += f"{pos} {nome}\n💰 {chips} chips\n\n"
 
     await q.message.reply_text(
         testo,
