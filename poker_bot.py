@@ -28,16 +28,13 @@ GRUPPI_AUTORIZZATI = [
     -1002229066951
 ]
 
-
 def autorizzato(update):
-    return True
+    chat_id = update.effective_chat.id
 
-    print("CONTROLLO CHAT =", chat.id)
+    print("CONTROLLO CHAT =", chat_id)
     print("GRUPPI =", GRUPPI_AUTORIZZATI)
 
-    return True
-    
-is_allowed = autorizzato
+    return chat_id in GRUPPI_AUTORIZZATI
 # =========================
 # DATABASE
 # =========================
@@ -274,13 +271,14 @@ def menu():
 # =========================
 async def start(update, context):
 
-    print("CHAT ID =", update.effective_chat.id)
+    chat_id = update.effective_chat.id
+
+    print("START IN CHAT =", chat_id)
 
     if not is_allowed(update):
-        if update.message:
-            await update.message.reply_text(
-                f"❌ Gruppo non autorizzato.\nID gruppo: {update.effective_chat.id}"
-            )
+        await update.effective_message.reply_text(
+            f"❌ Gruppo non autorizzato.\nID: {chat_id}"
+        )
         return
 
     get_user(
@@ -288,7 +286,7 @@ async def start(update, context):
         update.effective_user.first_name
     )
 
-    await update.message.reply_text(
+    await update.effective_message.reply_text(
         "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
         reply_markup=menu()
     )
@@ -846,17 +844,15 @@ async def cb(update, context):
         q.message.chat.type
     )
 
-    if not is_allowed(update):
-        await q.answer(
-            "❌ Gruppo non autorizzato",
-            show_alert=True
-        )
+    chat_id = q.message.chat.id
+
+    if not is_allowed_chat(chat_id):
+        await q.answer("❌ Gruppo non autorizzato", show_alert=True)
         return
 
     await q.answer()
 
     d = q.data
-
 
     if d == "slot": return await slot(update, context)
     if d == "roulette": return await roulette(update, context)
