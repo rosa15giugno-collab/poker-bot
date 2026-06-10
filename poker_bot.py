@@ -1,4 +1,3 @@
-[15:17, 10/06/2026] Rosa: import logging
 logging.basicConfig(level=logging.INFO)
 
 import os
