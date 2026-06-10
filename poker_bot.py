@@ -834,7 +834,28 @@ async def classifica(update, context):
 #==========================
 # CALLBACK
 #========================
+async def cb(update, context):
+    q = update.callback_query
 
+    print(
+        "CALLBACK:",
+        q.from_user.id,
+        "CHAT:",
+        q.message.chat.id,
+        "TIPO:",
+        q.message.chat.type
+    )
+
+    if not is_allowed(update):
+        await q.answer(
+            "❌ Gruppo non autorizzato",
+            show_alert=True
+        )
+        return
+
+    await q.answer()
+
+    d = q.data
 
 
     if d == "slot": return await slot(update, context)
