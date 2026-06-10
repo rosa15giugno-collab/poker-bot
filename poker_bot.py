@@ -4,11 +4,20 @@ import sqlite3
 import time
 import threading
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+
+# =========================
+# CONFIG
+# =========================
 
 TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
+
+print("🟢 CASINO GOD MODE ONLINE")
+
 
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
@@ -17,7 +26,7 @@ def is_allowed(chat_id):
 
 
 # =========================
-# DATABASE GOD MODE
+# DATABASE
 # =========================
 
 conn = sqlite3.connect("casino.db", check_same_thread=False)
@@ -47,17 +56,19 @@ conn.commit()
 def carta():
     return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
 
-def calc(mano):
-    t = sum(mano)
-    a = mano.count(11)
-    while t > 21 and a:
-        t -= 10
-        a -= 1
-    return t
+def calc(hand):
+    total = sum(hand)
+    aces = hand.count(11)
+
+    while total > 21 and aces:
+        total -= 10
+        aces -= 1
+
+    return total
 
 
 # =========================
-# USER SYSTEM GOD FIX
+# USER SYSTEM
 # =========================
 
 def get_user(uid, name="Player"):
@@ -111,20 +122,16 @@ def update_user(u):
         conn.commit()
 
 
-# =========================
-# RANK
-# =========================
-
 def rank(xp):
     if xp >= 5000: return "👑 LEGGENDA"
     if xp >= 2500: return "💎 PRO"
     if xp >= 1000: return "⭐ ESPERTO"
-    if xp >= 300: return "🎲 PLAYER"
+    if xp >= 300: return "🎲 GIOCATORE"
     return "🪙 NOVIZIO"
 
 
 # =========================
-# MENU GOD ITALIANO
+# MENU ITALIANO
 # =========================
 
 def menu():
@@ -132,117 +139,55 @@ def menu():
         [InlineKeyboardButton("🎰 Slot", callback_data="slot"),
          InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
 
-        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
-         InlineKeyboardButton("🆚 PvP Blackjack", callback_data="pvp")],
+        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
 
-        [InlineKeyboardButton("🎡 Ruota", callback_data="ruota"),
-         InlineKeyboardButton("🎁 Bonus", callback_data="bonus")],
+        [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
+         InlineKeyboardButton("💰 Shop", callback_data="shop")],
 
-        [InlineKeyboardButton("💰 Shop", callback_data="shop"),
-         InlineKeyboardButton("👤 Profilo", callback_data="profilo")],
-
-        [InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+        [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
+         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
     ])
 
-import random
-import time
-
-from core import get_user, update_user, calc
-
 
 # =========================
-# ANTI SPAM BASE
+# START
 # =========================
-cooldowns = {}
-
-def check_cd(uid):
-    now = time.time()
-    if uid in cooldowns and now - cooldowns[uid] < 2:
-        return False
-    cooldowns[uid] = now
-    return True
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
-
-from core import menu, get_user, is_allowed
-from games import slot, blackjack, hit, stand, shop
-
-
-async def start(update, context):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if not is_allowed(chat_id):
-        return await update.message.reply_text("❌ Non autorizzato")
+        return await update.message.reply_text("❌ Gruppo non autorizzato")
 
     get_user(update.effective_user.id, update.effective_user.first_name)
 
-    await update.message.reply_text("🟢 CASINO GOD MODE ATTIVO", reply_markup=menu())
+    await update.message.reply_text(
+        "🟢 CASINO GOD MODE ATTIVO\n🎮 Scegli un gioco:",
+        reply_markup=menu()
+    )
 
-
-async def cb(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    d = q.data
-
-    if d == "slot":
-        return await slot(update, context)
-
-    if d == "blackjack":
-        return await blackjack(update, context)
-
-    if d == "hit":
-        return await hit(update, context)
-
-    if d == "stand":
-        return await stand(update, context)
-
-    if d == "shop":
-        return await shop(update, context)
-
-    await q.message.reply_text("🚧 Funzione in sviluppo")
-
-
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("buy", buy))
-    app.add_handler(CallbackQueryHandler(cb))
-
-    print("🟢 CASINO GOD MODE ONLINE")
-    app.run_polling()
-
-
-if __name__ == "__main__":
-    main()
 
 # =========================
-# SLOT GOD MODE
+# SLOT
 # =========================
-
 async def slot(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id
-    if not check_cd(uid):
-        return
+    u = get_user(q.from_user.id)
 
-    u = get_user(uid)
+    symbols = ["🍒","🍋","🔔","💎","7️⃣"]
+    r = [random.choice(symbols) for _ in range(3)]
 
-    reels = ["🍒","🍋","🔔","💎","7️⃣"]
-    r = [random.choice(reels) for _ in range(3)]
-
-    base = 0
+    win = 0
     if r[0] == r[1] == r[2]:
-        base = 3000
+        win = 3000
     elif r[0] == r[1] or r[1] == r[2]:
-        base = 800
+        win = 800
 
-    win = int(base * u["multiplier"])
+    win = int(win * u["multiplier"])
 
     u["chips"] += win
-    u["xp"] += 25 if win else 5
+    u["xp"] += 10
 
     update_user(u)
 
@@ -250,9 +195,8 @@ async def slot(update, context):
 
 
 # =========================
-# BLACKJACK FIX GOD
+# BLACKJACK (FIXATO)
 # =========================
-
 games = {}
 
 async def blackjack(update, context):
@@ -260,24 +204,19 @@ async def blackjack(update, context):
     await q.answer()
 
     uid = q.from_user.id
-    u = get_user(uid)
 
     games[uid] = {
-        "player": [random.randint(2,11), random.randint(2,11)],
-        "dealer": [random.randint(2,11), random.randint(2,11)]
+        "p": [random.randint(2,11), random.randint(2,11)],
+        "d": [random.randint(2,11), random.randint(2,11)]
     }
 
     await q.message.reply_text(
-        f"🃏 BLACKJACK\nMano: {games[uid]['player']} ({calc(games[uid]['player'])})",
-        reply_markup=blackjack_menu()
+        f"🃏 BLACKJACK\nMano: {games[uid]['p']} ({calc(games[uid]['p'])})",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ Carta", callback_data="hit"),
+             InlineKeyboardButton("🛑 Stai", callback_data="stand")]
+        ])
     )
-
-
-def blackjack_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Carta", callback_data="hit"),
-         InlineKeyboardButton("🛑 Stai", callback_data="stand")]
-    ])
 
 
 async def hit(update, context):
@@ -289,13 +228,13 @@ async def hit(update, context):
     if not g:
         return
 
-    g["player"].append(random.randint(2,11))
+    g["p"].append(random.randint(2,11))
 
-    if calc(g["player"]) > 21:
+    if calc(g["p"]) > 21:
         del games[uid]
         return await q.message.reply_text("💥 Sballato!")
 
-    await q.message.reply_text(f"🃏 {g['player']} ({calc(g['player'])})")
+    await q.message.reply_text(f"🃏 {g['p']} ({calc(g['p'])})")
 
 
 async def stand(update, context):
@@ -307,58 +246,95 @@ async def stand(update, context):
     if not g:
         return
 
-    p = calc(g["player"])
-    d = calc(g["dealer"])
+    p = calc(g["p"])
+    d = calc(g["d"])
 
     u = get_user(uid)
 
     if p > d:
         u["chips"] += 800
         u["wins"] += 1
-        result = "🏆 VINTO"
+        res = "🏆 VINTO"
     elif p < d:
         u["losses"] += 1
-        result = "💀 PERSO"
+        res = "💀 PERSO"
     else:
-        result = "🤝 PAREGGIO"
+        res = "🤝 PAREGGIO"
 
     update_user(u)
     del games[uid]
 
-    await q.message.reply_text(f"🃏 Tu: {p} vs Dealer: {d}\n{result}")
+    await q.message.reply_text(f"🃏 Tu {p} vs Dealer {d}\n{res}")
 
 
 # =========================
-# SHOP GOD MODE
+# BONUS
 # =========================
-
-async def shop(update, context):
+async def bonus(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.reply_text(
-        "💰 SHOP\n\n1) x2 moltiplicatore → 5000 chips\n2) x3 moltiplicatore → 12000 chips\n\nUsa /buy 1 o /buy 2"
-    )
+    u = get_user(q.from_user.id)
 
+    now = int(time.time())
 
-async def buy(update, context):
-    uid = update.effective_user.id
-    u = get_user(uid)
+    if now - u["last_daily"] < 86400:
+        return await q.message.reply_text("⏳ già preso oggi")
 
-    try:
-        opt = int(context.args[0])
-    except:
-        return await update.message.reply_text("Uso: /buy 1 o /buy 2")
+    u["streak"] = u["streak"] + 1 if now - u["last_daily"] < 172800 else 1
 
-    if opt == 1 and u["chips"] >= 5000:
-        u["chips"] -= 5000
-        u["multiplier"] = 2.0
-    elif opt == 2 and u["chips"] >= 12000:
-        u["chips"] -= 12000
-        u["multiplier"] = 3.0
-    else:
-        return await update.message.reply_text("❌ Non puoi acquistare")
+    reward = random.randint(500,1500)
+
+    u["chips"] += reward
+    u["last_daily"] = now
 
     update_user(u)
-    await update.message.reply_text("✅ Acquisto effettuato!")
-    
+
+    await q.message.reply_text(f"🎁 +{reward}")
+
+
+# =========================
+# CALLBACK ROUTER
+# =========================
+async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    d = q.data
+
+    if d == "slot":
+        return await slot(update, context)
+
+    if d == "roulette":
+        return await q.message.reply_text("🚧 Roulette in sviluppo")
+
+    if d == "blackjack":
+        return await blackjack(update, context)
+
+    if d == "hit":
+        return await hit(update, context)
+
+    if d == "stand":
+        return await stand(update, context)
+
+    if d == "bonus":
+        return await bonus(update, context)
+
+    await q.message.reply_text("🚧 In sviluppo")
+
+
+# =========================
+# MAIN
+# =========================
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(cb))
+
+    print("🟢 CASINO GOD MODE ONLINE")
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
