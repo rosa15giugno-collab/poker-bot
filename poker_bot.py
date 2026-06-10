@@ -294,9 +294,13 @@ async def start(update, context):
 # SLOT
 # =========================
 
+    if not is_allowed_chat(update.effective_chat.id):
+        return
+
 async def slot(update, context):
     q = update.callback_query
-    u = get_user(q.from_user.id)
+    await q.answer()
+    u = get_user(q.from_user.id)  
 
     global jackpot
 
@@ -339,8 +343,13 @@ async def slot(update, context):
 # BLACKJACK BOT
 # =========================
 
+
 async def blackjack_start(update, context):
     q = update.callback_query
+    await q.answer()
+     if not is_allowed_chat(update.effective_chat.id):
+        return
+    u = get_user(q.from_user.id)
     uid = str(q.from_user.id)
 
     mano = [carta(), carta()]
@@ -358,6 +367,7 @@ async def blackjack_start(update, context):
 
 async def hit(update, context):
     q = update.callback_query
+    await q.answer()
     uid = str(q.from_user.id)
 
     g = blackjack_data.get(uid)
@@ -375,6 +385,7 @@ async def hit(update, context):
 
 async def stand(update, context):
     q = update.callback_query
+    await q.answer()
     uid = str(q.from_user.id)
 
     g = blackjack_data.get(uid)
@@ -402,8 +413,13 @@ async def stand(update, context):
 # PVP BLACKJACK PRO FIXED
 # =========================
 
+
 async def pvp_create(update, context):
     q = update.callback_query
+    await q.answer()
+    if not is_allowed_chat(update.effective_chat.id):
+        return
+    u = get_user(q.from_user.id)
     uid = str(q.from_user.id)
 
     table_id = str(random.randint(1000, 9999))
@@ -437,6 +453,7 @@ async def pvp_create(update, context):
 
 async def pvp_join(update, context):
     q = update.callback_query
+    await q.answer()
     uid = str(q.from_user.id)
     tid = q.data.split("_")[-1]
 
@@ -470,27 +487,22 @@ async def pvp_join(update, context):
 # START
 # =========================
 
-async def pvp_start(update, context):
-    q = update.callback_query
-    uid = str(q.from_user.id)
-    tid = q.data.split("_")[-1]
+async def start(update, context):
 
-    t = pvp_tables.get(tid)
-    if not t or t["owner"] != uid:
-        return await q.answer("❌ Non autorizzato", show_alert=True)
+    chat_id = update.effective_chat.id
 
-    if len(t["players"]) < 2:
-        return await q.answer("❌ Minimo 2 giocatori", show_alert=True)
+    print("START CHAT =", chat_id)
 
-    t["started"] = True
-    t["turn"] = 0
-    t["last_action"] = time.time()
+    if not is_allowed_chat(chat_id):
+        await update.effective_message.reply_text("❌ Gruppo non autorizzato")
+        return
 
-    for p in t["players"]:
-        t["hands"][p] = [carta(), carta()]
+    get_user(update.effective_user.id, update.effective_user.first_name)
 
-    await send_turn(context, tid)
-
+    await update.effective_message.reply_text(
+        "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
+        reply_markup=menu()
+    )
 
 # =========================
 # SEND TURN (FIXED)
@@ -541,6 +553,7 @@ async def send_turn(context, tid):
 
 async def pvp_hit(update, context):
     q = update.callback_query
+    await q.answer()
     uid = str(q.from_user.id)
     tid = q.data.split("_")[-1]
 
@@ -572,6 +585,7 @@ async def pvp_hit(update, context):
 
 async def pvp_stand(update, context):
     q = update.callback_query
+    await q.answer()
     uid = str(q.from_user.id)
     tid = q.data.split("_")[-1]
 
@@ -656,8 +670,12 @@ async def finish(context, tid):
 # ROULETTE
 #==========================
 
+        
 async def roulette(update, context):
     q = update.callback_query
+    await q.answer()
+    if not is_allowed_chat(update.effective_chat.id):
+        return
     u = get_user(q.from_user.id)
 
     numero = random.randint(0, 36)
@@ -677,10 +695,15 @@ async def roulette(update, context):
         f"🎲 Roulette\nNumero uscito: {numero}\n💰 Vincita: {win}",
         reply_markup=menu()
     )
+# SUPER RUOTA
 
+ 
 
 async def ruota(update, context):
     q = update.callback_query
+    await q.answer()
+    if not is_allowed_chat(update.effective_chat.id):
+        return
     u = get_user(q.from_user.id)
 
     premi = [
@@ -716,15 +739,15 @@ async def ruota(update, context):
 """,
         reply_markup=menu()
     )
-
 async def bonus(update, context):
     q = update.callback_query
+    await q.answer()
     u = get_user(q.from_user.id)
 
     now = int(time.time())
 
     if now - u["last_daily"] < 86400:
-        return await q.message.reply_text("⏳ Hai già preso il bonus oggi")
+        return await q.message.reply_text("⏳ Hai già preso il bonus oggi", reply_markup=menu())
 
     # streak system
     if now - u["last_daily"] < 172800:
@@ -746,21 +769,9 @@ async def bonus(update, context):
         reply_markup=menu()
     )
 
-    premio = random.randint(500, 2000)
-
-    u["chips"] += premio
-    u["last_bonus"] = now
-
-    update_user(u)
-
-    await q.message.reply_text(
-        f"🎁 Bonus giornaliero\n💰 +{premio}",
-        reply_markup=menu()
-    )
-
-
 async def saldo(update, context):
     q = update.callback_query
+    await q.answer()
     u = get_user(q.from_user.id)
 
     await q.message.reply_text(
@@ -771,6 +782,7 @@ async def saldo(update, context):
 
 async def profilo(update, context):
     q = update.callback_query
+    await q.answer()
     u = get_user(q.from_user.id)
 
     total = u["wins"] + u["losses"]
@@ -817,6 +829,7 @@ async def profilo(update, context):
 
 async def classifica(update, context):
     q = update.callback_query
+    await q.answer()
 
     cursor.execute("SELECT name, chips, xp FROM users ORDER BY chips DESC LIMIT 10")
     top = cursor.fetchall()
