@@ -266,21 +266,7 @@ def menu():
 # START
 # =========================
 async def start(update, context):
-    chat_id = update.effective_chat.id
-
-    print("START CHAT =", chat_id)
-
-    if not is_allowed_chat(chat_id):
-        await update.effective_message.reply_text("❌ Gruppo non autorizzato")
-        return
-
-    get_user(update.effective_user.id, update.effective_user.first_name)
-
-    await update.effective_message.reply_text(
-        "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
-        reply_markup=menu()
-    )
-
+    await update.effective_message.reply_text("START OK")
 # =========================
 # SLOT
 # =========================
