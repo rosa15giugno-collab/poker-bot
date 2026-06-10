@@ -3,10 +3,10 @@ import random
 import sqlite3
 import time
 import threading
+from collections import deque
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-
 
 # =========================
 # CONFIG
@@ -49,8 +49,9 @@ conn.commit()
 # MMO STATE
 # =========================
 
-games = {}
-pvp_queue = []
+games = {}              # match attivi
+pvp_queue = deque()    # matchmaking queue
+active_matches = {}    # match id -> state
 
 
 # =========================
@@ -151,23 +152,110 @@ async def slot(update, context):
 
     u = get_user(q.from_user.id)
 
-    reels = ["🍒","🍋","🔔","💎","7️⃣"]
-    r = [random.choice(reels) for _ in range(3)]
+    r = [random.choice(["🍒","🍋","🔔","💎","7️⃣"]) for _ in range(3)]
 
     win = 0
     if r[0] == r[1] == r[2]:
-        win = 3000
+        win = 2500
     elif r[0] == r[1] or r[1] == r[2]:
-        win = 800
+        win = 700
 
     win = int(win * u["multiplier"])
 
     u["chips"] += win
-    u["xp"] += win // 20
+    u["xp"] += win // 30
 
     save(u)
-
     await q.message.reply_text(f"🎰 {' | '.join(r)}\n💰 +{win}", reply_markup=menu())
+
+# =========================
+# REAL TIME PVP MATCHMAKING
+# =========================
+
+def create_match(p1, p2):
+    match_id = f"{p1}{p2}{int(time.time())}"
+
+    active_matches[match_id] = {
+        "p1": p1,
+        "p2": p2,
+        "p1_score": 0,
+        "p2_score": 0,
+        "round": 1,
+        "start": time.time()
+    }
+
+    return match_id
+
+
+def process_round(match_id):
+    m = active_matches.get(match_id)
+    if not m:
+        return
+
+    r1 = random.randint(1, 10)
+    r2 = random.randint(1, 10)
+
+    m["p1_score"] += r1
+    m["p2_score"] += r2
+    m["round"] += 1
+
+    if m["round"] > 5:
+        finish_match(match_id)
+
+
+def finish_match(match_id):
+    m = active_matches.get(match_id)
+    if not m:
+        return
+
+    p1 = get_user(m["p1"])
+    p2 = get_user(m["p2"])
+
+    if m["p1_score"] > m["p2_score"]:
+        p1["wins"] += 1
+        p2["losses"] += 1
+    else:
+        p2["wins"] += 1
+        p1["losses"] += 1
+
+    save(p1)
+    save(p2)
+
+    del active_matches[match_id]
+
+# =========================
+# QUEUE SYSTEM
+# =========================
+
+async def pvp_join(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+
+    if uid in pvp_queue:
+        return await q.message.reply_text("⏳ Sei già in coda")
+
+    pvp_queue.append(uid)
+
+    await q.message.reply_text("🆚 In coda PvP...")
+
+    if len(pvp_queue) >= 2:
+        p1 = pvp_queue.popleft()
+        p2 = pvp_queue.popleft()
+
+        match_id = create_match(p1, p2)
+
+        await q.message.reply_text(f"🔥 Match iniziato: {p1} vs {p2}")
+
+        # simulate real time rounds
+        for _ in range(5):
+            time.sleep(2)
+            process_round(match_id)
+
+
+
+
 
 
 # =========================
@@ -296,7 +384,7 @@ async def bonus(update, context):
     if now - u["last_bonus"] < 86400:
         return await q.message.reply_text("⏳ Bonus già preso")
 
-    reward = random.randint(500, 1800)
+    reward = random.randint(500, 1500)
 
     u["chips"] += reward
     u["last_bonus"] = now
@@ -399,6 +487,8 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await profilo(update, context)
     if d == "classifica":
         return await classifica(update, context)
+     if d == "pvp_join":
+        return await pvp_join(update, context)
 
     await q.message.reply_text("🚧 In sviluppo")
 
