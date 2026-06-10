@@ -18,6 +18,7 @@ if not TOKEN:
 
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
+
 def allowed(chat_id):
     return chat_id in GRUPPI_AUTORIZZATI
 
@@ -47,12 +48,13 @@ conn.commit()
 
 
 # =========================
-# STATE
+# MMO STATE
 # =========================
 
 games = {}
-pvp_rooms = {}
-jackpot = 0
+pvp_queue = []
+rooms = {}
+room_counter = 1
 
 
 # =========================
@@ -63,15 +65,17 @@ def carta():
     return random.choice([2,3,4,5,6,7,8,9,10,10,10,10,11])
 
 def calc(hand):
-    t = sum(hand)
-    a = hand.count(11)
-    while t > 21 and a:
-        t -= 10
-        a -= 1
-    return t
+    total = sum(hand)
+    assi = hand.count(11)
+
+    while total > 21 and assi:
+        total -= 10
+        assi -= 1
+
+    return total
 
 
-def level_from_xp(xp):
+def level(xp):
     return xp // 500
 
 
@@ -118,7 +122,7 @@ def get_user(uid, name="Player"):
 
 
 def save(u):
-    u["level"] = level_from_xp(u["xp"])
+    u["level"] = level(u["xp"])
 
     with lock:
         cursor.execute("""
@@ -140,11 +144,12 @@ def menu():
         [InlineKeyboardButton("🎰 Slot", callback_data="slot"),
          InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
 
-        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
-         InlineKeyboardButton("🆚 PvP", callback_data="pvp_menu")],
+        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack")],
 
-        [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-         InlineKeyboardButton("💰 Shop", callback_data="shop")],
+        [InlineKeyboardButton("🆚 PvP Arena", callback_data="pvp")],
+
+        [InlineKeyboardButton("💰 Shop", callback_data="shop"),
+         InlineKeyboardButton("🎁 Bonus", callback_data="bonus")],
 
         [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
          InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
@@ -164,7 +169,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_text(
-        "🟢 CASINO GOD FINAL BOSS MODE ATTIVO",
+        "🟢 CASINO MMO GOD MODE ONLINE",
         reply_markup=menu()
     )
 
@@ -183,12 +188,12 @@ async def slot(update, context):
 
     win = 0
     if r[0] == r[1] == r[2]:
-        win = int(3000 * u["multiplier"])
+        win = int(3200 * u["multiplier"])
     elif r[0] == r[1] or r[1] == r[2]:
-        win = int(800 * u["multiplier"])
+        win = int(900 * u["multiplier"])
 
     u["chips"] += win
-    u["xp"] += 10 + win // 100
+    u["xp"] += 15 + win // 80
 
     save(u)
 
@@ -208,16 +213,14 @@ async def roulette(update, context):
     n = random.randint(0, 36)
 
     if n == 0:
-        win = 1500
+        win = 2000
     elif n % 2 == 0:
-        win = 300
+        win = 400
     else:
         win = 0
 
     u["chips"] += win
-    u["wins"] += 1 if win > 0 else 0
-    u["losses"] += 1 if win == 0 else 0
-    u["xp"] += win // 50
+    u["xp"] += win // 40
 
     save(u)
 
@@ -254,8 +257,9 @@ async def hit(update, context):
 
     uid = q.from_user.id
     g = games.get(uid)
+
     if not g:
-        return
+        return await q.message.reply_text("❌ Nessuna partita")
 
     g["p"].append(carta())
 
@@ -272,8 +276,9 @@ async def stand(update, context):
 
     uid = q.from_user.id
     g = games.get(uid)
+
     if not g:
-        return
+        return await q.message.reply_text("❌ Nessuna partita")
 
     p = calc(g["p"])
     d = calc(g["d"])
@@ -281,21 +286,21 @@ async def stand(update, context):
     u = get_user(uid)
 
     if p > d:
-        win = 900
+        win = 1000
         u["wins"] += 1
     elif p < d:
         win = 0
         u["losses"] += 1
     else:
-        win = 200
+        win = 250
 
     u["chips"] += win
-    u["xp"] += win // 20
+    u["xp"] += win // 25
 
     save(u)
     del games[uid]
 
-    await q.message.reply_text(f"Tu {p} vs Dealer {d}\n💰 +{win}")
+    await q.message.reply_text(f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}")
 
 
 # =========================
@@ -309,10 +314,11 @@ async def bonus(update, context):
     u = get_user(q.from_user.id)
 
     now = int(time.time())
+
     if now - u["last_bonus"] < 86400:
         return await q.message.reply_text("⏳ Bonus già preso")
 
-    reward = random.randint(500, 1800)
+    reward = random.randint(600, 2000)
 
     u["chips"] += reward
     u["last_bonus"] = now
@@ -332,8 +338,8 @@ async def shop(update, context):
 
     await q.message.reply_text(
         "💰 SHOP\n\n"
-        "1) Moltiplicatore x2 → 5000 chips\n"
-        "2) Moltiplicatore x3 → 12000 chips\n\n"
+        "1) x2 → 5000 chips\n"
+        "2) x3 → 12000 chips\n\n"
         "Usa /buy 1 o /buy 2"
     )
 
@@ -357,6 +363,38 @@ async def buy(update, context):
 
     save(u)
     await update.message.reply_text("✅ Acquisto effettuato")
+
+
+# =========================
+# PVP MMO QUEUE
+# =========================
+
+async def pvp(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+
+    if uid in pvp_queue:
+        return await q.message.reply_text("⏳ Sei già in coda PvP")
+
+    pvp_queue.append(uid)
+
+    await q.message.reply_text("🆚 In attesa di avversario...")
+
+    if len(pvp_queue) >= 2:
+        p1 = pvp_queue.pop(0)
+        p2 = pvp_queue.pop(0)
+
+        room_id = f"ROOM-{random.randint(1000,9999)}"
+
+        rooms[room_id] = {
+            "p1": p1,
+            "p2": p2,
+            "state": "active"
+        }
+
+        await q.message.reply_text(f"🔥 PvP START! Room {room_id}")
 
 
 # =========================
@@ -394,6 +432,7 @@ async def classifica(update, context):
     top = cursor.fetchall()
 
     txt = "🏆 CLASSIFICA\n\n"
+
     for i, (n, c) in enumerate(top, 1):
         txt += f"{i}. {n} - {c}\n"
 
@@ -401,7 +440,7 @@ async def classifica(update, context):
 
 
 # =========================
-# CALLBACK ROUTER
+# ROUTER
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -422,12 +461,14 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await bonus(update, context)
     if d == "shop":
         return await shop(update, context)
+    if d == "pvp":
+        return await pvp(update, context)
     if d == "profilo":
         return await profilo(update, context)
     if d == "classifica":
         return await classifica(update, context)
 
-    await q.message.reply_text("🚧 Modalità in sviluppo")
+    await q.message.reply_text("🚧 Modalità MMO in sviluppo")
 
 
 # =========================
@@ -441,7 +482,7 @@ def main():
     app.add_handler(CommandHandler("buy", buy))
     app.add_handler(CallbackQueryHandler(cb))
 
-    print("🟢 CASINO GOD FINAL BOSS MODE ONLINE")
+    print("🟢 CASINO GOD MMO MODE ONLINE")
     app.run_polling()
 
 
