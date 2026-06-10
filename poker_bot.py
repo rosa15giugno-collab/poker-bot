@@ -132,8 +132,8 @@ def get_user(uid, name="Player"):
 
         r = cursor.fetchone()
 
+        # 🔴 UTENTE NUOVO
         if not r:
-
             cursor.execute("""
             INSERT INTO users (
                 user_id,
@@ -173,9 +173,16 @@ def get_user(uid, name="Player"):
                 "last_daily": 0
             }
 
+        # 🔥 UTENTE ESISTENTE → FIX NOME SEMPRE AGGIORNATO
+        cursor.execute("""
+        UPDATE users SET name=? WHERE user_id=?
+        """, (name, uid))
+
+        conn.commit()
+
         return {
             "user_id": r[0],
-            "name": r[1],
+            "name": name,   # 🔥 usa SEMPRE nome aggiornato
             "chips": r[2],
             "wins": r[3],
             "losses": r[4],
@@ -184,6 +191,7 @@ def get_user(uid, name="Player"):
             "streak": r[7],
             "last_daily": r[8]
         }
+
 
 def update_user(u):
     with lock:
@@ -212,6 +220,7 @@ def update_user(u):
         ))
 
         conn.commit()
+
 
 # =========================
 # SISTEMA XP
