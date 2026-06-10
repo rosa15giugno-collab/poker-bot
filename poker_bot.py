@@ -28,8 +28,6 @@ GRUPPI_AUTORIZZATI = [
     -1002229066951
 ]
 
-def autorizzato(update):
-    chat = None
 
     def autorizzato(update):
     chat = update.effective_chat
