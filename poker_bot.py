@@ -487,7 +487,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await profilo(update, context)
     if d == "classifica":
         return await classifica(update, context)
-     if d == "pvp_join":
+    if d == "pvp_join":
         return await pvp_join(update, context)
 
     await q.message.reply_text("🚧 In sviluppo")
