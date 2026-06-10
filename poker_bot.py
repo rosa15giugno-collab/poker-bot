@@ -28,13 +28,9 @@ GRUPPI_AUTORIZZATI = [
     -1002229066951
 ]
 
-def autorizzato(update):
-    chat_id = update.effective_chat.id
-
-    print("CONTROLLO CHAT =", chat_id)
-    print("GRUPPI =", GRUPPI_AUTORIZZATI)
-
+def is_allowed_chat(chat_id):
     return chat_id in GRUPPI_AUTORIZZATI
+    
 # =========================
 # DATABASE
 # =========================
@@ -270,21 +266,15 @@ def menu():
 # START
 # =========================
 async def start(update, context):
-
     chat_id = update.effective_chat.id
 
-    print("START IN CHAT =", chat_id)
+    print("START CHAT =", chat_id)
 
-    if not is_allowed(update):
-        await update.effective_message.reply_text(
-            f"❌ Gruppo non autorizzato.\nID: {chat_id}"
-        )
+    if not is_allowed_chat(chat_id):
+        await update.effective_message.reply_text("❌ Gruppo non autorizzato")
         return
 
-    get_user(
-        update.effective_user.id,
-        update.effective_user.first_name
-    )
+    get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.effective_message.reply_text(
         "🟢 CASINO ATTIVO\n🎮 Benvenuto!",
@@ -835,43 +825,74 @@ async def classifica(update, context):
 async def cb(update, context):
     q = update.callback_query
 
+    chat_id = q.message.chat.id
+
     print(
         "CALLBACK:",
         q.from_user.id,
         "CHAT:",
-        q.message.chat.id,
+        chat_id,
         "TIPO:",
         q.message.chat.type
     )
 
-    chat_id = q.message.chat.id
-
+    # 🔴 controllo autorizzazione
     if not is_allowed_chat(chat_id):
         await q.answer("❌ Gruppo non autorizzato", show_alert=True)
         return
 
+    # ⚠️ sempre rispondere al callback UNA SOLA VOLTA
     await q.answer()
 
     d = q.data
 
-    if d == "slot": return await slot(update, context)
-    if d == "roulette": return await roulette(update, context)
-    if d == "ruota": return await ruota(update, context)
-    if d == "bonus": return await bonus(update, context)
-    if d == "saldo": return await saldo(update, context)
-    if d == "profilo": return await profilo(update, context)
-    if d == "classifica": return await classifica(update, context)
+    # 🎮 ROUTER GIOCHI
+    if d == "slot":
+        return await slot(update, context)
 
-    if d == "blackjack": return await blackjack_start(update, context)
-    if d == "hit": return await hit(update, context)
-    if d == "stand": return await stand(update, context)
+    if d == "roulette":
+        return await roulette(update, context)
 
-    if d == "pvp_create": return await pvp_create(update, context)
-    if d.startswith("pvp_join_"): return await pvp_join(update, context)
-    if d.startswith("pvp_start_"): return await pvp_start(update, context)
-    if d.startswith("pvp_hit_"): return await pvp_hit(update, context)
-    if d.startswith("pvp_stand_"): return await pvp_stand(update, context)
+    if d == "ruota":
+        return await ruota(update, context)
 
+    if d == "bonus":
+        return await bonus(update, context)
+
+    if d == "saldo":
+        return await saldo(update, context)
+
+    if d == "profilo":
+        return await profilo(update, context)
+
+    if d == "classifica":
+        return await classifica(update, context)
+
+    # 🃏 BLACKJACK
+    if d == "blackjack":
+        return await blackjack_start(update, context)
+
+    if d == "hit":
+        return await hit(update, context)
+
+    if d == "stand":
+        return await stand(update, context)
+
+    # 🆚 PVP
+    if d == "pvp_create":
+        return await pvp_create(update, context)
+
+    if d.startswith("pvp_join_"):
+        return await pvp_join(update, context)
+
+    if d.startswith("pvp_start_"):
+        return await pvp_start(update, context)
+
+    if d.startswith("pvp_hit_"):
+        return await pvp_hit(update, context)
+
+    if d.startswith("pvp_stand_"):
+        return await pvp_stand(update, context)
 # =========================
 # MAIN
 # =========================
