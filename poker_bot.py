@@ -31,18 +31,13 @@ GRUPPI_AUTORIZZATI = [
 def autorizzato(update):
     chat = None
 
-    if update.effective_chat:
-        chat = update.effective_chat
-    elif update.callback_query:
-        chat = update.callback_query.message.chat
+    def autorizzato(update):
+    chat = update.effective_chat
 
-    if not chat:
-        return False
+    print("CONTROLLO CHAT =", chat.id)
+    print("GRUPPI =", GRUPPI_AUTORIZZATI)
 
-    if chat.type == "private":
-        return True
-
-    return chat.id in GRUPPI_AUTORIZZATI
+    return True
     
 is_allowed = autorizzato
 # =========================
@@ -843,27 +838,6 @@ async def classifica(update, context):
 #========================
 
 
-async def cb(update, context):
-    q = update.callback_query
-
-    print(
-        "CALLBACK:",
-        q.from_user.id,
-        "CHAT:",
-        q.message.chat.id,
-        "TIPO:",
-        q.message.chat.type
-    )
-
-    if not is_allowed(update):
-        await q.answer(
-            f"NON AUTORIZZATO\nCHAT={q.message.chat.id}",
-            show_alert=True
-        )
-        return
-
-    await q.answer()
-    d = q.data
 
     if d == "slot": return await slot(update, context)
     if d == "roulette": return await roulette(update, context)
