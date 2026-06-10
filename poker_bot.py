@@ -30,7 +30,7 @@ GRUPPI_AUTORIZZATI = [
 
 
 def autorizzato(update):
-    chat = update.effective_chat
+    return True
 
     print("CONTROLLO CHAT =", chat.id)
     print("GRUPPI =", GRUPPI_AUTORIZZATI)
