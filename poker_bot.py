@@ -73,7 +73,7 @@ def get_rank(xp):
     if xp >= 1000: return "⭐ ESPERTO"
     if xp >= 300: return "🎲 GIOCATORE"
     return "🪙 PRINCIPIANTE"
-[15:20, 10/06/2026] Rosa: # =========================
+# =========================
 # UTENTE
 # =========================
 
