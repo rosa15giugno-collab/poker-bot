@@ -173,25 +173,22 @@ async def slot(update, context):
 # =========================
 
 def create_match(p1, p2):
-    match_id = f"{p1}{p2}{int(time.time())}"
+    mid = f"{p1}{p2}{int(time.time())}"
 
-    active_matches[match_id] = {
+    active_matches[mid] = {
         "p1": p1,
         "p2": p2,
         "p1_score": 0,
         "p2_score": 0,
-        "round": 1,
-        "start": time.time()
+        "round": 0,
+        "msg_id": None,
+        "chat_id": None
     }
 
-    return match_id
+    return mid
 
 
-def process_round(match_id):
-    m = active_matches.get(match_id)
-    if not m:
-        return
-
+def calc_round(m):
     r1 = random.randint(1, 10)
     r2 = random.randint(1, 10)
 
@@ -199,12 +196,11 @@ def process_round(match_id):
     m["p2_score"] += r2
     m["round"] += 1
 
-    if m["round"] > 5:
-        finish_match(match_id)
+    return r1, r2
 
 
-def finish_match(match_id):
-    m = active_matches.get(match_id)
+async def finish_match(bot, mid):
+    m = active_matches.get(mid)
     if not m:
         return
 
@@ -214,20 +210,61 @@ def finish_match(match_id):
     if m["p1_score"] > m["p2_score"]:
         p1["wins"] += 1
         p2["losses"] += 1
+        result = f"🏆 VINCE {p1['name']}"
     else:
         p2["wins"] += 1
         p1["losses"] += 1
+        result = f"🏆 VINCE {p2['name']}"
 
     save(p1)
     save(p2)
 
-    del active_matches[match_id]
+    if m["chat_id"] and m["msg_id"]:
+        await bot.edit_message_text(
+            chat_id=m["chat_id"],
+            message_id=m["msg_id"],
+            text=(
+                f"🔥 MATCH FINITO\n\n"
+                f"P1: {m['p1_score']}\n"
+                f"P2: {m['p2_score']}\n\n"
+                f"{result}"
+            )
+        )
+
+    del active_matches[mid]
+
+
+async def run_match(bot, mid, chat_id, msg_id):
+    m = active_matches[mid]
+    m["chat_id"] = chat_id
+    m["msg_id"] = msg_id
+
+    for i in range(5):
+        if mid not in active_matches:
+            return
+
+        r1, r2 = calc_round(m)
+
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=msg_id,
+            text=(
+                f"⚡ PvP LIVE ROUND {m['round']}/5\n\n"
+                f"P1 +{r1} → {m['p1_score']}\n"
+                f"P2 +{r2} → {m['p2_score']}"
+            )
+        )
+
+        await asyncio.sleep(2)
+
+    await finish_match(bot, mid)
+
 
 # =========================
-# QUEUE SYSTEM
+# PvP JOIN
 # =========================
 
-async def pvp_join(update, context):
+async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
@@ -238,24 +275,17 @@ async def pvp_join(update, context):
 
     pvp_queue.append(uid)
 
-    await q.message.reply_text("🆚 In coda PvP...")
+    if len(pvp_queue) < 2:
+        return await q.message.reply_text("🆚 In attesa avversario...")
 
-    if len(pvp_queue) >= 2:
-        p1 = pvp_queue.popleft()
-        p2 = pvp_queue.popleft()
+    p1 = pvp_queue.pop(0)
+    p2 = pvp_queue.pop(0)
 
-        match_id = create_match(p1, p2)
+    mid = create_match(p1, p2)
 
-        await q.message.reply_text(f"🔥 Match iniziato: {p1} vs {p2}")
+    msg = await q.message.reply_text("🔥 MATCH INIZIATO...")
 
-        # simulate real time rounds
-        for _ in range(5):
-            time.sleep(2)
-            process_round(match_id)
-
-
-
-
+    asyncio.create_task(run_match(context.bot, mid, msg.chat_id, msg.message_id))
 
 
 # =========================
