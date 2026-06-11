@@ -160,13 +160,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
     caption=
     "     Benvenuto in 👑 Casinò by Rosa \n\n"
-    "   𝓘𝓵 𝓬𝓪𝓼𝓸 𝓷𝓸𝓷 𝓮̀ 𝓬𝓪𝓸𝓼: 𝓮̀ 𝓾𝓷 𝓵𝓲𝓷𝓰𝓾𝓪𝓰𝓰𝓲𝓸.\n"
-    "        𝓒𝓱𝓲 𝓼𝓪 𝓪𝓼𝓬𝓸𝓵𝓽𝓪𝓻𝓵𝓸, 𝓿𝓲𝓷𝓬𝓮.\n"
-    "_______________________________\n"
+    "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔:è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
+    "    …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n"
+    "          ✦ ───── ✦\n"
     "      Slot, Blackjack, Roulette\n"
     "       Classifiche settimanali\n"
-    " _______________________________\n"
-    "  𝓘𝓵 𝓭𝓮𝓼𝓽𝓲𝓷𝓸 𝓽𝓲 𝓰𝓾𝓪𝓻𝓭𝓪. 𝓣𝓾 𝓰𝓾𝓪𝓻𝓭𝓲 𝓵𝓾𝓲"
+    "          ✦ ───── ✦\n"
+    "𝑰𝒍 𝑫𝒆𝒔𝒕𝒊𝒏𝒐 𝒕𝒊 𝒈𝒖𝒂𝒓𝒅𝒂. 𝑻𝒖 𝒈𝒖𝒂𝒓𝒅𝒊 𝒍𝒖𝒊"
     "👇 Scegli una modalità",
     reply_markup=menu()
 )
