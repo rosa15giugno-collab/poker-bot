@@ -533,52 +533,38 @@ async def classifica(update, context):
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
 
-    print(
-        "CLICK:",
-        q.from_user.id,
-        q.from_user.first_name,
-        q.data
-    )
+    print("🔥 CB ARRIVATO:", q.from_user.id, q.data)
 
     try:
         await q.answer()
 
-        d = q.data
+        data = q.data
 
-        if d == "slot":
+        if data == "slot":
             return await slot(update, context)
-
-        if d == "roulette":
+        if data == "roulette":
             return await roulette(update, context)
-
-        if d == "blackjack":
+        if data == "blackjack":
             return await blackjack(update, context)
-
-        if d == "hit":
+        if data == "hit":
             return await hit(update, context)
-
-        if d == "stand":
+        if data == "stand":
             return await stand(update, context)
-
-        if d == "bonus":
+        if data == "bonus":
             return await bonus(update, context)
-
-        if d == "acquista":
-            return await acquista_button(update, context)
-
-        if d == "profilo":
+        if data == "acquista":
+            return await acquista(update, context)
+        if data == "profilo":
             return await profilo(update, context)
-
-        if d == "classifica":
+        if data == "classifica":
             return await classifica(update, context)
-
-        if d == "pvp":
+        if data == "pvp":
             return await pvp(update, context)
 
         await q.message.reply_text("🚧 In sviluppo")
 
     except Exception as e:
-        print("CB ERROR:", e)
+        print("❌ CB ERROR:", e)
         await q.message.reply_text("⚠️ Errore temporaneo")
 
 
