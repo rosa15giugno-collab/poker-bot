@@ -156,10 +156,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     get_user(update.effective_user.id, update.effective_user.first_name)
 
-    await update.message.reply_text(
-        "🟢 CASINO PRO SERVER ONLINE",
-        reply_markup=menu()
-    )
+    await update.message.reply_photo(
+    photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
+    caption=
+    "👑 Benvenuto in Casinò by Rosa\n\n"
+    "🎰 Slot\n"
+    "🃏 Blackjack\n"
+    "🎲 Roulette\n"
+    "🆚 PvP Live\n"
+    "🎁 Bonus\n"
+    "🏆 Classifica\n\n"
+    "👇 Scegli una modalità",
+    reply_markup=menu()
+)
 
 
 # =========================
