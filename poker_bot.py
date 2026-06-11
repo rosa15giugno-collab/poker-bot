@@ -164,7 +164,7 @@ async def fileid(update, context):
 #fine funzione
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-     if not is_allowed(update):
+    if not is_allowed(update):
         return await update.message.reply_text("❌ Gruppo non autorizzato")
 
     get_user(update.effective_user.id, update.effective_user.first_name)
