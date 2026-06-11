@@ -20,18 +20,12 @@ TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
-GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
+
 
 def is_allowed(update):
-    chat = update.effective_chat if hasattr(update, "effective_chat") else update.message.chat
+    return True
 
-    if not chat:
-        return False
 
-    if chat.type == "private":
-        return True
-
-    return chat.id in GRUPPI_AUTORIZZATI
    
 
 
@@ -164,9 +158,6 @@ async def fileid(update, context):
 #fine funzione
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_allowed(update):
-        return await update.message.reply_text("❌ Gruppo non autorizzato")
-
     get_user(update.effective_user.id, update.effective_user.first_name)
 
     await update.message.reply_photo(
@@ -544,11 +535,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         await q.answer()
-
-        # 🔴 FIX PERMESSI (GIUSTO UPDATE, NON Q)
-        if not is_allowed(update):
-            await q.message.reply_text("❌ Non autorizzato")
-            return
 
         d = q.data
 
