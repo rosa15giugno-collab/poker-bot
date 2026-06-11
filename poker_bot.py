@@ -132,14 +132,22 @@ def menu():
 
 # Funzione immagine di benvenuto
 async def fileid(update, context):
+
     if not update.message.reply_to_message:
         return await update.message.reply_text(
-            "📷 Rispondi a una foto con /fileid"
+            "📷 Rispondi ad una foto con /fileid"
         )
-        
+
+    if not update.message.reply_to_message.photo:
+        return await update.message.reply_text(
+            "❌ Quello non è una foto"
+        )
+
     photo = update.message.reply_to_message.photo[-1]
 
-    await update.message.reply_text(photo.file_id)
+    await update.message.reply_text(
+        f"FILE ID:\n\n{photo.file_id}"
+    )
 #fine funzione
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
