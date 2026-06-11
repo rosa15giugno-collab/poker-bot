@@ -23,7 +23,7 @@ if not TOKEN:
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
 def is_allowed(update):
-    chat = update.effective_chat
+    chat = update.effective_chat if hasattr(update, "effective_chat") else update.message.chat
 
     if not chat:
         return False
@@ -501,7 +501,7 @@ async def acquista(update, context):
     else:
         return await update.message.reply_text("❌ Non disponibile")
 
-    update_user(u)
+    save(u)
     await update.message.reply_text("✅ Acquisto fatto")
 
 
@@ -536,7 +536,7 @@ async def classifica(update, context):
 
 
 # =========================
-# ROUTER
+# CALLBACK ROUTER FIXED
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -545,8 +545,10 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await q.answer()
 
+        # 🔴 FIX PERMESSI (GIUSTO UPDATE, NON Q)
         if not is_allowed(update):
-            return await q.message.reply_text("❌ Non autorizzato")
+            await q.message.reply_text("❌ Non autorizzato")
+            return
 
         d = q.data
 
@@ -592,12 +594,12 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).build()
     app = ApplicationBuilder() \
-    .token(TOKEN) \
-    .connect_timeout(30) \
-    .read_timeout(30) \
-    .build()
+        .token(TOKEN) \
+        .connect_timeout(30) \
+        .read_timeout(30) \
+        .build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("acquista", acquista))
     app.add_handler(CommandHandler("fileid", fileid))
