@@ -533,6 +533,13 @@ async def classifica(update, context):
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
 
+    print(
+        "CLICK:",
+        q.from_user.id,
+        q.from_user.first_name,
+        q.data
+    )
+
     try:
         await q.answer()
 
