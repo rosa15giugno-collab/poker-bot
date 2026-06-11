@@ -159,13 +159,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
     photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
     caption=
-    "👑 Benvenuto in Casinò by Rosa\n\n"
-    "🎰 Slot\n"
-    "🃏 Blackjack\n"
-    "🎲 Roulette\n"
-    "🆚 PvP Live\n"
-    "🎁 Bonus\n"
-    "🏆 Classifica\n\n"
+    "     Benvenuto in 👑 Casinò by Rosa \n\n"
+    "   𝓘𝓵 𝓬𝓪𝓼𝓸 𝓷𝓸𝓷 𝓮̀ 𝓬𝓪𝓸𝓼: 𝓮̀ 𝓾𝓷 𝓵𝓲𝓷𝓰𝓾𝓪𝓰𝓰𝓲𝓸.\n"
+    "       𝓒𝓱𝓲 𝓼𝓪 𝓪𝓼𝓬𝓸𝓵𝓽𝓪𝓻𝓵𝓸, 𝓿𝓲𝓷𝓬𝓮.\n"
+    "____________________________________________\n"
+    "  Slot, Blackjack, Roulette e classifiche\n"
+    "                settimanali\n"
+    " ____________________________________________\n"
+    "  𝓘𝓵 𝓭𝓮𝓼𝓽𝓲𝓷𝓸 𝓽𝓲 𝓰𝓾𝓪𝓻𝓭𝓪. 𝓣𝓾 𝓰𝓾𝓪𝓻𝓭𝓲 𝓵𝓾𝓲"
     "👇 Scegli una modalità",
     reply_markup=menu()
 )
