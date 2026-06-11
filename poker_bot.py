@@ -605,6 +605,11 @@ def main():
     app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
+    async def error_handler(update, context):
+        print("ERROR:", context.error)
+
+    app.add_error_handler(error_handler)
+
     print("🟢 CASINO PRO SERVER FINAL ONLINE")
     app.run_polling()
 
