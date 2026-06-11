@@ -21,18 +21,13 @@ GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 def is_allowed(update):
     chat = None
 
-    if update.message:
-        chat = update.message.chat
-
-    elif update.callback_query:
-        chat = update.callback_query.message.chat
+    if update.effective_chat:
+        chat = update.effective_chat
 
     if not chat:
         return False
 
-    if chat.type == "private":
-        return True
-    return chat_id in GRUPPI_AUTORIZZATI
+    return chat.id in GRUPPI_AUTORIZZATI
 
 
 # =========================
