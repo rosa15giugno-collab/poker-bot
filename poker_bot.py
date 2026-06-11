@@ -119,7 +119,7 @@ def menu():
          InlineKeyboardButton("🆚 PvP", callback_data="pvp")],
 
         [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-         InlineKeyboardButton("💰 Shop", callback_data="shop")],
+         InlineKeyboardButton("💰 acquista", callback_data="acquista")],
 
         [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
          InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
@@ -458,25 +458,25 @@ async def bonus(update, context):
 # SHOP
 # =========================
 
-async def shop(update, context):
+async def acquista(update, context):
     q = update.callback_query
     await q.answer()
 
     await q.message.reply_text(
-        "💰 SHOP\n\n"
+        "💰 ACQUISTA\n\n"
         "1) x2 → 5000 chips\n"
         "2) x3 → 12000 chips\n"
-        "Usa /shop 1 o /shop 2"
+        "Usa /acquista 1 o /acquista2"
     )
 
 
-async def shop(update, context):
+async def acquista(update, context):
     u = get_user(update.effective_user.id)
 
     try:
         opt = int(context.args[0])
     except:
-        return await update.message.reply_text("Uso: /shop 1 o /shop 2")
+        return await update.message.reply_text("Uso: /acquista 1 o /acquista 2")
 
     if opt == 1 and u["chips"] >= 5000:
         u["chips"] -= 5000
@@ -541,8 +541,8 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await stand(update, context)
     if d == "bonus":
         return await bonus(update, context)
-    if d == "shop":
-        return await shop(update, context)
+    if d == "acquista":
+        return await acquista(update, context)
     if d == "profilo":
         return await profilo(update, context)
     if d == "classifica":
@@ -561,7 +561,7 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("shop", shop))
+    app.add_handler(CommandHandler("acquista", acquista))
     app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
