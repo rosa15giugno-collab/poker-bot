@@ -18,7 +18,20 @@ if not TOKEN:
 
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
-def allowed(chat_id):
+def is_allowed(update):
+    chat = None
+
+    if update.message:
+        chat = update.message.chat
+
+    elif update.callback_query:
+        chat = update.callback_query.message.chat
+
+    if not chat:
+        return False
+
+    if chat.type == "private":
+        return True
     return chat_id in GRUPPI_AUTORIZZATI
 
 
@@ -527,26 +540,45 @@ async def classifica(update, context):
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    await q.answer()
+
+    # 🔴 BLOCCO GRUPPI QUI (FONDAMENTALE)
+    if not is_allowed(update):
+        await context.bot.send_message(
+            chat_id=q.message.chat_id,
+            text="❌ Gruppo non autorizzato"
+        )
+        return
+
     d = q.data
 
     if d == "slot":
         return await slot(update, context)
+
     if d == "roulette":
         return await roulette(update, context)
+
     if d == "blackjack":
         return await blackjack(update, context)
+
     if d == "hit":
         return await hit(update, context)
+
     if d == "stand":
         return await stand(update, context)
+
     if d == "bonus":
         return await bonus(update, context)
+
     if d == "acquista":
         return await acquista(update, context)
+
     if d == "profilo":
         return await profilo(update, context)
+
     if d == "classifica":
         return await classifica(update, context)
+
     if d == "pvp":
         return await pvp(update, context)
 
