@@ -19,14 +19,16 @@ if not TOKEN:
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
 def is_allowed(update):
-    chat = None
-
-    if update.effective_chat:
-        chat = update.effective_chat
+    chat = update.effective_chat
 
     if not chat:
         return False
 
+    # 🔥 PRIVATI SEMPRE PERMESSI
+    if chat.type == "private":
+        return True
+
+    # 🔥 GRUPPI SOLO SE AUTORIZZATI
     return chat.id in GRUPPI_AUTORIZZATI
 
 
