@@ -460,13 +460,10 @@ async def bonus(update, context):
     save(u)
 
     await q.message.reply_text(f"🎁 +{reward}", reply_markup=menu())
-
-
-# =========================
-# SHOP
-# =========================
-
-async def acquista(update, context):
+#===========================
+# ACQUISTA
+#==========================
+async def acquista_button(update, context):
     q = update.callback_query
     await q.answer()
 
@@ -474,9 +471,13 @@ async def acquista(update, context):
         "💰 ACQUISTA\n\n"
         "1) x2 → 5000 chips\n"
         "2) x3 → 12000 chips\n"
-        "Usa /acquista 1 o /acquista2"
+        "Usa /acquista 1 o /acquista 2"
     )
 
+
+# =========================
+# SHOP
+# =========================
 
 async def acquista(update, context):
     u = get_user(update.effective_user.id)
@@ -495,7 +496,7 @@ async def acquista(update, context):
     else:
         return await update.message.reply_text("❌ Non disponibile")
 
-    save(u)
+    update_user(u)
     await update.message.reply_text("✅ Acquisto fatto")
 
 
@@ -566,7 +567,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await bonus(update, context)
 
     if d == "acquista":
-        return await acquista(update, context)
+        return await acquista_button(update, context)
 
     if d == "profilo":
         return await profilo(update, context)
