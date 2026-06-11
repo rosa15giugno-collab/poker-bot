@@ -4,6 +4,9 @@ import sqlite3
 import time
 import threading
 import asyncio
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from collections import deque
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -590,7 +593,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-
+    app = ApplicationBuilder() \
+    .token(TOKEN) \
+    .connect_timeout(30) \
+    .read_timeout(30) \
+    .build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("acquista", acquista))
     app.add_handler(CommandHandler("fileid", fileid))
