@@ -130,6 +130,18 @@ def menu():
 # START
 # =========================
 
+# Funzione immagine di benvenuto
+async def fileid(update, context):
+    if not update.message.reply_to_message:
+        return await update.message.reply_text(
+            "📷 Rispondi a una foto con /fileid"
+        )
+        
+    photo = update.message.reply_to_message.photo[-1]
+
+    await update.message.reply_text(photo.file_id)
+#fine funzione
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not allowed(update.effective_chat.id):
         return await update.message.reply_text("❌ Gruppo non autorizzato")
@@ -532,6 +544,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("buy", buy))
+    app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
     print("🟢 CASINO PRO SERVER FINAL ONLINE")
