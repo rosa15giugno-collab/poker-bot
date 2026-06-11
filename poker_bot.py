@@ -3,6 +3,7 @@ import random
 import sqlite3
 import time
 import threading
+import asyncio
 from collections import deque
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -19,10 +20,15 @@ if not TOKEN:
 GRUPPI_AUTORIZZATI = [-1003664350829, -1002229066951]
 
 def is_allowed(update):
-   
+    chat = update.effective_chat
+
+    if not chat:
+        return False
+
+    if chat.type == "private":
         return True
 
-    # 🔥 GRUPPI SOLO SE AUTORIZZATI
+    return chat.id in GRUPPI_AUTORIZZATI
    
 
 
@@ -532,49 +538,50 @@ async def classifica(update, context):
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
-    await q.answer()
 
-    # 🔴 BLOCCO GRUPPI QUI (FONDAMENTALE)
-    if not is_allowed(update):
-        await context.bot.send_message(
-            chat_id=q.message.chat_id,
-            text="❌ Gruppo non autorizzato"
-        )
-        return
+    try:
+        await q.answer()
 
-    d = q.data
+        if not is_allowed(update):
+            return await q.message.reply_text("❌ Non autorizzato")
 
-    if d == "slot":
-        return await slot(update, context)
+        d = q.data
 
-    if d == "roulette":
-        return await roulette(update, context)
+        if d == "slot":
+            return await slot(update, context)
 
-    if d == "blackjack":
-        return await blackjack(update, context)
+        if d == "roulette":
+            return await roulette(update, context)
 
-    if d == "hit":
-        return await hit(update, context)
+        if d == "blackjack":
+            return await blackjack(update, context)
 
-    if d == "stand":
-        return await stand(update, context)
+        if d == "hit":
+            return await hit(update, context)
 
-    if d == "bonus":
-        return await bonus(update, context)
+        if d == "stand":
+            return await stand(update, context)
 
-    if d == "acquista":
-        return await acquista_button(update, context)
+        if d == "bonus":
+            return await bonus(update, context)
 
-    if d == "profilo":
-        return await profilo(update, context)
+        if d == "acquista":
+            return await acquista_button(update, context)
 
-    if d == "classifica":
-        return await classifica(update, context)
+        if d == "profilo":
+            return await profilo(update, context)
 
-    if d == "pvp":
-        return await pvp(update, context)
+        if d == "classifica":
+            return await classifica(update, context)
 
-    await q.message.reply_text("🚧 In sviluppo")
+        if d == "pvp":
+            return await pvp(update, context)
+
+        await q.message.reply_text("🚧 In sviluppo")
+
+    except Exception as e:
+        print("CB ERROR:", e)
+        await q.message.reply_text("⚠️ Errore temporaneo")
 
 
 # =========================
