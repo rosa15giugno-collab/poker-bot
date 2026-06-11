@@ -162,10 +162,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "     Benvenuto in 👑 Casinò by Rosa \n\n"
     "   𝓘𝓵 𝓬𝓪𝓼𝓸 𝓷𝓸𝓷 𝓮̀ 𝓬𝓪𝓸𝓼: 𝓮̀ 𝓾𝓷 𝓵𝓲𝓷𝓰𝓾𝓪𝓰𝓰𝓲𝓸.\n"
     "        𝓒𝓱𝓲 𝓼𝓪 𝓪𝓼𝓬𝓸𝓵𝓽𝓪𝓻𝓵𝓸, 𝓿𝓲𝓷𝓬𝓮.\n"
-    "_____________________________________\n"
-    "  Slot, Blackjack, Roulette e classifiche\n"
-    "                settimanali\n"
-    " _____________________________________\n"
+    "_________________________________\n"
+    "  Slot, Blackjack, Roulette\n"
+    "   classifiche settimanali\n"
+    " _________________________________\n"
     "  𝓘𝓵 𝓭𝓮𝓼𝓽𝓲𝓷𝓸 𝓽𝓲 𝓰𝓾𝓪𝓻𝓭𝓪. 𝓣𝓾 𝓰𝓾𝓪𝓻𝓭𝓲 𝓵𝓾𝓲"
     "👇 Scegli una modalità",
     reply_markup=menu()
