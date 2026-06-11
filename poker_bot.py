@@ -466,17 +466,17 @@ async def shop(update, context):
         "💰 SHOP\n\n"
         "1) x2 → 5000 chips\n"
         "2) x3 → 12000 chips\n"
-        "Usa /buy 1 o /buy 2"
+        "Usa /shop 1 o /shop 2"
     )
 
 
-async def buy(update, context):
+async def shop(update, context):
     u = get_user(update.effective_user.id)
 
     try:
         opt = int(context.args[0])
     except:
-        return await update.message.reply_text("Uso: /buy 1 o /buy 2")
+        return await update.message.reply_text("Uso: /shop 1 o /shop 2")
 
     if opt == 1 and u["chips"] >= 5000:
         u["chips"] -= 5000
@@ -561,7 +561,7 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("buy", buy))
+    app.add_handler(CommandHandler("shop", shop))
     app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
