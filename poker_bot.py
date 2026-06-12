@@ -133,12 +133,18 @@ def menu():
 # =========================
 
 # Funzione immagine di benvenuto
-async def fileid(update, context):
+from telegram.ext import CommandHandler
 
-    if not update.message.reply_to_message:
-        return await update.message.reply_text(
-            "📷 Rispondi ad una foto con /fileid"
+async def fileid(update, context):
+    if update.message.reply_to_message and update.message.reply_to_message.photo:
+        fid = update.message.reply_to_message.photo[-1].file_id
+        await update.message.reply_text(fid)
+    else:
+        await update.message.reply_text(
+            "Rispondi a una foto con /fileid"
         )
+
+app.add_handler(CommandHandler("fileid", fileid))
 
     if not update.message.reply_to_message.photo:
         return await update.message.reply_text(
