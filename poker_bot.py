@@ -6,6 +6,8 @@ import threading
 import asyncio
 import logging
 
+print("START ARRIVATO:", update.effective_user.id)
+
 from collections import deque
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
