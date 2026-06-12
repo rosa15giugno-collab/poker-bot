@@ -133,28 +133,21 @@ def menu():
 # =========================
 
 # Funzione immagine di benvenuto
-from telegram.ext import CommandHandler
 
 async def fileid(update, context):
     if update.message.reply_to_message and update.message.reply_to_message.photo:
-        fid = update.message.reply_to_message.photo[-1].file_id
-        await update.message.reply_text(fid)
+        photo = update.message.reply_to_message.photo[-1]
+
+        await update.message.reply_text(
+            f"📸 FILE ID:\n\n{photo.file_id}"
+        )
     else:
         await update.message.reply_text(
-            "Rispondi a una foto con /fileid"
+            "❌ Rispondi a una foto con /fileid"
         )
 
-app.add_handler(CommandHandler("fileid", fileid))
 
-    if not update.message.reply_to_message.photo:
-        return await update.message.reply_text(
-            "❌ Quello non è una foto"
-        )
 
-    photo = update.message.reply_to_message.photo[-1]
-
-    await update.message.reply_text(
-        f"FILE ID:\n\n{photo.file_id}"
     )
 #fine funzione
 
@@ -164,7 +157,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("START ARRIVATO:", update.effective_user.id)
 
     await update.message.reply_photo(
-    photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
+    photo="FILE_ID_METTI_QUI",
     caption=
     "     Benvenuto in 👑 Casinò by Rosa \n\n"
     "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔:è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
