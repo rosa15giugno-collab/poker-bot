@@ -148,7 +148,7 @@ async def fileid(update, context):
 
 
 
-    )
+    
 #fine funzione
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
