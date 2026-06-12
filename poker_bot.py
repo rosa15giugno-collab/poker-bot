@@ -132,15 +132,45 @@ def menu():
 # START
 # =========================
 
-async def start(update, context):
-    try:
-        print("START OK:", update.effective_user.id)
+# Funzione immagine di benvenuto
+async def fileid(update, context):
 
-        await update.message.reply_text("✅ Bot attivo e funzionante!")
+    if not update.message.reply_to_message:
+        return await update.message.reply_text(
+            "📷 Rispondi ad una foto con /fileid"
+        )
 
-    except Exception as e:
-        print("❌ ERRORE START:", e)
-        await update.message.reply_text("Errore interno, riprova più tardi")
+    if not update.message.reply_to_message.photo:
+        return await update.message.reply_text(
+            "❌ Quello non è una foto"
+        )
+
+    photo = update.message.reply_to_message.photo[-1]
+
+    await update.message.reply_text(
+        f"FILE ID:\n\n{photo.file_id}"
+    )
+#fine funzione
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    get_user(update.effective_user.id, update.effective_user.first_name)
+   
+    print("START ARRIVATO:", update.effective_user.id)
+
+    await update.message.reply_photo(
+    photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
+    caption=
+    "     Benvenuto in 👑 Casinò by Rosa \n\n"
+    "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔:è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
+    "       …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n"
+    "               ✦ ───── ✦\n"
+    "      Slot, Blackjack, Roulette\n"
+    "       Classifiche settimanali\n"
+    "               ✦ ───── ✦\n"
+    "𝑰𝒍 𝑫𝒆𝒔𝒕𝒊𝒏𝒐 𝒕𝒊 𝒈𝒖𝒂𝒓𝒅𝒂. 𝑻𝒖 𝒈𝒖𝒂𝒓𝒅𝒊 𝒍𝒖𝒊"
+    "👇 Scegli una modalità",
+    reply_markup=menu()
+)
 
 # =========================
 # SLOT
