@@ -344,10 +344,10 @@ async def roulette(update, context):
 
     save(u)
 
-     await q.message.edit_text(
+    await q.message.edit_text(
         f"🎲 Numero: {n}\n💰 +{win}",
         reply_markup=menu()
-
+    )
 # =========================
 # BLACKJACK
 # =========================
