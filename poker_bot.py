@@ -5,12 +5,12 @@ import time
 import threading
 import asyncio
 import logging
-logging.basicConfig(level=logging.INFO)
 
 from collections import deque
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+logging.basicConfig(level=logging.INFO)
 
 # =========================
 # CONFIG
@@ -19,15 +19,6 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
-
-
-
-def is_allowed(update):
-    return True
-
-
-   
-
 
 # =========================
 # DATABASE
@@ -53,7 +44,7 @@ conn.commit()
 
 
 # =========================
-# MMO STATE
+# STATE
 # =========================
 
 games = {}              # match attivi
@@ -119,19 +110,23 @@ def save(u):
 
 def menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 Slot", callback_data="slot"),
-         InlineKeyboardButton("🎲 Roulette", callback_data="roulette")],
-
-        [InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
-         InlineKeyboardButton("🆚 PvP", callback_data="pvp")],
-
-        [InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-         InlineKeyboardButton("💰 acquista", callback_data="acquista")],
-
-        [InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
-         InlineKeyboardButton("🏆 Classifica", callback_data="classifica")]
+        [
+            InlineKeyboardButton("🎰 Slot", callback_data="slot"),
+            InlineKeyboardButton("🎲 Roulette", callback_data="roulette")
+        ],
+        [
+            InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
+            InlineKeyboardButton("🆚 PvP", callback_data="pvp")
+        ],
+        [
+            InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
+            InlineKeyboardButton("💰 Shop", callback_data="shop")
+        ],
+        [
+            InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
+            InlineKeyboardButton("🏆 Classifica", callback_data="classifica")
+        ]
     ])
-
 
 # =========================
 # START
@@ -200,7 +195,10 @@ async def slot(update, context):
     u["xp"] += win // 30
 
     save(u)
-    await q.message.reply_text(f"🎰 {' | '.join(r)}\n💰 +{win}", reply_markup=menu())
+    await q.message.edit_text(
+        f"🎰 {' | '.join(r)}\n💰 +{win}",
+        reply_markup=menu()
+    )    
 
 # =========================
 # REAL TIME PVP MATCHMAKING
@@ -305,7 +303,7 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = q.from_user.id
 
     if uid in pvp_queue:
-        return await q.message.reply_text("⏳ Sei già in coda")
+        return await q.message.reply_text("⏳ Sei già in coda")   # sostituire reply_text con edit_text
 
     pvp_queue.append(uid)
 
@@ -346,8 +344,9 @@ async def roulette(update, context):
 
     save(u)
 
-    await q.message.reply_text(f"🎲 Numero: {n}\n💰 +{win}", reply_markup=menu())
-
+     await q.message.edit_text(
+        f"🎲 Numero: {n}\n💰 +{win}",
+        reply_markup=menu()
 
 # =========================
 # BLACKJACK
@@ -376,14 +375,13 @@ async def blackjack(update, context):
 
     g = games[q.from_user.id]
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("➕ Carta", callback_data="hit"),
-             InlineKeyboardButton("🛑 Stai", callback_data="stand")]
-        ])
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("➕ Carta", callback_data="hit"),
+            InlineKeyboardButton("🛑 Stai", callback_data="stand")
+        ]])
     )
-
 
 async def hit(update, context):
     q = update.callback_query
@@ -395,11 +393,14 @@ async def hit(update, context):
 
     g["p"].append(random.randint(2, 11))
 
-    if calc(g["p"]) > 21:
+      if calc(g["p"]) > 21:
         del games[q.from_user.id]
-        return await q.message.reply_text("💥 Sballato!")
-
-    await q.message.reply_text(f"🃏 {g['p']} ({calc(g['p'])})")
+        return await q.message.edit_text("💥 Sballato!", reply_markup=menu())
+          
+    await q.message.edit_text(
+        f"🃏 {g['p']} ({calc(g['p'])})",
+        reply_markup=q.message.reply_markup
+    )
 
 
 async def stand(update, context):
@@ -430,7 +431,10 @@ async def stand(update, context):
     save(u)
     del games[q.from_user.id]
 
-    await q.message.reply_text(f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}", reply_markup=menu())
+    await q.message.edit_text(
+        f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
+        reply_markup=menu()
+    )
 
 
 # =========================
@@ -446,7 +450,7 @@ async def bonus(update, context):
     now = int(time.time())
 
     if now - u["last_bonus"] < 86400:
-        return await q.message.reply_text("⏳ Bonus già preso")
+        return await q.message.edit_text("⏳ Bonus già preso", reply_markup=menu())
 
     reward = random.randint(500, 1500)
 
@@ -455,7 +459,8 @@ async def bonus(update, context):
 
     save(u)
 
-    await q.message.reply_text(f"🎁 +{reward}", reply_markup=menu())
+    await q.message.edit_text(f"🎁 +{reward}", reply_markup=menu())
+
 #===========================
 # ACQUISTA
 #==========================
@@ -463,7 +468,7 @@ async def acquista_button(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         "💰 ACQUISTA\n\n"
         "1) x2 → 5000 chips\n"
         "2) x3 → 12000 chips\n"
@@ -481,7 +486,7 @@ async def acquista(update, context):
     try:
         opt = int(context.args[0])
     except:
-        return await update.message.reply_text("Uso: /acquista 1 o /acquista 2")
+        return await update.message.edit_text("Uso: /acquista 1 o /acquista 2")
 
     if opt == 1 and u["chips"] >= 5000:
         u["chips"] -= 5000
@@ -490,10 +495,10 @@ async def acquista(update, context):
         u["chips"] -= 12000
         u["multiplier"] = 3.0
     else:
-        return await update.message.reply_text("❌ Non disponibile")
+        return await update.message.edit_text("❌ Non disponibile")
 
     save(u)
-    await update.message.reply_text("✅ Acquisto fatto")
+    await update.message.edit_text("✅ Acquisto fatto")
 
 
 # =========================
@@ -533,11 +538,10 @@ async def classifica(update, context):
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
 
-    print("🔥 CB ARRIVATO:", q.from_user.id, q.data)
+    print("🔥 CB:", q.from_user.id, q.data)
 
-    try:
         await q.answer()
-
+    try    
         data = q.data
 
         if data == "slot":
@@ -552,7 +556,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return await stand(update, context)
         if data == "bonus":
             return await bonus(update, context)
-        if data == "acquista":
+        if data == "shop":
             return await acquista(update, context)
         if data == "profilo":
             return await profilo(update, context)
@@ -561,11 +565,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if data == "pvp":
             return await pvp(update, context)
 
-        await q.message.reply_text("🚧 In sviluppo")
+        await q.message.edit_text("🚧 In sviluppo", reply_markup=menu())
 
     except Exception as e:
-        print("❌ CB ERROR:", e)
-        await q.message.reply_text("⚠️ Errore temporaneo")
+        print("❌ ERROR:", e)
+        await q.message.edit_text("⚠️ Errore", reply_markup=menu())
 
 
 # =========================
@@ -573,23 +577,12 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
-    app = ApplicationBuilder() \
-        .token(TOKEN) \
-        .connect_timeout(30) \
-        .read_timeout(30) \
-        .build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("acquista", acquista))
-    app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
-    async def error_handler(update, context):
-        print("ERROR:", context.error)
-
-    app.add_error_handler(error_handler)
-
-    print("🟢 CASINO PRO SERVER FINAL ONLINE")
+    print("🟢 CASINO DEFINITIVO ONLINE")
     app.run_polling()
 
 
