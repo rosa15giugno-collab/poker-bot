@@ -355,12 +355,15 @@ async def roulette(update, context):
 def hand():
     return [random.randint(2, 11), random.randint(2, 11)]
 
+
 def calc(h):
     t = sum(h)
     a = h.count(11)
+
     while t > 21 and a:
         t -= 10
         a -= 1
+
     return t
 
 
@@ -377,29 +380,56 @@ async def blackjack(update, context):
 
     await q.message.edit_text(
         f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("➕ Carta", callback_data="hit"),
-            InlineKeyboardButton("🛑 Stai", callback_data="stand")
-        ]])
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "➕ Carta",
+                    callback_data="hit"
+                ),
+                InlineKeyboardButton(
+                    "🛑 Stai",
+                    callback_data="stand"
+                )
+            ]
+        ])
     )
+
 
 async def hit(update, context):
     q = update.callback_query
     await q.answer()
 
     g = games.get(q.from_user.id)
+
     if not g:
         return
 
     g["p"].append(random.randint(2, 11))
 
-      if calc(g["p"]) > 21:
+    if calc(g["p"]) > 21:
         del games[q.from_user.id]
-        return await q.message.edit_text("💥 Sballato!", reply_markup=menu())
-          
+
+        await q.message.edit_text(
+            "💥 Sballato!",
+            reply_markup=menu()
+        )
+
+        return
+
     await q.message.edit_text(
         f"🃏 {g['p']} ({calc(g['p'])})",
-        reply_markup=q.message.reply_markup
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "➕ Carta",
+                    callback_data="hit"
+                ),
+                InlineKeyboardButton(
+                    "🛑 Stai",
+                    callback_data="stand"
+                )
+            ]
+        ])
     )
 
 
@@ -408,6 +438,7 @@ async def stand(update, context):
     await q.answer()
 
     g = games.get(q.from_user.id)
+
     if not g:
         return
 
@@ -419,9 +450,11 @@ async def stand(update, context):
     if p > d:
         win = 900
         u["wins"] += 1
+
     elif p < d:
         win = 0
         u["losses"] += 1
+
     else:
         win = 200
 
@@ -429,13 +462,13 @@ async def stand(update, context):
     u["xp"] += win // 20
 
     save(u)
+
     del games[q.from_user.id]
 
     await q.message.edit_text(
         f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
         reply_markup=menu()
     )
-
 
 # =========================
 # BONUS
