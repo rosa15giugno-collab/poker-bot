@@ -6,8 +6,6 @@ import threading
 import asyncio
 import logging
 
-print("START ARRIVATO:", update.effective_user.id)
-
 from collections import deque
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -156,6 +154,8 @@ async def fileid(update, context):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(update.effective_user.id, update.effective_user.first_name)
+   
+    print("START ARRIVATO:", update.effective_user.id)
 
     await update.message.reply_photo(
     photo="AgACAgQAAyEFAATaaY5tAAIQ8Wop5hJDkqhSsGRsfd2u8h-mQsYmAALIDWsbAwdQUdjjqwhQoAABFQEAAwIAA3kAAzsE",
