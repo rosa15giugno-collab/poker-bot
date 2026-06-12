@@ -540,38 +540,43 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print("🔥 CB:", q.from_user.id, q.data)
 
+    try:
         await q.answer()
-    try    
-        data = q.data
 
-        if data == "slot":
-            return await slot(update, context)
-        if data == "roulette":
-            return await roulette(update, context)
-        if data == "blackjack":
-            return await blackjack(update, context)
-        if data == "hit":
-            return await hit(update, context)
-        if data == "stand":
-            return await stand(update, context)
-        if data == "bonus":
-            return await bonus(update, context)
-        if data == "shop":
-            return await acquista(update, context)
-        if data == "profilo":
-            return await profilo(update, context)
-        if data == "classifica":
-            return await classifica(update, context)
-        if data == "pvp":
-            return await pvp(update, context)
+        if q.data == "slot":
+            await slot(update, context)
 
-        await q.message.edit_text("🚧 In sviluppo", reply_markup=menu())
+        elif q.data == "roulette":
+            await roulette(update, context)
+
+        elif q.data == "blackjack":
+            await blackjack(update, context)
+
+        elif q.data == "hit":
+            await hit(update, context)
+
+        elif q.data == "stand":
+            await stand(update, context)
+
+        elif q.data == "bonus":
+            await bonus(update, context)
+
+        else:
+            await q.message.edit_text(
+                "🚧 In sviluppo",
+                reply_markup=menu()
+            )
 
     except Exception as e:
         print("❌ ERROR:", e)
-        await q.message.edit_text("⚠️ Errore", reply_markup=menu())
 
-
+        try:
+            await q.message.edit_text(
+                "⚠️ Errore temporaneo",
+                reply_markup=menu()
+            )
+        except:
+            pass
 # =========================
 # MAIN
 # =========================
