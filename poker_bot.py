@@ -133,43 +133,11 @@ def menu():
 # =========================
 
 # Funzione immagine di benvenuto
-
-async def fileid(update, context):
-    if update.message.reply_to_message and update.message.reply_to_message.photo:
-        photo = update.message.reply_to_message.photo[-1]
-
-        await update.message.reply_text(
-            f"📸 FILE ID:\n\n{photo.file_id}"
-        )
-    else:
-        await update.message.reply_text(
-            "❌ Rispondi a una foto con /fileid"
-        )
-
-
-
-    
-#fine funzione
+import logging
+logging.basicConfig(level=logging.INFO)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    get_user(update.effective_user.id, update.effective_user.first_name)
-
-    print("START ARRIVATO:", update.effective_user.id)
-
-    await update.message.reply_photo(
-        photo="FILE_ID_METTI_QUI",
-        caption=
-        "     Benvenuto in 👑 Casinò by Rosa \n\n"
-        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
-        "       …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n"
-        "               ✦ ───── ✦\n"
-        "      Slot, Blackjack, Roulette\n"
-        "       Classifiche settimanali\n"
-        "               ✦ ───── ✦\n"
-        "𝑰𝒍 𝑫𝒆𝒔𝒕𝒊𝒏𝒐 𝒕𝒊 𝒈𝒖𝒂𝒓𝒅𝒂. 𝑻𝒖 𝒈𝒖𝒂𝒓𝒅𝒊 𝒍𝒖𝒊\n"
-        "👇 Scegli una modalità",
-        reply_markup=menu()
-    )
+    await update.message.reply_text("START OK")
 # =========================
 # SLOT
 # =========================
@@ -617,10 +585,12 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("fileid", fileid))
     app.add_handler(CallbackQueryHandler(cb))
 
     print("🟢 CASINO DEFINITIVO ONLINE")
-    app.run_polling()
+
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
