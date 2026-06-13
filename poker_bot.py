@@ -192,7 +192,7 @@ async def slot(update, context):
     u["xp"] += win // 30
 
     save(u)
-    await q.message.edit_text(
+    await q.message.edit_caption(
         f"🎰 {' | '.join(r)}\n💰 +{win}",
         reply_markup=menu()
     )    
@@ -341,7 +341,7 @@ async def roulette(update, context):
 
     save(u)
 
-    await q.message.edit_text(
+    await q.message.edit_caption(
         f"🎲 Numero: {n}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -375,7 +375,7 @@ async def blackjack(update, context):
 
     g = games[q.from_user.id]
 
-    await q.message.edit_text(
+    await q.message.edit_caption(
         f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -406,14 +406,14 @@ async def hit(update, context):
     if calc(g["p"]) > 21:
         del games[q.from_user.id]
 
-        await q.message.edit_text(
+        await q.message.edit_caption(
             "💥 Sballato!",
             reply_markup=menu()
         )
 
         return
 
-    await q.message.edit_text(
+    await q.message.edit_caption(
         f"🃏 {g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -462,7 +462,7 @@ async def stand(update, context):
 
     del games[q.from_user.id]
 
-    await q.message.edit_text(
+    await q.message.edit_caption(
         f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -480,7 +480,7 @@ async def bonus(update, context):
     now = int(time.time())
 
     if now - u["last_bonus"] < 86400:
-        return await q.message.edit_text("⏳ Bonus già preso", reply_markup=menu())
+        return await q.message.edit_caption("⏳ Bonus già preso", reply_markup=menu())
 
     reward = random.randint(500, 1500)
 
@@ -489,7 +489,7 @@ async def bonus(update, context):
 
     save(u)
 
-    await q.message.edit_text(f"🎁 +{reward}", reply_markup=menu())
+    await q.message.edit_caption(f"🎁 +{reward}", reply_markup=menu())
 
 #===========================
 # ACQUISTA
@@ -498,7 +498,7 @@ async def acquista_button(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.edit_text(
+    await q.message.edit_caption(
         "💰 ACQUISTA\n\n"
         "1) x2 → 5000 chips\n"
         "2) x3 → 12000 chips\n"
@@ -592,7 +592,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await bonus(update, context)
 
         else:
-            await q.message.edit_text(
+            await q.message.edit_caption(
                 "🚧 In sviluppo",
                 reply_markup=menu()
             )
@@ -601,7 +601,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("❌ ERROR:", e)
 
         try:
-            await q.message.edit_text(
+            await q.message.edit_caption(
                 "⚠️ Errore temporaneo",
                 reply_markup=menu()
             )
