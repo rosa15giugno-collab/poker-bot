@@ -201,12 +201,13 @@ async def slot(update, context):
 
 def create_table():
     return {
-        "players": [],   # {id, name}
-        "hands": {},     # uid -> cards
+        "players": [],     # {id, name}
+        "hands": {},       # uid -> cards
         "started": False,
         "message": None,
         "chat_id": None,
-        "dealer": []
+        "dealer": [],
+        "stood": set()
     }
 
 
@@ -221,8 +222,9 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(q.from_user.id)
     name = q.from_user.first_name
 
-    # trova tavolo
     table_id = None
+
+    # trova tavolo disponibile
     for tid, t in tables.items():
         if not t["started"] and len(t["players"]) < 6:
             table_id = tid
@@ -237,55 +239,34 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # già dentro
     if any(p["id"] == uid for p in t["players"]):
-        return await safe_edit(
-            q.message,
-            "⏳ Sei già al tavolo",
-            reply_markup=menu()
-        )
+        return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=menu())
 
     # aggiungi player
-    t["players"].append({
-        "id": uid,
-        "name": name
-    })
-
-    t["hands"][uid] = [
-        random.randint(2, 11),
-        random.randint(2, 11)
-    ]
-
+    t["players"].append({"id": uid, "name": name})
+    t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
     user_tables[uid] = table_id
 
     # attesa
     if len(t["players"]) < 2:
         return await safe_edit(
             q.message,
-            f"🃏 BLACKJACK TABLE\n\n"
-            f"👥 Giocatori: {len(t['players'])}/6\n"
-            f"⏳ In attesa...",
+            f"🃏 BLACKJACK TABLE\n\n👥 Giocatori: {len(t['players'])}/6\n⏳ In attesa...",
             reply_markup=menu()
         )
 
     # START GAME
     if not t["started"]:
         t["started"] = True
-        t["dealer"] = [
-            random.randint(2, 11),
-            random.randint(2, 11)
-        ]
+        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
 
-        msg = await safe_edit(
-            q.message,
+        await q.message.edit_text(
             render_table(t),
             reply_markup=table_buttons(t)
         )
 
-        t["message"] = msg.message_id
-        t["chat_id"] = msg.chat_id
+        print(f"TABLE STARTED: {table_id}")
 
-        print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
-
-        asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
+        asyncio.create_task(run_table(context.bot, table_id, q.message.chat_id))
 
 
 # =========================
@@ -298,19 +279,18 @@ def render_table(t):
     for p in t["players"]:
         uid = p["id"]
         name = p["name"]
-
         hand = t["hands"].get(uid, [])
 
         txt += f"👤 {name}: {sum(hand)} {hand}\n"
 
-    txt += f"\n🎰 Dealer: {sum(t['dealer'])}\n"
+    txt += f"\n🎰 Dealer: {sum(t['dealer'])}"
     txt += f"\n👥 Players: {len(t['players'])}/6"
 
     return txt
 
 
 # =========================
-# BUTTONS
+# BUTTONS (IMPORTANTISSIMO)
 # =========================
 
 def table_buttons(t):
@@ -320,6 +300,60 @@ def table_buttons(t):
             InlineKeyboardButton("🛑 STAND", callback_data="stand_mp")
         ]
     ])
+
+
+# =========================
+# HIT MP
+# =========================
+
+async def hit_mp(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+
+    table_id = user_tables.get(uid)
+    if not table_id:
+        return await safe_edit(q.message, "❌ Tavolo non trovato", reply_markup=menu())
+
+    t = tables.get(table_id)
+    if not t:
+        return await safe_edit(q.message, "❌ Tavolo inesistente", reply_markup=menu())
+
+    if uid not in t["hands"]:
+        return await safe_edit(q.message, "❌ Non sei nel tavolo", reply_markup=menu())
+
+    t["hands"][uid].append(random.randint(2, 11))
+    score = sum(t["hands"][uid])
+
+    if score > 21:
+        t["stood"].add(uid)
+        return await safe_edit(q.message, "💥 Sballato!", reply_markup=table_buttons(t))
+
+    await safe_edit(q.message, render_table(t), reply_markup=table_buttons(t))
+
+
+# =========================
+# STAND MP
+# =========================
+
+async def stand_mp(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+
+    table_id = user_tables.get(uid)
+    if not table_id:
+        return await safe_edit(q.message, "❌ Tavolo non trovato", reply_markup=menu())
+
+    t = tables.get(table_id)
+    if not t:
+        return await safe_edit(q.message, "❌ Tavolo inesistente", reply_markup=menu())
+
+    t["stood"].add(uid)
+
+    await safe_edit(q.message, render_table(t), reply_markup=table_buttons(t))
 
 
 # =========================
@@ -334,23 +368,20 @@ async def run_table(bot, table_id, chat_id):
             del tables[table_id]
             return
 
-        try:
-            await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=t["message"],
-                text=render_table(t),
-                reply_markup=table_buttons(t)
-            )
-        except:
-            pass
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=t["message"] if t["message"] else None,
+            text=render_table(t),
+            reply_markup=table_buttons(t)
+        )
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
 
     await finish_table(bot, table_id)
 
 
 # =========================
-# FINISH GAME
+# FINISH TABLE
 # =========================
 
 async def finish_table(bot, table_id):
@@ -362,8 +393,8 @@ async def finish_table(bot, table_id):
     for p in t["players"]:
         uid = p["id"]
         name = p["name"]
-
         score = sum(t["hands"][uid])
+
         user = get_user(uid)
 
         if score > 21:
