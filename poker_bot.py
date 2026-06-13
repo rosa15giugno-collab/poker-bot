@@ -5,25 +5,20 @@ import time
 import threading
 import asyncio
 import logging
-
 from collections import deque
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
 
 # =========================
-# CONFIG
+# DATABASE (OBBLIGATORIO PRIMO)
 # =========================
-TOKEN = os.getenv("CASINO_TOKEN")
-if not TOKEN:
-    raise ValueError("CASINO_TOKEN mancante")
 
-# =========================
-# DB
-# =========================
 conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
 cursor = conn.cursor()
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id TEXT PRIMARY KEY,
@@ -38,15 +33,13 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-
-# =========================
-# LOCK
-# =========================
+# LOCK (FIXATO)
 lock = threading.Lock()
 
 # =========================
 # STATE
 # =========================
+
 games = {}
 pvp_queue = deque()
 active_matches = {}
@@ -56,15 +49,11 @@ user_tables = {}
 # =========================
 # SAFE EDIT
 # =========================
-async def safe_edit(message, text=None, reply_markup=None):
+async def safe_edit(msg, text, reply_markup=None):
     try:
-        if getattr(message, "text", None):
-            return await message.edit_text(text, reply_markup=reply_markup)
-        else:
-            return await message.edit_caption(text, reply_markup=reply_markup)
+        return await msg.edit_text(text, reply_markup=reply_markup)
     except:
-        return await message.reply_text(text, reply_markup=reply_markup)
-
+        return await msg.edit_caption(text, reply_markup=reply_markup)
 # =========================
 # USER SYSTEM
 # =========================
@@ -188,7 +177,7 @@ async def slot(update, context):
     u["chips"] += win
     u["xp"] += win // 30
 
-    save(u)
+    save_user(u)
 
     await safe_edit(
         q.message,
@@ -385,7 +374,7 @@ async def finish_table(bot, table_id):
             user["losses"] += 1
 
         user["chips"] += win
-        save(user)
+        save_user(user)
 
         results.append((name, score, win))
 
@@ -421,7 +410,7 @@ async def roulette(update, context):
     u["chips"] += win
     u["xp"] += win // 30
 
-    save(u)
+    save_user(u)
 
     await safe_edit(
         q.message,
@@ -550,7 +539,7 @@ async def stand(update, context):
     u["chips"] += win
     u["xp"] += win // 20
 
-    save(u)
+    save_user(u)
 
     del games[q.from_user.id]
 
@@ -586,7 +575,7 @@ async def bonus(update, context):
     u["chips"] += reward
     u["last_bonus"] = now
 
-    save(u)
+    save_user(u)
 
     await safe_edit(
         q.message,
@@ -634,7 +623,7 @@ async def acquista(update, context):
     else:
         return await update.message.reply_text("❌ Non disponibile o chips insufficienti")
 
-    save(u)
+    save_user(u)
 
     await update.message.reply_text(
         f"💰 ACQUISTO COMPLETATO\n\n"
@@ -645,6 +634,18 @@ async def acquista(update, context):
 # =========================
 # PROFILO + CLASSIFICA
 # =========================
+
+async def profilo(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    u = get_user(q.from_user.id)
+
+    await safe_edit(
+        q.message,
+        f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
+        reply_markup=menu()
+    )
 
 async def classifica(update, context):
     q = update.callback_query
