@@ -89,6 +89,7 @@ def get_user(user_id, name="Player"):
             "multiplier": 1.0
         }
 
+
 def save_user(u):
     with lock:
         cursor.execute("""
