@@ -12,60 +12,36 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 logging.basicConfig(level=logging.INFO)
 
-lock = threading.Lock(
-
 # =========================
 # CONFIG
 # =========================
-
 TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
 
 # =========================
-# DATABASE
+# DB
 # =========================
+conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
+cursor = conn.cursor()
 
-def get_user(user_id, name="Player"):
-    uid = str(user_id)
-
-    cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
-    row = cursor.fetchone()
-
-    if row:
-        return {
-            "user_id": row[0],
-            "name": row[1],
-            "chips": row[2],
-            "xp": row[3],
-            "wins": row[4],
-            "losses": row[5],
-            "last_bonus": row[6],
-            "multiplier": row[7]
-        }
-
-    cursor.execute("""
-        INSERT INTO users VALUES (?, ?, 1000, 0, 0, 0, 0, 1.0)
-    """, (uid, name))
-    conn.commit()
-
-    return get_user(uid, name)
-
+# =========================
+# LOCK
+# =========================
+lock = threading.Lock()
 
 # =========================
 # STATE
 # =========================
+games = {}
+pvp_queue = deque()
+active_matches = {}
+tables = {}
+user_tables = {}
 
-games = {}              # match attivi
-pvp_queue = deque()    # matchmaking queue
-active_matches = {}    # match id -> state
-tables = {}            # user_id
-user_tables = {}       # user_id
-
-#==========================
-#  SAFE EDIT
-#=========================
-
+# =========================
+# SAFE EDIT
+# =========================
 async def safe_edit(message, text=None, reply_markup=None):
     try:
         if getattr(message, "text", None):
@@ -75,48 +51,45 @@ async def safe_edit(message, text=None, reply_markup=None):
     except:
         return await message.reply_text(text, reply_markup=reply_markup)
 
-
 # =========================
-# UTILS
+# USER SYSTEM
 # =========================
-
-def get_user(uid, name="Player"):
-    uid = str(uid)
+def get_user(user_id, name="Player"):
+    uid = str(user_id)
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
-        r = cursor.fetchone()
+        row = cursor.fetchone()
 
-        if not r:
-            cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (uid, name, 5000, 0, 0, 0, 0, 1.0))
-            conn.commit()
-
+        if row:
             return {
-                "user_id": uid,
-                "name": name,
-                "chips": 5000,
-                "xp": 0,
-                "wins": 0,
-                "losses": 0,
-                "last_bonus": 0,
-                "multiplier": 1.0
+                "user_id": row[0],
+                "name": row[1],
+                "chips": row[2],
+                "xp": row[3],
+                "wins": row[4],
+                "losses": row[5],
+                "last_bonus": row[6],
+                "multiplier": row[7]
             }
 
+        cursor.execute("""
+            INSERT INTO users VALUES (?, ?, 1000, 0, 0, 0, 0, 1.0)
+        """, (uid, name))
+        conn.commit()
+
         return {
-            "user_id": r[0],
-            "name": r[1],
-            "chips": r[2],
-            "xp": r[3],
-            "wins": r[4],
-            "losses": r[5],
-            "last_bonus": r[6],
-            "multiplier": r[7]
+            "user_id": uid,
+            "name": name,
+            "chips": 1000,
+            "xp": 0,
+            "wins": 0,
+            "losses": 0,
+            "last_bonus": 0,
+            "multiplier": 1.0
         }
 
-
-def save(u):
+def save_user(u):
     with lock:
         cursor.execute("""
         UPDATE users SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
@@ -126,12 +99,6 @@ def save(u):
             u["last_bonus"], u["multiplier"], u["user_id"]
         ))
         conn.commit()
-
-async def safe_edit(msg, text, reply_markup=None):
-    try:
-        return await msg.edit_text(text, reply_markup=reply_markup)
-    except:
-        return await msg.edit_caption(text, reply_markup=reply_markup)
 
 # =========================
 # MENU
