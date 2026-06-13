@@ -155,7 +155,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("START ARRIVATO:", update.effective_user.id)
 
     await update.message.reply_photo(
-        photo="FILE_ID_METTI_QUI",
+        photo="AgACAgQAAxkBAAMbaiz214DsBkP09-ZfQsrbL4MOqFgAAsoOaxsCGmhREEolIiPDR4cBAAMCAAN5AAM8BA",
         caption=
         "     Benvenuto in 👑 Casinò by Rosa \n\n"
         "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
