@@ -678,62 +678,83 @@ async def classifica(update, context):
 # =========================
 
 async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+q = update.callback_query
+await q.answer()
 
-    print("🔥 CB:", q.from_user.id, q.data)
+print("🔥 CB:", q.from_user.id, q.data)
+
+try:
+    data = q.data
+
+    # SLOT
+    if data == "slot":
+        return await slot(update, context)
+
+    # ROULETTE
+    elif data == "roulette":
+        return await roulette(update, context)
+
+    # BLACKJACK
+    elif data == "blackjack":
+        return await blackjack(update, context)
+
+    elif data == "hit":
+        return await hit(update, context)
+
+    elif data == "stand":
+        return await stand(update, context)
+
+    # PVP BLACKJACK
+    elif data == "pvp":
+        return await pvp(update, context)
+
+    elif data == "hit_mp":
+        return await hit_mp(update, context)
+
+    elif data == "stand_mp":
+        return await stand_mp(update, context)
+
+    # BONUS
+    elif data == "bonus":
+        return await bonus(update, context)
+
+    # PROFILO
+    elif data == "profilo":
+        return await profilo(update, context)
+
+    # CLASSIFICA
+    elif data == "classifica":
+        return await classifica(update, context)
+
+    # SHOP
+    elif data == "shop":
+        return await shop(update, context)
+
+    # PULSANTI FINTI
+    elif data == "noop":
+        return
+
+    # COMANDO NON TROVATO
+    else:
+        print("⚠️ CALLBACK NON GESTITA:", data)
+
+        return await safe_edit(
+            q.message,
+            f"🚧 In sviluppo\n\nCallback: {data}",
+            reply_markup=menu()
+        )
+
+except Exception as e:
+    print("❌ ERROR:", e)
 
     try:
-        data = q.data
-
-        if data == "slot":
-            return await slot(update, context)
-
-        elif data == "roulette":
-            return await roulette(update, context)
-
-        elif data == "blackjack":
-            return await blackjack(update, context)
-
-        elif data == "hit_mp":
-            return await hit_mp(update, context)
-
-        elif data == "stand_mp":
-            return await stand_mp(update, context)
-
-        elif data == "bonus":
-            return await bonus(update, context)
-
-        elif data == "profilo":
-            return await profilo(update, context)
-
-        elif data == "classifica":
-            return await classifica(update, context)
-
-        elif data == "shop":
-            return await shop(update, context)
-
-        elif data == "pvp":
-            return await pvp(update, context)
-
-        else:
-            return await safe_edit(
-                q.message,
-                "🚧 In sviluppo",
-                reply_markup=menu()
-            )
-
-    except Exception as e:
-        print("❌ ERROR:", e)
-
-        try:
-            return await safe_edit(
-                q.message,
-                "⚠️ Errore temporaneo",
-                reply_markup=menu()
-            )
-        except Exception as e2:
-            print("❌ SAFE_EDIT FAILED:", e2)
+        return await safe_edit(
+            q.message,
+            f"⚠️ Errore temporaneo\n\n{e}",
+            reply_markup=menu()
+        )
+    except Exception as e2:
+        print("❌ SAFE_EDIT FAILED:", e2)
 # =========================
 # MAIN
 # =========================
