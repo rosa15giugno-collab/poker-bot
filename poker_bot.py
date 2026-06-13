@@ -244,15 +244,15 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # start automatico
     if len(t["players"]) >= 2 and not t["started"]:
-    t["started"] = True
-    t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
+        t["started"] = True
+        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
 
-    msg = await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
+        msg = await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
 
-    t["message"] = msg.message_id
-    t["chat_id"] = msg.chat_id
+        t["message"] = msg.message_id
+        t["chat_id"] = msg.chat_id
 
-    print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
+        print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
     
     asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
 
