@@ -53,6 +53,19 @@ active_matches = {}    # match id -> state
 tables = {}            # user_id
 user_tables = {}       # user_id
 
+#==========================
+#  SAFE EDIT
+#=========================
+
+async def safe_edit(message, text=None, reply_markup=None):
+    try:
+        if getattr(message, "text", None):
+            return await message.edit_text(text, reply_markup=reply_markup)
+        else:
+            return await message.edit_caption(text, reply_markup=reply_markup)
+    except:
+        return await message.reply_text(text, reply_markup=reply_markup)
+
 
 # =========================
 # UTILS
@@ -195,56 +208,59 @@ async def slot(update, context):
         reply_markup=menu()
     )
 # =========================
-# REAL TIME PVP 
+# CREATE TABLE
 # =========================
 
-    # CREATE TAVOLO
-    #----------------
 def create_table():
     return {
-        "players": [],
-        "hands": {},
-        "turn": 0,
+        "players": [],   # {id, name}
+        "hands": {},     # uid -> cards
         "started": False,
         "message": None,
         "chat_id": None,
         "dealer": []
     }
 
-    # JOIN PVP
-    #----------------
+
+# =========================
+# PVP JOIN
+# =========================
 
 async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
+    name = q.from_user.first_name
 
-    # trova tavolo aperto
+    # trova tavolo
     table_id = None
-
     for tid, t in tables.items():
         if not t["started"] and len(t["players"]) < 6:
             table_id = tid
             break
 
-    # crea tavolo se non esiste
+    # crea tavolo
     if not table_id:
         table_id = str(int(time.time()))
         tables[table_id] = create_table()
 
     t = tables[table_id]
 
-    # già presente
-    if uid in t["players"]:
+    # già dentro
+    if any(p["id"] == uid for p in t["players"]):
         return await safe_edit(
             q.message,
             "⏳ Sei già al tavolo",
             reply_markup=menu()
         )
 
-    # aggiungi giocatore
-    t["players"].append(uid)
+    # aggiungi player
+    t["players"].append({
+        "id": uid,
+        "name": name
+    })
+
     t["hands"][uid] = [
         random.randint(2, 11),
         random.randint(2, 11)
@@ -252,17 +268,17 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_tables[uid] = table_id
 
-    # mostra tavolo in attesa
+    # attesa
     if len(t["players"]) < 2:
         return await safe_edit(
             q.message,
-            f"🃏 TAVOLO BLACKJACK\n\n"
-            f"👥 Giocatori: {len(t['players'])}/6\n\n"
-            f"⏳ In attesa di altri giocatori...",
+            f"🃏 BLACKJACK TABLE\n\n"
+            f"👥 Giocatori: {len(t['players'])}/6\n"
+            f"⏳ In attesa...",
             reply_markup=menu()
         )
 
-    # start automatico
+    # START GAME
     if not t["started"]:
         t["started"] = True
         t["dealer"] = [
@@ -281,85 +297,84 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
 
-        asyncio.create_task(
-            run_table(
-                context.bot,
-                table_id,
-                msg.chat_id
-            )
-        )
+        asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
 
-    # UI TAVOLO
-    #----------------
+
+# =========================
+# RENDER TABLE
+# =========================
 
 def render_table(t):
     txt = "🃏 BLACKJACK TABLE\n\n"
 
-    for i, p in enumerate(t["players"]):
-        hand = t["hands"][p]
-        txt += f"👤 P{i+1}: {sum(hand)} {hand}\n"
+    for p in t["players"]:
+        uid = p["id"]
+        name = p["name"]
+
+        hand = t["hands"].get(uid, [])
+
+        txt += f"👤 {name}: {sum(hand)} {hand}\n"
 
     txt += f"\n🎰 Dealer: {sum(t['dealer'])}\n"
     txt += f"\n👥 Players: {len(t['players'])}/6"
 
     return txt
 
-    # PULSANTI DINAMICI
-    #----------------
+
+# =========================
+# BUTTONS
+# =========================
 
 def table_buttons(t):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("➕ HIT", callback_data="hit_mp"),
             InlineKeyboardButton("🛑 STAND", callback_data="stand_mp")
-        ],
-        [
-            InlineKeyboardButton("📊 TABLE", callback_data="noop")
         ]
     ])
 
-    # LOGICA GAME
-    #----------------
+
+# =========================
+# RUN TABLE
+# =========================
 
 async def run_table(bot, table_id, chat_id):
     t = tables[table_id]
-    t["chat_id"] = chat_id
 
     while t["started"]:
         if len(t["players"]) == 0:
             del tables[table_id]
             return
 
-        for uid in t["players"]:
-            if uid not in t["hands"]:
-                continue
+        try:
+            await bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=t["message"],
+                text=render_table(t),
+                reply_markup=table_buttons(t)
+            )
+        except:
+            pass
 
-            # aggiorna messaggio
-            try:
-                await bot.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=t.get("message"),
-                    text=render_table(t),
-                    reply_markup=table_buttons(t)
-                )
-            except:
-                pass
-
-            await asyncio.sleep(2)
-
-        break
+        await asyncio.sleep(2)
 
     await finish_table(bot, table_id)
 
-    # FINE PARTITA
-    #----------------
+
+# =========================
+# FINISH GAME
+# =========================
+
 async def finish_table(bot, table_id):
     t = tables[table_id]
 
     dealer_score = sum(t["dealer"])
     results = []
 
-    for uid in t["players"]:
+    for p in t["players"]:
+        uid = p["id"]
+        name = p["name"]
+
         score = sum(t["hands"][uid])
         user = get_user(uid)
 
@@ -381,18 +396,17 @@ async def finish_table(bot, table_id):
         user["chips"] += win
         save(user)
 
-        results.append((uid, score, win))
+        results.append((name, score, win))
 
     text = "🏁 MATCH FINITO\n\n"
     text += f"🎰 Dealer: {dealer_score}\n\n"
 
-    for uid, score, win in results:
-        text += f"👤 {uid} → {score} | +{win}\n"
+    for name, score, win in results:
+        text += f"👤 {name}: {score} | +{win}\n"
 
     await bot.send_message(t["chat_id"], text)
 
     del tables[table_id]
-
 
 # =========================
 # ROULETTE
@@ -679,51 +693,56 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("🔥 CB:", q.from_user.id, q.data)
 
     try:
-        if q.data == "slot":
-            await slot(update, context)
+        data = q.data
 
-        elif q.data == "roulette":
-            await roulette(update, context)
+        if data == "slot":
+            return await slot(update, context)
 
-        elif q.data == "blackjack":
-            await blackjack(update, context)
+        elif data == "roulette":
+            return await roulette(update, context)
 
-        elif q.data == "hit_mp":
-            await hit_mp(update, context)
+        elif data == "blackjack":
+            return await blackjack(update, context)
 
-        elif q.data == "stand_mp":
-            await stand_mp(update, context)
+        elif data == "hit_mp":
+            return await hit_mp(update, context)
 
-        elif q.data == "bonus":
-            await bonus(update, context)
+        elif data == "stand_mp":
+            return await stand_mp(update, context)
 
-        elif q.data == "profilo":
-            await profilo(update, context)
+        elif data == "bonus":
+            return await bonus(update, context)
 
-        elif q.data == "classifica":
-            await classifica(update, context)
+        elif data == "profilo":
+            return await profilo(update, context)
 
-        elif q.data == "shop":
-            await shop(update, context)
+        elif data == "classifica":
+            return await classifica(update, context)
 
-        elif q.data == "pvp":
-            await pvp(update, context)
+        elif data == "shop":
+            return await shop(update, context)
+
+        elif data == "pvp":
+            return await pvp(update, context)
 
         else:
-            await safe_edit(
+            return await safe_edit(
                 q.message,
-                "🚧 In sviluppo", 
+                "🚧 In sviluppo",
                 reply_markup=menu()
             )
 
     except Exception as e:
         print("❌ ERROR:", e)
 
-        await safe_edit(
-            q.message,
-            "⚠️ Errore temporaneo",
-            reply_markup=menu()
-        )
+        try:
+            return await safe_edit(
+                q.message,
+                "⚠️ Errore temporaneo",
+                reply_markup=menu()
+            )
+        except Exception as e2:
+            print("❌ SAFE_EDIT FAILED:", e2)
 # =========================
 # MAIN
 # =========================
