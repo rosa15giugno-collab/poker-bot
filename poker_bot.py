@@ -665,7 +665,7 @@ async def classifica(update, context):
     for i, (n, c) in enumerate(top, 1):
         txt += f"{i}. {n} - {c}\n"
 
-    await safe_text(txt, reply_markup=menu())
+    await safe_edit(txt, reply_markup=menu())
 
 
 # =========================
@@ -704,7 +704,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await classifica(update, context)
 
         elif q.data == "shop":
-            await acquista_button(update, context)
+            await shop(update, context)
 
         elif q.data == "pvp":
             await pvp(update, context)
