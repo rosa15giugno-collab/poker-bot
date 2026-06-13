@@ -24,23 +24,30 @@ if not TOKEN:
 # DATABASE
 # =========================
 
-conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
-cursor = conn.cursor()
-lock = threading.Lock()
+def get_user(user_id, name="Player"):
+    uid = str(user_id)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    name TEXT,
-    chips INTEGER,
-    xp INTEGER,
-    wins INTEGER,
-    losses INTEGER,
-    last_bonus INTEGER,
-    multiplier REAL
-)
-""")
-conn.commit()
+    cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
+    row = cursor.fetchone()
+
+    if row:
+        return {
+            "user_id": row[0],
+            "name": row[1],
+            "chips": row[2],
+            "xp": row[3],
+            "wins": row[4],
+            "losses": row[5],
+            "last_bonus": row[6],
+            "multiplier": row[7]
+        }
+
+    cursor.execute("""
+        INSERT INTO users VALUES (?, ?, 1000, 0, 0, 0, 0, 1.0)
+    """, (uid, name))
+    conn.commit()
+
+    return get_user(uid, name)
 
 
 # =========================
