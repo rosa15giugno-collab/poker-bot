@@ -105,11 +105,11 @@ def save(u):
         ))
         conn.commit()
 
-async def safe_edit(message, text, reply_markup=None):
+async def safe_edit(msg, text, reply_markup=None):
     try:
-        return await message.edit_text(text, reply_markup=reply_markup)
+        return await msg.edit_text(text, reply_markup=reply_markup)
     except:
-        return await message.edit_caption(text, reply_markup=reply_markup)
+        return await msg.edit_caption(text, reply_markup=reply_markup)
 
 # =========================
 # MENU
@@ -186,7 +186,7 @@ async def slot(update, context):
 
     save(u)
 
-    await q.message.edit_caption(
+    await q.safe.edit((q.message, "TESTO", menu()) ***
         caption=(
             f"🎰 SLOT CASINO PRO\n\n"
             f"┃ {' | '.join(r)} ┃\n\n"
@@ -247,14 +247,16 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
         t["started"] = True
         t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
 
-        msg = await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
+        msg = await safe_edit(
+            q.message,
+            render_table(t),
+            table_buttons(t)
+        )
 
         t["message"] = msg.message_id
         t["chat_id"] = msg.chat_id
 
-        print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
-    
-    asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
+        asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
 
     # UI TAVOLO
     #----------------
@@ -385,7 +387,7 @@ async def roulette(update, context):
 
     save(u)
 
-    await q.message.edit_text(
+    await safe_edit(
         f"🎲 Numero: {n}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -419,7 +421,7 @@ async def blackjack(update, context):
 
     g = games[q.from_user.id]
 
-    await q.message.edit_text(
+    await safe_edit(
         f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -450,14 +452,14 @@ async def hit(update, context):
     if calc(g["p"]) > 21:
         del games[q.from_user.id]
 
-        await q.message.edit_text(
+        await safe_edit(
             "💥 Sballato!",
             reply_markup=menu()
         )
 
         return
 
-    await q.message.edit_text(
+    await safe_edit(
         f"🃏 {g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -471,7 +473,7 @@ async def hit(update, context):
                 )
             ]
         ])
-    )
+   )
 
 
 async def stand(update, context):
@@ -506,7 +508,7 @@ async def stand(update, context):
 
     del games[q.from_user.id]
 
-    await q.message.edit_text(
+    await safe_edit(
         f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -524,7 +526,7 @@ async def bonus(update, context):
     now = int(time.time())
 
     if now - u["last_bonus"] < 86400:
-        return await q.message.edit_text("⏳ Bonus già preso", reply_markup=menu())
+        return await safe_edit("⏳ Bonus già preso", reply_markup=menu())
 
     reward = random.randint(500, 1500)
 
@@ -533,7 +535,7 @@ async def bonus(update, context):
 
     save(u)
 
-    await q.message.edit_text(f"🎁 +{reward}", reply_markup=menu())
+    await safe_edit(f"🎁 +{reward}", reply_markup=menu())
 
 #===========================
 # ACQUISTA
@@ -542,7 +544,7 @@ async def shop(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.edit_text(
+    await safe_edit(
         "💰 SHOP CASINO PRO\n\n"
         "1️⃣ x2 Multiplier → 5000 chips\n"
         "2️⃣ x3 Multiplier → 12000 chips\n\n"
@@ -592,7 +594,7 @@ async def profilo(update, context):
 
     u = get_user(q.from_user.id)
 
-    await q.message.edit_text(
+    await safe_edit(
         f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
         reply_markup=menu()
     )
@@ -609,7 +611,7 @@ async def classifica(update, context):
     for i, (n, c) in enumerate(top, 1):
         txt += f"{i}. {n} - {c}\n"
 
-    await q.message.edit_text(txt, reply_markup=menu())
+    await safe_text(txt, reply_markup=menu())
 
 
 # =========================
@@ -654,11 +656,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await pvp(update, context)
 
         else:
-            await q.message.edit_text("🚧 In sviluppo", reply_markup=menu())
+            await safe_edit("🚧 In sviluppo", reply_markup=menu())
 
     except Exception as e:
         print("❌ ERROR:", e)
-        await q.message.edit_text("⚠️ Errore temporaneo", reply_markup=menu())
+        await safe_edit("⚠️ Errore temporaneo", reply_markup=menu())
 # =========================
 # MAIN
 # =========================
