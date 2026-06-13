@@ -605,6 +605,20 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN
 # =========================
 
+async def fileid(update, context):
+    if update.message.reply_to_message and update.message.reply_to_message.photo:
+        photo = update.message.reply_to_message.photo[-1]
+
+        await update.message.reply_text(
+            f"📸 FILE ID:\n\n{photo.file_id}"
+        )
+    else:
+        await update.message.reply_text(
+            "❌ Rispondi a una foto con /fileid"
+        )
+
+
+
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
