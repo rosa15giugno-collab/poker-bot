@@ -655,19 +655,6 @@ async def acquista(update, context):
 # PROFILO + CLASSIFICA
 # =========================
 
-async def profilo(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    u = get_user(q.from_user.id)
-
-    await safe_edit(
-        q.message,
-        f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
-        reply_markup=menu()
-    )
-
-
 async def classifica(update, context):
     q = update.callback_query
     await q.answer()
@@ -679,7 +666,11 @@ async def classifica(update, context):
     for i, (n, c) in enumerate(top, 1):
         txt += f"{i}. {n} - {c}\n"
 
-    await safe_edit(txt, reply_markup=menu())
+    await safe_edit(
+        q.message,
+        txt,
+        reply_markup=menu()
+    )
 
 
 # =========================
