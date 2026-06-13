@@ -24,6 +24,20 @@ if not TOKEN:
 # =========================
 conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
 cursor = conn.cursor()
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id TEXT PRIMARY KEY,
+    name TEXT,
+    chips INTEGER,
+    xp INTEGER,
+    wins INTEGER,
+    losses INTEGER,
+    last_bonus INTEGER,
+    multiplier REAL
+)
+""")
+conn.commit()
+
 
 # =========================
 # LOCK
