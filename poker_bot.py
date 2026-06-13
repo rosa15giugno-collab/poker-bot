@@ -46,6 +46,14 @@ active_matches = {}
 tables = {}
 user_tables = {}
 
+#=========================
+#  TOKEN CONFIG
+#=========================
+TOKEN = os.getenv("CASINO_TOKEN")
+
+if not TOKEN:
+    raise ValueError("CASINO_TOKEN mancante")
+
 # =========================
 # SAFE EDIT
 # =========================
