@@ -462,7 +462,7 @@ async def stand(update, context):
 
     del games[q.from_user.id]
 
-    await q.message.repl_text(
+    await q.message.reply_text(
         f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
         reply_markup=menu()
     )
