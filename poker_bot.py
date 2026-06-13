@@ -192,7 +192,7 @@ async def slot(update, context):
         f"┃ {' | '.join(r)} ┃\n\n"
         f"💰 Vincita: +{win}\n"
         f"💎 Chips: {u['chips']}",
-        menu()
+        reply_markup=menu()
     )
 # =========================
 # REAL TIME PVP 
@@ -222,6 +222,7 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # trova tavolo aperto
     table_id = None
+
     for tid, t in tables.items():
         if not t["started"] and len(t["players"]) < 6:
             table_id = tid
@@ -234,28 +235,59 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     t = tables[table_id]
 
+    # già presente
     if uid in t["players"]:
-        return await safe_edit("⏳ Sei già al tavolo")
+        return await safe_edit(
+            q.message,
+            "⏳ Sei già al tavolo",
+            reply_markup=menu()
+        )
 
+    # aggiungi giocatore
     t["players"].append(uid)
-    t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
+    t["hands"][uid] = [
+        random.randint(2, 11),
+        random.randint(2, 11)
+    ]
+
     user_tables[uid] = table_id
 
+    # mostra tavolo in attesa
+    if len(t["players"]) < 2:
+        return await safe_edit(
+            q.message,
+            f"🃏 TAVOLO BLACKJACK\n\n"
+            f"👥 Giocatori: {len(t['players'])}/6\n\n"
+            f"⏳ In attesa di altri giocatori...",
+            reply_markup=menu()
+        )
+
     # start automatico
-    if len(t["players"]) >= 2 and not t["started"]:
+    if not t["started"]:
         t["started"] = True
-        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
+        t["dealer"] = [
+            random.randint(2, 11),
+            random.randint(2, 11)
+        ]
 
         msg = await safe_edit(
             q.message,
             render_table(t),
-            table_buttons(t)
+            reply_markup=table_buttons(t)
         )
 
         t["message"] = msg.message_id
         t["chat_id"] = msg.chat_id
 
-        asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
+        print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
+
+        asyncio.create_task(
+            run_table(
+                context.bot,
+                table_id,
+                msg.chat_id
+            )
+        )
 
     # UI TAVOLO
     #----------------
@@ -387,6 +419,7 @@ async def roulette(update, context):
     save(u)
 
     await safe_edit(
+        q.message,
         f"🎲 Numero: {n}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -421,7 +454,10 @@ async def blackjack(update, context):
     g = games[q.from_user.id]
 
     await safe_edit(
-        f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
+        q.message,
+        f"🃏 Blackjack\n\n"
+        f"Le tue carte: {g['p']}\n"
+        f"Totale: {calc(g['p'])}",
         reply_markup=InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
@@ -452,14 +488,17 @@ async def hit(update, context):
         del games[q.from_user.id]
 
         await safe_edit(
-            "💥 Sballato!",
+            q.message,
+            "💥 Hai sballato!",
             reply_markup=menu()
         )
-
         return
 
     await safe_edit(
-        f"🃏 {g['p']} ({calc(g['p'])})",
+        q.message,
+        f"🃏 Blackjack\n\n"
+        f"Le tue carte: {g['p']}\n"
+        f"Totale: {calc(g['p'])}",
         reply_markup=InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
@@ -472,7 +511,7 @@ async def hit(update, context):
                 )
             ]
         ])
-   )
+    )
 
 
 async def stand(update, context):
@@ -484,12 +523,15 @@ async def stand(update, context):
     if not g:
         return
 
+    while calc(g["d"]) < 17:
+        g["d"].append(random.randint(2, 11))
+
     p = calc(g["p"])
     d = calc(g["d"])
 
     u = get_user(q.from_user.id)
 
-    if p > d:
+    if d > 21 or p > d:
         win = 900
         u["wins"] += 1
 
@@ -508,10 +550,13 @@ async def stand(update, context):
     del games[q.from_user.id]
 
     await safe_edit(
-        f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
+        q.message,
+        f"🃏 BLACKJACK\n\n"
+        f"👤 Tu: {p}\n"
+        f"🎰 Dealer: {d}\n\n"
+        f"💰 Vincita: +{win}",
         reply_markup=menu()
     )
-
 # =========================
 # BONUS
 # =========================
@@ -525,7 +570,11 @@ async def bonus(update, context):
     now = int(time.time())
 
     if now - u["last_bonus"] < 86400:
-        return await safe_edit("⏳ Bonus già preso", reply_markup=menu())
+        return await safe_edit(
+            q.message,
+            "⏳ Bonus già preso",
+            reply_markup=menu()
+        )
 
     reward = random.randint(500, 1500)
 
@@ -534,7 +583,11 @@ async def bonus(update, context):
 
     save(u)
 
-    await safe_edit(f"🎁 +{reward}", reply_markup=menu())
+    await safe_edit(
+        q.message,
+        f"🎁 BONUS GIORNALIERO\n\n💰 +{reward} Chips",
+        reply_markup=menu()
+    )
 
 #===========================
 # ACQUISTA
@@ -544,6 +597,7 @@ async def shop(update, context):
     await q.answer()
 
     await safe_edit(
+        q.message,
         "💰 SHOP CASINO PRO\n\n"
         "1️⃣ x2 Multiplier → 5000 chips\n"
         "2️⃣ x3 Multiplier → 12000 chips\n\n"
@@ -594,6 +648,7 @@ async def profilo(update, context):
     u = get_user(q.from_user.id)
 
     await safe_edit(
+        q.message,
         f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
         reply_markup=menu()
     )
@@ -655,11 +710,20 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await pvp(update, context)
 
         else:
-            await safe_edit("🚧 In sviluppo", reply_markup=menu())
+            await safe_edit(
+                q.message,
+                "🚧 In sviluppo", 
+                reply_markup=menu()
+            )
 
     except Exception as e:
         print("❌ ERROR:", e)
-        await safe_edit("⚠️ Errore temporaneo", reply_markup=menu())
+
+        await safe_edit(
+            q.message,
+            "⚠️ Errore temporaneo",
+            reply_markup=menu()
+        )
 # =========================
 # MAIN
 # =========================
