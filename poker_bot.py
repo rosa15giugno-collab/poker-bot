@@ -50,6 +50,8 @@ conn.commit()
 games = {}              # match attivi
 pvp_queue = deque()    # matchmaking queue
 active_matches = {}    # match id -> state
+tables = {}            # user_id
+user_tables = {}       # user_id
 
 
 # =========================
@@ -192,40 +194,21 @@ async def slot(update, context):
 # REAL TIME PVP 
 # =========================
 
-    # CREATE MATCH
+    # CREATE TAVOLO
     #----------------
-
-def create_match(p1, p2):
-    mid = f"{p1}{p2}{int(time.time())}"
-
-    active_matches[mid] = {
-        "p1": p1,
-        "p2": p2,
-        "p1_score": 0,
-        "p2_score": 0,
-        "round": 0,
-        "msg_id": None,
-        "chat_id": None
+def create_table():
+    return {
+        "players": [],
+        "hands": {},
+        "turn": 0,
+        "started": False,
+        "message": None,
+        "chat_id": None,
+        "dealer": []
     }
 
-    return mid
-
-   # CALCOLO ROUND
-   #-----------------
-
-def calc_round(m):
-    r1 = random.randint(1, 10)
-    r2 = random.randint(1, 10)
-
-    m["p1_score"] += r1
-    m["p2_score"] += r2
-    m["round"] += 1
-
-    return r1, r2
-
-
-   # JOIN PVP
-   #------------
+    # JOIN PVP
+    #----------------
 
 async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -233,107 +216,140 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     uid = q.from_user.id
 
-    if uid in pvp_queue:
-        await q.message.edit_text("⏳ Sei già in coda...", reply_markup=menu())
-        return
+    # trova tavolo aperto
+    table_id = None
+    for tid, t in tables.items():
+        if not t["started"] and len(t["players"]) < 6:
+            table_id = tid
+            break
 
-    pvp_queue.append(uid)
+    # crea tavolo se non esiste
+    if not table_id:
+        table_id = str(int(time.time()))
+        tables[table_id] = create_table()
 
-    if len(pvp_queue) < 2:
-        await q.message.edit_text("🆚 In attesa avversario...", reply_markup=menu())
-        return
+    t = tables[table_id]
 
-    p1 = pvp_queue.popleft()
-    p2 = pvp_queue.popleft()
+    if uid in t["players"]:
+        return await q.message.edit_text("⏳ Sei già al tavolo")
 
-    mid = create_match(p1, p2)
+    t["players"].append(uid)
+    t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
+    user_table[uid] = table_id
 
-    msg = await q.message.edit_text(
-        "🔥 MATCH INIZIATO...\nPreparazione...",
-        reply_markup=None
-    )
+    # start automatico
+    if len(t["players"]) >= 2 and not t["started"]:
+        t["started"] = True
+        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
+        asyncio.create_task(run_table(context.bot, table_id, q.message.chat_id))
 
-    asyncio.create_task(run_match(
-        context.bot,
-        mid,
-        msg.chat_id,
-        msg.message_id
-    ))
+    await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
 
 
-    # RUN MATCH
-    #------------------
+    # UI TAVOLO
+    #----------------
 
-async def run_match(bot, mid, chat_id, msg_id):
-    m = active_matches.get(mid)
-    if not m:
-        return
+def render_table(t):
+    txt = "🃏 BLACKJACK TABLE\n\n"
 
-    m["chat_id"] = chat_id
-    m["msg_id"] = msg_id
+    for i, p in enumerate(t["players"]):
+        hand = t["hands"][p]
+        txt += f"👤 P{i+1}: {sum(hand)} {hand}\n"
 
-    for _ in range(5):
-        if mid not in active_matches:
+    txt += f"\n🎰 Dealer: {sum(t['dealer'])}\n"
+    txt += f"\n👥 Players: {len(t['players'])}/6"
+
+    return txt
+
+    # PULSANTI DINAMICI
+    #----------------
+
+def table_buttons(t):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ HIT", callback_data="hit_mp"),
+            InlineKeyboardButton("🛑 STAND", callback_data="stand_mp")
+        ],
+        [
+            InlineKeyboardButton("📊 TABLE", callback_data="noop")
+        ]
+    ])
+
+    # LOGICA GAME
+    #----------------
+
+async def run_table(bot, table_id, chat_id):
+    t = tables[table_id]
+    t["chat_id"] = chat_id
+
+    while t["started"]:
+        if len(t["players"]) == 0:
+            del tables[table_id]
             return
 
-        r1, r2 = calc_round(m)
+        for uid in t["players"]:
+            if uid not in t["hands"]:
+                continue
 
-        try:
-            await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=msg_id,
-                text=(
-                    f"⚡ PvP LIVE ROUND {m['round']}/5\n\n"
-                    f"P1 +{r1} → {m['p1_score']}\n"
-                    f"P2 +{r2} → {m['p2_score']}"
+            # aggiorna messaggio
+            try:
+                await bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=t.get("message"),
+                    text=render_table(t),
+                    reply_markup=table_buttons(t)
                 )
-            )
-        except Exception as e:
-            print("❌ PvP edit error:", e)
+            except:
+                pass
 
-        await asyncio.sleep(2)
+            await asyncio.sleep(2)
 
-    await finish_match(bot, mid)
+        break
 
+    await finish_table(bot, table_id)
 
-    #  FINE MATCH
-    #--------------------
+    # FINE PARTITA
+    #----------------
+async def finish_table(bot, table_id):
+    t = tables[table_id]
 
-async def finish_match(bot, mid):
-    m = active_matches.get(mid)
-    if not m:
-        return
+    dealer_score = sum(t["dealer"])
+    results = []
 
-    p1 = get_user(m["p1"])
-    p2 = get_user(m["p2"])
+    for uid in t["players"]:
+        score = sum(t["hands"][uid])
+        user = get_user(uid)
 
-    if m["p1_score"] > m["p2_score"]:
-        p1["wins"] += 1
-        p2["losses"] += 1
-        result = f"🏆 VINCE {p1['name']}"
-    else:
-        p2["wins"] += 1
-        p1["losses"] += 1
-        result = f"🏆 VINCE {p2['name']}"
+        if score > 21:
+            win = 0
+            user["losses"] += 1
 
-    save(p1)
-    save(p2)
+        elif dealer_score > 21 or score > dealer_score:
+            win = 1000
+            user["wins"] += 1
 
-    try:
-        await bot.edit_message_text(
-            chat_id=m["chat_id"],
-            message_id=m["msg_id"],
-            text=(
-                f"🔥 MATCH FINITO\n\n"
-                f"P1: {m['p1_score']}\n"
-                f"P2: {m['p2_score']}\n\n"
-                f"{result}"
-            )
-        )
-    except Exception as e:
-        print("❌ finish_match error:", e)
+        elif score == dealer_score:
+            win = 300
 
-    del active_matches[mid]
+        else:
+            win = 0
+            user["losses"] += 1
+
+        user["chips"] += win
+        save(user)
+
+        results.append((uid, score, win))
+
+    text = "🏁 MATCH FINITO\n\n"
+    text += f"🎰 Dealer: {dealer_score}\n\n"
+
+    for uid, score, win in results:
+        text += f"👤 {uid} → {score} | +{win}\n"
+
+    await bot.send_message(t["chat_id"], text)
+
+    del tables[table_id]
+
 
 # =========================
 # ROULETTE
@@ -606,11 +622,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif q.data == "blackjack":
             await blackjack(update, context)
 
-        elif q.data == "hit":
-            await hit(update, context)
+        elif q.data == "hit_mp":
+            await hit_mp(update, context)
 
-        elif q.data == "stand":
-            await stand(update, context)
+        elif q.data == "stand_mp":
+            await stand_mp(update, context)
 
         elif q.data == "bonus":
             await bonus(update, context)
