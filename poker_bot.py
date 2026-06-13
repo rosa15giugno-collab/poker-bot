@@ -105,6 +105,11 @@ def save(u):
         ))
         conn.commit()
 
+async def safe_edit(message, text, reply_markup=None):
+    try:
+        return await message.edit_text(text, reply_markup=reply_markup)
+    except:
+        return await message.edit_caption(text, reply_markup=reply_markup)
 
 # =========================
 # MENU
@@ -231,20 +236,25 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     t = tables[table_id]
 
     if uid in t["players"]:
-        return await q.message.edit_text("⏳ Sei già al tavolo")
+        return await safe_edit("⏳ Sei già al tavolo")
 
     t["players"].append(uid)
     t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
-    user_table[uid] = table_id
+    user_tables[uid] = table_id
 
     # start automatico
     if len(t["players"]) >= 2 and not t["started"]:
-        t["started"] = True
-        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
-        asyncio.create_task(run_table(context.bot, table_id, q.message.chat_id))
+    t["started"] = True
+    t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
 
-    await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
+    msg = await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
 
+    t["message"] = msg.message_id
+    t["chat_id"] = msg.chat_id
+
+    print(f"TABLE STARTED: {table_id} players={len(t['players'])}")
+    
+    asyncio.create_task(run_table(context.bot, table_id, msg.chat_id))
 
     # UI TAVOLO
     #----------------
