@@ -132,40 +132,26 @@ def menu():
 # START
 # =========================
 
-async def fileid(update, context):
-    if update.message.reply_to_message and update.message.reply_to_message.photo:
-        photo = update.message.reply_to_message.photo[-1]
-
-        await update.message.reply_text(
-            f"📸 FILE ID:\n\n{photo.file_id}"
-        )
-    else:
-        await update.message.reply_text(
-            "❌ Rispondi a una foto con /fileid"
-        )
-
-
-
-    
-#fine funzione
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    get_user(update.effective_user.id, update.effective_user.first_name)
+    user = update.effective_user
+    get_user(user.id, user.first_name)
 
-    print("START ARRIVATO:", update.effective_user.id)
+    print("START ARRIVATO:", user.id)
+
+    photo_id = "AgACAgQAAxkBAAMbaiz214DsBkP09-ZfQsrbL4MOqFgAAsoOaxsCGmhREEolIiPDR4cBAAMCAAN5AAM8BA"
+
+    caption = (
+        "👑 Benvenuto in CASINO PRO\n\n"
+        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
+        "…𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
+        "🎰 Slot | 🎲 Roulette | 🃏 Blackjack | 🆚 PvP\n"
+        "🏆 Classifiche live | 🎁 Bonus giornaliero\n\n"
+        "👇 Scegli una modalità"
+    )
 
     await update.message.reply_photo(
-        photo="AgACAgQAAxkBAAMbaiz214DsBkP09-ZfQsrbL4MOqFgAAsoOaxsCGmhREEolIiPDR4cBAAMCAAN5AAM8BA",
-        caption=
-        "     Benvenuto in 👑 Casinò by Rosa \n\n"
-        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐…\n"
-        "       …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n"
-        "               ✦ ───── ✦\n"
-        "      Slot, Blackjack, Roulette\n"
-        "       Classifiche settimanali\n"
-        "               ✦ ───── ✦\n"
-        "𝑰𝒍 𝑫𝒆𝒔𝒕𝒊𝒏𝒐 𝒕𝒊 𝒈𝒖𝒂𝒓𝒅𝒂. 𝑻𝒖 𝒈𝒖𝒂𝒓𝒅𝒊 𝒍𝒖𝒊\n"
-        "👇 Scegli una modalità",
+        photo=photo_id,
+        caption=caption,
         reply_markup=menu()
     )
 # =========================
@@ -192,7 +178,7 @@ async def slot(update, context):
     u["xp"] += win // 30
 
     save(u)
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🎰 {' | '.join(r)}\n💰 +{win}",
         reply_markup=menu()
     )    
@@ -300,19 +286,19 @@ async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = q.from_user.id
 
     if uid in pvp_queue:
-        return await q.message.reply_text("⏳ Sei già in coda")   # sostituire reply_text con edit_text
+        return await q.message.edit_text("⏳ Sei già in coda")   # sostituire edit_text con edit_text
 
     pvp_queue.append(uid)
 
     if len(pvp_queue) < 2:
-        return await q.message.reply_text("🆚 In attesa avversario...")
+        return await q.message.edit_text("🆚 In attesa avversario...")
 
     p1 = pvp_queue.pop(0)
     p2 = pvp_queue.pop(0)
 
     mid = create_match(p1, p2)
 
-    msg = await q.message.reply_text("🔥 MATCH INIZIATO...")
+    msg = await q.message.edit_text("🔥 MATCH INIZIATO...")
 
     asyncio.create_task(run_match(context.bot, mid, msg.chat_id, msg.message_id))
 
@@ -341,7 +327,7 @@ async def roulette(update, context):
 
     save(u)
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🎲 Numero: {n}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -375,7 +361,7 @@ async def blackjack(update, context):
 
     g = games[q.from_user.id]
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🃏 Blackjack\n{g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -406,14 +392,14 @@ async def hit(update, context):
     if calc(g["p"]) > 21:
         del games[q.from_user.id]
 
-        await q.message.reply_text(
+        await q.message.edit_text(
             "💥 Sballato!",
             reply_markup=menu()
         )
 
         return
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🃏 {g['p']} ({calc(g['p'])})",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -462,7 +448,7 @@ async def stand(update, context):
 
     del games[q.from_user.id]
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"🃏 Tu {p} vs Dealer {d}\n💰 +{win}",
         reply_markup=menu()
     )
@@ -480,7 +466,7 @@ async def bonus(update, context):
     now = int(time.time())
 
     if now - u["last_bonus"] < 86400:
-        return await q.message.reply_text("⏳ Bonus già preso", reply_markup=menu())
+        return await q.message.edit_text("⏳ Bonus già preso", reply_markup=menu())
 
     reward = random.randint(500, 1500)
 
@@ -489,20 +475,21 @@ async def bonus(update, context):
 
     save(u)
 
-    await q.message.reply_text(f"🎁 +{reward}", reply_markup=menu())
+    await q.message.edit_text(f"🎁 +{reward}", reply_markup=menu())
 
 #===========================
 # ACQUISTA
 #==========================
-async def acquista_button(update, context):
+async def shop(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.reply_text(
-        "💰 ACQUISTA\n\n"
-        "1) x2 → 5000 chips\n"
-        "2) x3 → 12000 chips\n"
-        "Usa /acquista 1 o /acquista 2"
+    await q.message.edit_text(
+        "💰 SHOP CASINO PRO\n\n"
+        "1️⃣ x2 Multiplier → 5000 chips\n"
+        "2️⃣ x3 Multiplier → 12000 chips\n\n"
+        "Usa:\n/acquista 1\n/acquista 2",
+        reply_markup=menu()
     )
 
 
@@ -516,19 +503,25 @@ async def acquista(update, context):
     try:
         opt = int(context.args[0])
     except:
-        return await update.message.edit_text("Uso: /acquista 1 o /acquista 2")
+        return await update.message.reply_text("Uso: /acquista 1 o /acquista 2")
 
     if opt == 1 and u["chips"] >= 5000:
         u["chips"] -= 5000
         u["multiplier"] = 2.0
+
     elif opt == 2 and u["chips"] >= 12000:
         u["chips"] -= 12000
         u["multiplier"] = 3.0
+
     else:
-        return await update.message.edit_text("❌ Non disponibile")
+        return await update.message.reply_text("❌ Non disponibile o chips insufficienti")
 
     save(u)
-    await update.message.edit_text("✅ Acquisto fatto")
+
+    await update.message.reply_text(
+        f"💰 ACQUISTO COMPLETATO\n\n"
+        f"🎯 Moltiplicatore attuale: x{u['multiplier']}"
+    )
 
 
 # =========================
@@ -541,7 +534,7 @@ async def profilo(update, context):
 
     u = get_user(q.from_user.id)
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
         reply_markup=menu()
     )
@@ -558,7 +551,7 @@ async def classifica(update, context):
     for i, (n, c) in enumerate(top, 1):
         txt += f"{i}. {n} - {c}\n"
 
-    await q.message.reply_text(txt, reply_markup=menu())
+    await q.message.edit_text(txt, reply_markup=menu())
 
 
 # =========================
@@ -603,11 +596,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await pvp(update, context)
 
         else:
-            await q.message.reply_text("🚧 In sviluppo", reply_markup=menu())
+            await q.message.edit_text("🚧 In sviluppo", reply_markup=menu())
 
     except Exception as e:
         print("❌ ERROR:", e)
-        await q.message.reply_text("⚠️ Errore temporaneo", reply_markup=menu())
+        await q.message.edit_text("⚠️ Errore temporaneo", reply_markup=menu())
 # =========================
 # MAIN
 # =========================
