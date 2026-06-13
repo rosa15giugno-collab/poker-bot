@@ -12,6 +12,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 logging.basicConfig(level=logging.INFO)
 
+lock = threading.Lock(
+
 # =========================
 # CONFIG
 # =========================
