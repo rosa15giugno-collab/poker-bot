@@ -186,14 +186,13 @@ async def slot(update, context):
 
     save(u)
 
-    await q.safe.edit((q.message, "TESTO", menu()) ***
-        caption=(
-            f"🎰 SLOT CASINO PRO\n\n"
-            f"┃ {' | '.join(r)} ┃\n\n"
-            f"💰 Vincita: +{win}\n"
-            f"💎 Chips: {u['chips']}"
-        ),
-        reply_markup=menu()
+    await safe_edit(
+        q.message,
+        f"🎰 SLOT CASINO PRO\n\n"
+        f"┃ {' | '.join(r)} ┃\n\n"
+        f"💰 Vincita: +{win}\n"
+        f"💎 Chips: {u['chips']}",
+        menu()
     )
 # =========================
 # REAL TIME PVP 
