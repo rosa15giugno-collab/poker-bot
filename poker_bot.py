@@ -610,8 +610,7 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # MAIN
 # =========================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("START OK")
+
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
