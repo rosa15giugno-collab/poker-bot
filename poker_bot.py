@@ -237,13 +237,15 @@ async def pvp(update, context):
     uid = str(q.from_user.id)
     name = q.from_user.first_name
 
-    bet = 100  # puoi cambiarla o farla dinamica
+    bet = 100  # puoi renderla dinamica
 
     user = get_user(uid)
 
+    # ❌ controllo chips
     if user["chips"] < bet:
         return await q.answer("❌ Non hai abbastanza chips", show_alert=True)
 
+    # 🎯 cerca tavolo disponibile
     table_id = None
 
     for tid, t in tables.items():
@@ -251,30 +253,50 @@ async def pvp(update, context):
             table_id = tid
             break
 
+    # 🆕 crea tavolo se non esiste
     if not table_id:
         table_id = str(int(time.time()))
         tables[table_id] = create_table()
 
     t = tables[table_id]
 
+    # ❌ già dentro al tavolo
     if any(p["id"] == uid for p in t["players"]):
         return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=menu())
 
-    # 💰 blocca chips (casino vero)
+    # 💰 scala chips
     user["chips"] -= bet
     save_user(user)
 
+    # 🪑 aggiungi player
     t["players"].append({
         "id": uid,
         "name": name,
         "bet": bet
     })
 
-    t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
-    t["pot"] += bet
+    # 🖼️ IMMAGINE ENTRATA (effetto casino PvP)
+    await context.bot.send_photo(
+        chat_id=q.message.chat_id,
+        photo="AgACAgQAAxkBAAMkai8flTPIwC3PRtw-ITOGKdLzjBsAAokPaxsMTHhRw0yUgC0hQVYBAAMCAAN5AAM8BA",
+        caption=(
+            f"🎰 CASINO ROYALE\n"
+            f"🃏 PvP Blackjack\n\n"
+            f"👤 {name} è entrato nel tavolo\n"
+            f"💰 Puntata: {bet} chips"
+        )
+    )
 
+    # 🃏 carte iniziali
+    t["hands"][uid] = [
+        random.randint(2, 11),
+        random.randint(2, 11)
+    ]
+
+    t["pot"] += bet
     user_tables[uid] = table_id
 
+    # 👥 se non ci sono abbastanza player
     if len(t["players"]) < 2:
         return await safe_edit(
             q.message,
@@ -282,15 +304,25 @@ async def pvp(update, context):
             reply_markup=menu()
         )
 
+    # 🚀 avvio partita
     if not t["started"]:
         t["started"] = True
-        t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
+
+        t["dealer"] = [
+            random.randint(2, 11),
+            random.randint(2, 11)
+        ]
+
         t["order"] = [p["id"] for p in t["players"]]
 
-        await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
+        await q.message.edit_text(
+            render_table(t),
+            reply_markup=table_buttons(t)
+        )
 
-        asyncio.create_task(game_loop(context.bot, table_id, q.message.chat_id))
-
+        asyncio.create_task(
+            game_loop(context.bot, table_id, q.message.chat_id)
+        )
 
 # =========================
 # RENDER TABLE UI
