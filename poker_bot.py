@@ -208,19 +208,22 @@ def create_table():
     return {
         "players": [],
         "hands": {},
-        "bets": {},
         "started": False,
-        "finished": False,
+        "message": None,
+        "chat_id": None,
 
         "dealer": [],
+
+        "pot": 0,
+        "finished": False,
+
         "order": [],
         "turn_index": 0,
 
-        "chat_id": None,
-        "message_id": None,
-
         "last_action": time.time(),
-        "lock": False  # 🔥 anti spam click
+
+        "stood": set()
+    }
 
 
 # =========================
