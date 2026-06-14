@@ -36,6 +36,22 @@ conn.commit()
 # LOCK (FIXATO)
 lock = threading.Lock()
 
+#=======================
+# SAVE USER
+#======================
+def save_user(u):
+    with lock:
+        cursor.execute("""
+        UPDATE users
+        SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
+        WHERE user_id=?
+        """, (
+            u["name"], u["chips"], u["xp"], u["wins"], u["losses"],
+            u["last_bonus"], u["multiplier"], u["user_id"]
+        ))
+        conn.commit()
+
+
 # =========================
 # STATE
 # =========================
@@ -85,32 +101,21 @@ def get_user(user_id, name="Player"):
             }
 
         cursor.execute("""
-            INSERT INTO users VALUES (?, ?, 1000, 0, 0, 0, 0, 1.0)
-        """, (uid, name))
+            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (uid, name, 5000, 0, 0, 0, 0, 1.0))
+
         conn.commit()
 
         return {
             "user_id": uid,
             "name": name,
-            "chips": 1000,
+            "chips": 5000,
             "xp": 0,
             "wins": 0,
             "losses": 0,
             "last_bonus": 0,
             "multiplier": 1.0
         }
-
-
-def save_user(u):
-    with lock:
-        cursor.execute("""
-        UPDATE users SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
-        WHERE user_id=?
-        """, (
-            u["name"], u["chips"], u["xp"], u["wins"], u["losses"],
-            u["last_bonus"], u["multiplier"], u["user_id"]
-        ))
-        conn.commit()
 
 # =========================
 # MENU
@@ -215,58 +220,66 @@ def create_table():
 # PVP JOIN
 # =========================
 
-async def pvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def pvp(update, context):
     q = update.callback_query
     await q.answer()
 
     uid = str(q.from_user.id)
     name = q.from_user.first_name
 
+    bet = 100  # puoi cambiarla o farla dinamica
+
+    user = get_user(uid)
+
+    if user["chips"] < bet:
+        return await q.answer("❌ Non hai abbastanza chips", show_alert=True)
+
     table_id = None
 
-    # trova tavolo disponibile
     for tid, t in tables.items():
         if not t["started"] and len(t["players"]) < 6:
             table_id = tid
             break
 
-    # crea tavolo
     if not table_id:
         table_id = str(int(time.time()))
         tables[table_id] = create_table()
 
     t = tables[table_id]
 
-    # già dentro
     if any(p["id"] == uid for p in t["players"]):
         return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=menu())
 
-    # aggiungi player
-    t["players"].append({"id": uid, "name": name})
+    # 💰 blocca chips (casino vero)
+    user["chips"] -= bet
+    save_user(user)
+
+    t["players"].append({
+        "id": uid,
+        "name": name,
+        "bet": bet
+    })
+
     t["hands"][uid] = [random.randint(2, 11), random.randint(2, 11)]
+    t["pot"] += bet
+
     user_tables[uid] = table_id
 
-    # attesa
     if len(t["players"]) < 2:
         return await safe_edit(
             q.message,
-            f"🃏 BLACKJACK TABLE\n\n👥 Giocatori: {len(t['players'])}/6\n⏳ In attesa...",
+            f"🃏 TABLE\n👥 {len(t['players'])}/6\n💰 Pot: {t['pot']}",
             reply_markup=menu()
         )
 
-    # START GAME
     if not t["started"]:
         t["started"] = True
         t["dealer"] = [random.randint(2, 11), random.randint(2, 11)]
+        t["order"] = [p["id"] for p in t["players"]]
 
-        await q.message.edit_text(
-            render_table(t),
-            reply_markup=table_buttons(t)
-        )
+        await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
 
-        print(f"TABLE STARTED: {table_id}")
-
-        asyncio.create_task(run_table(context.bot, table_id, q.message.chat_id))
+        asyncio.create_task(game_loop(context.bot, table_id, q.message.chat_id))
 
 
 # =========================
@@ -311,26 +324,20 @@ async def hit_mp(update, context):
     await q.answer()
 
     uid = str(q.from_user.id)
+    t = tables.get(user_tables.get(uid))
 
-    table_id = user_tables.get(uid)
-    if not table_id:
-        return await safe_edit(q.message, "❌ Tavolo non trovato", reply_markup=menu())
+    if not t or t["finished"]:
+        return
 
-    t = tables.get(table_id)
-    if not t:
-        return await safe_edit(q.message, "❌ Tavolo inesistente", reply_markup=menu())
-
-    if uid not in t["hands"]:
-        return await safe_edit(q.message, "❌ Non sei nel tavolo", reply_markup=menu())
+    if t["order"][t["turn_index"]] != uid:
+        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
     t["hands"][uid].append(random.randint(2, 11))
-    score = sum(t["hands"][uid])
 
-    if score > 21:
-        t["stood"].add(uid)
-        return await safe_edit(q.message, "💥 Sballato!", reply_markup=table_buttons(t))
+    if sum(t["hands"][uid]) > 21:
+        t["turn_index"] += 1
 
-    await safe_edit(q.message, render_table(t), reply_markup=table_buttons(t))
+    await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
 
 
 # =========================
@@ -342,43 +349,32 @@ async def stand_mp(update, context):
     await q.answer()
 
     uid = str(q.from_user.id)
+    t = tables.get(user_tables.get(uid))
 
-    table_id = user_tables.get(uid)
-    if not table_id:
-        return await safe_edit(q.message, "❌ Tavolo non trovato", reply_markup=menu())
-
-    t = tables.get(table_id)
     if not t:
-        return await safe_edit(q.message, "❌ Tavolo inesistente", reply_markup=menu())
+        return
 
-    t["stood"].add(uid)
-
-    await safe_edit(q.message, render_table(t), reply_markup=table_buttons(t))
+    t["turn_index"] += 1
 
 
 # =========================
-# RUN TABLE
+# RUN TABLE GAME LOOP
 # =========================
 
-async def run_table(bot, table_id, chat_id):
+async def game_loop(bot, table_id, chat_id):
     t = tables[table_id]
 
-    while t["started"]:
-        if len(t["players"]) == 0:
-            del tables[table_id]
-            return
+    while not t["finished"]:
+        await asyncio.sleep(2)
 
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=t["message"] if t["message"] else None,
-            text=render_table(t),
-            reply_markup=table_buttons(t)
-        )
+        if time.time() - t["last_action"] > 25:
+            t["turn_index"] += 1
+            t["last_action"] = time.time()
 
-        await asyncio.sleep(3)
+        if t["turn_index"] >= len(t["order"]):
+            break
 
     await finish_table(bot, table_id)
-
 
 # =========================
 # FINISH TABLE
@@ -387,41 +383,44 @@ async def run_table(bot, table_id, chat_id):
 async def finish_table(bot, table_id):
     t = tables[table_id]
 
-    dealer_score = sum(t["dealer"])
+    dealer = t["dealer"]
+
+    while sum(dealer) < 17:
+        dealer.append(random.randint(2, 11))
+
+    dealer_score = sum(dealer)
+
     results = []
 
     for p in t["players"]:
         uid = p["id"]
-        name = p["name"]
-        score = sum(t["hands"][uid])
-
         user = get_user(uid)
+
+        score = sum(t["hands"][uid])
+        bet = p["bet"]
 
         if score > 21:
             win = 0
-            user["losses"] += 1
 
         elif dealer_score > 21 or score > dealer_score:
-            win = 1000
-            user["wins"] += 1
+            win = bet * 2
 
         elif score == dealer_score:
-            win = 300
+            win = bet
 
         else:
             win = 0
-            user["losses"] += 1
 
         user["chips"] += win
         save_user(user)
 
-        results.append((name, score, win))
+        results.append((p["name"], score, win))
 
-    text = "🏁 MATCH FINITO\n\n"
+    text = "🏁 CASINO RESULT\n\n"
     text += f"🎰 Dealer: {dealer_score}\n\n"
 
-    for name, score, win in results:
-        text += f"👤 {name}: {score} | +{win}\n"
+    for n, s, w in results:
+        text += f"👤 {n}: {s} | +{w}\n"
 
     await bot.send_message(t["chat_id"], text)
 
