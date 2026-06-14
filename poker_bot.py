@@ -208,14 +208,19 @@ def create_table():
     return {
         "players": [],
         "hands": {},
+        "bets": {},
         "started": False,
-        "finished": False,   # 👈 AGGIUNGI
+        "finished": False,
+
         "dealer": [],
-        "pot": 0,            # 👈 AGGIUNGI
-        "order": [],         # 👈 AGGIUNGI
-        "turn_index": 0,     # 👈 AGGIUNGI
-        "last_action": time.time()
-    }
+        "order": [],
+        "turn_index": 0,
+
+        "chat_id": None,
+        "message_id": None,
+
+        "last_action": time.time(),
+        "lock": False  # 🔥 anti spam click
 
 
 # =========================
@@ -285,23 +290,59 @@ async def pvp(update, context):
 
 
 # =========================
-# RENDER TABLE
+# RENDER TABLE UI
 # =========================
 
 def render_table(t):
-    txt = "🃏 BLACKJACK TABLE\n\n"
+    txt = "🃏 <b>BLACKJACK PvP LIVE</b>\n\n"
+
+    current_uid = None
+
+    if t["order"] and t["turn_index"] < len(t["order"]):
+        current_uid = t["order"][t["turn_index"]]
 
     for p in t["players"]:
         uid = p["id"]
         name = p["name"]
         hand = t["hands"].get(uid, [])
 
-        txt += f"👤 {name}: {sum(hand)} {hand}\n"
+        marker = "👉" if uid == current_uid else "👤"
 
-    txt += f"\n🎰 Dealer: {sum(t['dealer'])}"
-    txt += f"\n👥 Players: {len(t['players'])}/6"
+        txt += f"{marker} <b>{name}</b>: {sum(hand)} {hand}\n"
+
+    txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
+
+    if current_uid:
+        current_name = next(
+            (p["name"] for p in t["players"] if p["id"] == current_uid),
+            "?"
+        )
+
+        txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
+
+    txt += f"\n💰 Pot: {t['pot']}"
 
     return txt
+
+
+#==========================
+# UPDATE
+#==========================
+
+async def update_table(bot, t):
+    if t.get("finished"):
+        return
+
+    try:
+        await bot.edit_message_text(
+            chat_id=t["chat_id"],
+            message_id=t["message_id"],
+            text=render_table(t),
+            reply_markup=table_buttons(t),
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        print("UPDATE ERROR:", e)
 
 
 # =========================
@@ -317,6 +358,10 @@ def table_buttons(t):
     ])
 
 
+# =========================
+# HIT MP
+# =========================
+
 async def hit_mp(update, context):
     q = update.callback_query
     await q.answer()
@@ -327,35 +372,59 @@ async def hit_mp(update, context):
     t = tables.get(table_id)
 
     if not t:
-        return await q.answer("⚠️ Tavolo non trovato", show_alert=True)
+        return await q.answer(
+            "⚠️ Tavolo non trovato",
+            show_alert=True
+        )
 
     if t.get("finished"):
-        return await q.answer("⚠️ Partita finita", show_alert=True)
+        return await q.answer(
+            "⚠️ Partita terminata",
+            show_alert=True
+        )
 
     if "order" not in t or "turn_index" not in t:
-        return await q.answer("⚠️ Tavolo non inizializzato", show_alert=True)
+        return await q.answer(
+            "⚠️ Tavolo non inizializzato",
+            show_alert=True
+        )
 
-    # sicurezza indice
     if t["turn_index"] >= len(t["order"]):
-        return await q.answer("⏳ Turno non valido", show_alert=True)
+        return await q.answer(
+            "⏳ Turno non valido",
+            show_alert=True
+        )
 
     if t["order"][t["turn_index"]] != uid:
-        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
+        return await q.answer(
+            "⛔ Non è il tuo turno",
+            show_alert=True
+        )
 
     # pesca carta
-    t["hands"].setdefault(uid, []).append(random.randint(2, 11))
+    card = random.randint(2, 11)
 
-    # bust → passa turno
-    if sum(t["hands"][uid]) > 21:
+    t["hands"].setdefault(uid, []).append(card)
+
+    print(f"HIT_MP -> {uid} pesca {card}")
+
+    score = sum(t["hands"][uid])
+
+    # sballato
+    if score > 21:
+        print(f"BUST -> {uid}")
+
         t["turn_index"] += 1
 
+    # aggiorna timer turno
+    t["last_action"] = time.time()
+
     try:
-        await q.message.edit_text(
-            render_table(t),
-            reply_markup=table_buttons(t)
-        )
+        await update_table(context.bot, t)
     except Exception as e:
-        print("❌ EDIT ERROR HIT_MP:", e)
+        print("❌ UPDATE ERROR HIT_MP:", e)
+
+    return
 
 
 # =========================
@@ -372,20 +441,26 @@ async def stand_mp(update, context):
     if not t:
         return
 
-    t["turn_index"] += 1
+    if t["order"][t["turn_index"]] != uid:
+        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
+    t["turn_index"] += 1
+    t["last_action"] = time.time()
+
+    await update_table(context.bot, t)
 
 # =========================
 # RUN TABLE GAME LOOP
 # =========================
 
-async def game_loop(bot, table_id, chat_id):
+async def game_loop(bot, table_id):
     t = tables[table_id]
 
     while not t["finished"]:
         await asyncio.sleep(2)
 
-        if time.time() - t["last_action"] > 25:
+        # timeout turno (20 sec)
+        if time.time() - t["last_action"] > 20:
             t["turn_index"] += 1
             t["last_action"] = time.time()
 
@@ -402,47 +477,39 @@ async def finish_table(bot, table_id):
     t = tables[table_id]
 
     dealer = t["dealer"]
-
     while sum(dealer) < 17:
-        dealer.append(random.randint(2, 11))
+        dealer.append(random.randint(2,11))
 
-    dealer_score = sum(dealer)
+    d = sum(dealer)
 
-    results = []
+    txt = "🏁 <b>RISULTATO FINALE</b>\n\n"
+    txt += f"🎰 Dealer: {d}\n\n"
 
     for p in t["players"]:
         uid = p["id"]
         user = get_user(uid)
 
         score = sum(t["hands"][uid])
-        bet = p["bet"]
+        bet = t["bets"][uid]
 
         if score > 21:
             win = 0
-
-        elif dealer_score > 21 or score > dealer_score:
+        elif d > 21 or score > d:
             win = bet * 2
-
-        elif score == dealer_score:
+        elif score == d:
             win = bet
-
         else:
             win = 0
 
         user["chips"] += win
         save_user(user)
 
-        results.append((p["name"], score, win))
+        txt += f"👤 {p['name']}: {score} → +{win}\n"
 
-    text = "🏁 CASINO RESULT\n\n"
-    text += f"🎰 Dealer: {dealer_score}\n\n"
-
-    for n, s, w in results:
-        text += f"👤 {n}: {s} | +{w}\n"
-
-    await bot.send_message(t["chat_id"], text)
+    await bot.send_message(t["chat_id"], txt)
 
     del tables[table_id]
+
 
 # =========================
 # ROULETTE
