@@ -206,13 +206,15 @@ async def slot(update, context):
 
 def create_table():
     return {
-        "players": [],     # {id, name}
-        "hands": {},       # uid -> cards
+        "players": [],
+        "hands": {},
         "started": False,
-        "message": None,
-        "chat_id": None,
+        "finished": False,   # 👈 AGGIUNGI
         "dealer": [],
-        "stood": set()
+        "pot": 0,            # 👈 AGGIUNGI
+        "order": [],         # 👈 AGGIUNGI
+        "turn_index": 0,     # 👈 AGGIUNGI
+        "last_action": time.time()
     }
 
 
@@ -315,29 +317,45 @@ def table_buttons(t):
     ])
 
 
-# =========================
-# HIT MP
-# =========================
-
 async def hit_mp(update, context):
     q = update.callback_query
     await q.answer()
 
     uid = str(q.from_user.id)
-    t = tables.get(user_tables.get(uid))
 
-    if not t or t["finished"]:
-        return
+    table_id = user_tables.get(uid)
+    t = tables.get(table_id)
+
+    if not t:
+        return await q.answer("⚠️ Tavolo non trovato", show_alert=True)
+
+    if t.get("finished"):
+        return await q.answer("⚠️ Partita finita", show_alert=True)
+
+    if "order" not in t or "turn_index" not in t:
+        return await q.answer("⚠️ Tavolo non inizializzato", show_alert=True)
+
+    # sicurezza indice
+    if t["turn_index"] >= len(t["order"]):
+        return await q.answer("⏳ Turno non valido", show_alert=True)
 
     if t["order"][t["turn_index"]] != uid:
         return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-    t["hands"][uid].append(random.randint(2, 11))
+    # pesca carta
+    t["hands"].setdefault(uid, []).append(random.randint(2, 11))
 
+    # bust → passa turno
     if sum(t["hands"][uid]) > 21:
         t["turn_index"] += 1
 
-    await q.message.edit_text(render_table(t), reply_markup=table_buttons(t))
+    try:
+        await q.message.edit_text(
+            render_table(t),
+            reply_markup=table_buttons(t)
+        )
+    except Exception as e:
+        print("❌ EDIT ERROR HIT_MP:", e)
 
 
 # =========================
@@ -711,10 +729,10 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
-    print("🔥 CB:", q.from_user.id, q.data)
+    data = q.data
+    print("🔥 CB:", q.from_user.id, data)
 
     try:
-        data = q.data
 
         # SLOT
         if data == "slot":
@@ -734,15 +752,31 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "stand":
             return await stand(update, context)
 
-        # PVP BLACKJACK
+        # PVP
         elif data == "pvp":
             return await pvp(update, context)
 
         elif data == "hit_mp":
-            return await hit_mp(update, context)
+            try:
+                return await hit_mp(update, context)
+            except Exception as e:
+                print("❌ HIT_MP ERROR:", e)
+                return await safe_edit(q.message, "⚠️ Errore HIT MP", reply_markup=menu())
 
         elif data == "stand_mp":
-            return await stand_mp(update, context)
+            try:
+                return await stand_mp(update, context)
+
+            except Exception as e:
+                import traceback
+                print("❌ STAND_MP ERROR:", e)
+                traceback.print_exc()
+
+                return await safe_edit(
+                    q.message,
+                    "⚠️ Errore STAND MP\n\nControlla log",
+                    reply_markup=menu()
+                )
 
         # BONUS
         elif data == "bonus":
@@ -760,11 +794,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "shop":
             return await shop(update, context)
 
-        # PULSANTI FINTI
+        # IGNORA
         elif data == "noop":
             return
 
-        # COMANDO NON TROVATO
+        # NON GESTITO
         else:
             print("⚠️ CALLBACK NON GESTITA:", data)
 
@@ -775,7 +809,10 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
     except Exception as e:
-        print("❌ ERROR:", e)
+        print("❌ CB ERROR:", e)
+
+        import traceback
+        traceback.print_exc()
 
         try:
             return await safe_edit(
