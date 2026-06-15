@@ -750,188 +750,69 @@ async def cb(update, context):
     await q.answer()
 
     data = q.data
-
-    try:
-
-        if data == "roulette":
-            return await roulette(update, context)
-
-        elif data == "bet_number":
-            context.user_data["waiting_number"] = True
-            context.user_data["number_time"] = time.time()
-
-            return await q.message.reply_text(
-                "🎲 PUNTATA NUMERO\n\n"
-                "Scrivi un numero da 0 a 36 👇"
-            )
-
-        elif data == "bet_red":
-            return await roulette_spin(update, context, "red")
-
-        elif data == "bet_black":
-            return await roulette_spin(update, context, "black")
-
-        elif data == "bet_even":
-            return await roulette_spin(update, context, "even")
-
-        elif data == "bet_odd":
-            return await roulette_spin(update, context, "odd")
-
-        elif data == "bet_zero":
-            return await roulette_spin(update, context, "zero")
-
-        elif data == "bet_number_value":
-            return await roulette_spin(update, context, "number")
-
-        else:
-            return await q.message.reply_text(f"🚧 Callback non gestita: {data}")
-
-    except Exception as e:
-        print("CB ERROR:", e)
-        return await q.message.reply_text("⚠️ Errore interno roulette")
-#===========================
-# ACQUISTA
-#==========================
-async def shop(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    await safe_edit(
-        q.message,
-        "💰 SHOP CASINO PRO\n\n"
-        "1️⃣ x2 Multiplier → 5000 chips\n"
-        "2️⃣ x3 Multiplier → 12000 chips\n\n"
-        "Usa:\n/acquista 1\n/acquista 2",
-        reply_markup=menu()
-    )
-
-
-# =========================
-# SHOP
-# =========================
-
-async def acquista(update, context):
-    u = get_user(update.effective_user.id)
-
-    try:
-        opt = int(context.args[0])
-    except:
-        return await update.message.reply_text("Uso: /acquista 1 o /acquista 2")
-
-    if opt == 1 and u["chips"] >= 5000:
-        u["chips"] -= 5000
-        u["multiplier"] = 2.0
-
-    elif opt == 2 and u["chips"] >= 12000:
-        u["chips"] -= 12000
-        u["multiplier"] = 3.0
-
-    else:
-        return await update.message.reply_text("❌ Non disponibile o chips insufficienti")
-
-    save_user(u)
-
-    await update.message.reply_text(
-        f"💰 ACQUISTO COMPLETATO\n\n"
-        f"🎯 Moltiplicatore attuale: x{u['multiplier']}"
-    )
-
-
-# =========================
-# PROFILO + CLASSIFICA
-# =========================
-
-async def profilo(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    u = get_user(q.from_user.id)
-
-    await safe_edit(
-        q.message,
-        f"👤 {u['name']}\n💰 {u['chips']}\n⭐ XP {u['xp']}",
-        reply_markup=menu()
-    )
-
-async def classifica(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    cursor.execute("SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10")
-    top = cursor.fetchall()
-
-    txt = "🏆 CLASSIFICA\n\n"
-    for i, (n, c) in enumerate(top, 1):
-        txt += f"{i}. {n} - {c}\n"
-
-    await safe_edit(
-        q.message,
-        txt,
-        reply_markup=menu()
-    )
-
-
-# =========================
-# CALLBACK ROUTER FIXED
-# =========================
-
-async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    data = q.data
     print("🔥 CB:", q.from_user.id, data)
 
     try:
 
         # =========================
-        # 🎰 SLOT
-        # =========================
-        if data == "slot":
-            return await slot(update, context)
-
-        # =========================
         # 🎰 ROULETTE MENU
         # =========================
-        elif data == "roulette":
+        if data == "roulette":
             return await roulette(update, context)
 
         # =========================
-        # 🎲 ROULETTE NUMBER MODE
+        # 🎲 INPUT NUMERO
         # =========================
         elif data == "bet_number":
             context.user_data["waiting_number"] = True
+            context.user_data["waiting_stake"] = False
 
             return await q.message.reply_text(
-                "🎲 PUNTATA NUMERO\n\n"
-                "Scrivi un numero da 0 a 36 👇"
+                "🎲 PUNTATA NUMERO\n\nScrivi un numero da 0 a 36 👇"
             )
 
         # =========================
-        # 🎯 ROULETTE BETS
+        # 🎡 SPIN DOPO NUMERO + STAKE
+        # =========================
+        elif data == "bet_number_value":
+
+            if not context.user_data.get("bet_number"):
+                return await q.message.reply_text("❌ Devi prima scegliere il numero")
+
+            if not context.user_data.get("stake"):
+                return await q.message.reply_text("❌ Devi prima inserire la puntata")
+
+            return await roulette_spin(update, context, "number")
+
+        # =========================
+        # 🎯 BET CLASSICHE
         # =========================
         elif data == "bet_red":
+            context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "red")
 
         elif data == "bet_black":
+            context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "black")
 
         elif data == "bet_even":
+            context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "even")
 
         elif data == "bet_odd":
+            context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "odd")
 
         elif data == "bet_zero":
+            context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "zero")
 
         # =========================
-        # ❌ RIMOSSO: bet_number_value (INUTILE)
+        # 🎰 ALTRE FUNZIONI
         # =========================
+        elif data == "slot":
+            return await slot(update, context)
 
-        # =========================
-        # 🎰 BLACKJACK
-        # =========================
         elif data == "blackjack":
             return await blackjack(update, context)
 
@@ -941,9 +822,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "stand":
             return await stand(update, context)
 
-        # =========================
-        # 🎮 PVP
-        # =========================
         elif data == "pvp":
             return await pvp(update, context)
 
@@ -958,38 +836,24 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 return await stand_mp(update, context)
             except Exception as e:
-                import traceback
                 print("❌ STAND_MP ERROR:", e)
-                traceback.print_exc()
                 return await safe_edit(q.message, "⚠️ Errore STAND MP", reply_markup=menu())
 
         # =========================
-        # 🎁 BONUS
+        # 🎁 EXTRA
         # =========================
         elif data == "bonus":
             return await bonus(update, context)
 
-        # =========================
-        # 👤 PROFILO
-        # =========================
         elif data == "profilo":
             return await profilo(update, context)
 
-        # =========================
-        # 🏆 CLASSIFICA
-        # =========================
         elif data == "classifica":
             return await classifica(update, context)
 
-        # =========================
-        # 🛒 SHOP
-        # =========================
         elif data == "shop":
             return await shop(update, context)
 
-        # =========================
-        # 🔕 IGNORA
-        # =========================
         elif data == "noop":
             return
 
@@ -999,26 +863,17 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             print("❌ CALLBACK NON GESTITA:", data)
 
-            return await safe_edit(
-                q.message,
-                f"🚧 Callback non gestita:\n\n{data}",
-                reply_markup=menu()
+            return await q.message.reply_text(
+                f"🚧 Callback non gestita:\n\n{data}"
             )
 
     except Exception as e:
         print("❌ CB ERROR:", e)
 
-        import traceback
-        traceback.print_exc()
-
         try:
-            return await safe_edit(
-                q.message,
-                f"⚠️ Errore temporaneo\n\n{e}",
-                reply_markup=menu()
-            )
-        except Exception as e2:
-            print("❌ SAFE_EDIT FAILED:", e2)
+            return await q.message.reply_text("⚠️ Errore interno roulette")
+        except:
+            pass
 # =========================
 # MAIN
 # =========================
