@@ -734,7 +734,7 @@ async def roulette_spin(update, context, bet):
         text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
-[15:48, 15/06/2026] Rosa: import asyncio
+Rosa: import asyncio
 import random
 import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
