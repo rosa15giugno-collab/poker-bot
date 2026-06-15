@@ -844,9 +844,14 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if data == "slot":
             return await slot(update, context)
 
-        # 🎰 ROULETTE MENU (FIX MANCANTE)
+        # 🎰 ROULETTE MENU
         elif data == "roulette":
             return await roulette(update, context)
+
+        # 🎲 NUMBER MODE (❗ MANCAVA QUESTO)
+        elif data == "bet_number":
+            context.user_data["waiting_number"] = True
+            return await q.message.reply_text("🎲 Scrivi un numero da 0 a 36:")
 
         # 🎯 ROULETTE BETS
         elif data == "bet_red":
@@ -863,6 +868,9 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif data == "bet_zero":
             return await roulette_spin(update, context, "zero")
+
+        elif data == "bet_number_value":
+            return await roulette_spin(update, context, "number")
 
         # BLACKJACK
         elif data == "blackjack":
@@ -888,17 +896,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "stand_mp":
             try:
                 return await stand_mp(update, context)
-
             except Exception as e:
                 import traceback
                 print("❌ STAND_MP ERROR:", e)
                 traceback.print_exc()
-
-                return await safe_edit(
-                    q.message,
-                    "⚠️ Errore STAND MP\n\nControlla log",
-                    reply_markup=menu()
-                )
+                return await safe_edit(q.message, "⚠️ Errore STAND MP\n\nControlla log", reply_markup=menu())
 
         # BONUS
         elif data == "bonus":
@@ -916,7 +918,6 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "shop":
             return await shop(update, context)
 
-        # IGNORA
         elif data == "noop":
             return
 
