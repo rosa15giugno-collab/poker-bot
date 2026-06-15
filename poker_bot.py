@@ -734,32 +734,6 @@ async def roulette_spin(update, context, bet):
         text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
-Rosa: import asyncio
-import random
-import time
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-# =========================
-# 🎰 MENU ROULETTE
-# =========================
-async def roulette(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    keyboard = [
-        [
-            InlineKeyboardButton("🔴 Rosso", callback_data="bet_red"),
-            InlineKeyboardButton("⚫ Nero", callback_data="bet_black")
-        ],
-        [
-            InlineKeyboardButton("🔢 Pari", callback_data="bet_even"),
-            InlineKeyboardButton("🔢 Dispari", callback_data="bet_odd")
-        ],
-        [
-            InlineKeyboardButton("🎯 Zero", callback_data="bet_zero")
-        ],
-        [
-            InlineKeyboardButton("🎲 Numero (0-36)", c…
 
 # =========================
 # 🎯 CALLBACK (ROUTER FIXATO)
