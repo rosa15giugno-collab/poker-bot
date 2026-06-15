@@ -549,21 +549,10 @@ async def finish_table(bot, table_id):
 # ROULETTE PRO MAX
 # =========================
 
-import asyncio
-import random
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import MessageHandler, filters
-
-
-# =========================
-# 🎰 MENU ROULETTE (STEP 1)
-# =========================
-import asyncio
+[14:52, 15/06/2026] Rosa: import asyncio
 import random
 import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import MessageHandler, filters
-
 
 # =========================
 # 🎰 MENU ROULETTE
@@ -598,27 +587,60 @@ async def roulette(update, context):
 
 
 # =========================
-# ⌨️ INPUT NUMERO 0-36
+# ⌨️ INPUT UTENTE
 # =========================
 async def text_handler(update, context):
-    if not context.user_data.get("waiting_number"):
+
+    if not context.user_data.get("waiting_number") and not context.user_data.get("waiting_stake"):
         return
 
-    try:
-        n = int(update.message.text)
+    # =========================
+    # 🎯 NUMERO
+    # =========================
+    if context.user_data.get("waiting_number"):
+        try:
+            n = int(update.message.text)
 
-        if n < 0 or n > 36:
-            return await update.message.reply_text("❌ Inserisci un numero da 0 a 36")
+            if n < 0 or n > 36:
+                return await update.message.reply_text("❌ Numero da 0 a 36")
 
-        context.user_data["waiting_number"] = False
-        context.user_data["bet_number"] = n
+            context.user_data["bet_number"] = n
+            context.user_data["waiting_number"] = False
+            context.user_data["waiting_stake"] = True
 
-        return await update.message.reply_text(
-            f"🎯 Numero {n} registrato!\nOra scegli una puntata per girare la roulette 🎡"
-        )
+            return await update.message.reply_text(
+                f"🎯 Numero {n} salvato!\n\n💰 Quanto vuoi puntare?"
+            )
 
-    except:
-        return await update.message.reply_text("❌ Numero non valido")
+        except:
+            return await update.message.reply_text("❌ Numero non valido")
+
+    # =========================
+    # 💰 STAKE
+    # =========================
+    if context.user_data.get("waiting_stake"):
+        try:
+            stake = int(update.message.text)
+
+            if stake <= 0:
+                return await update.message.reply_text("❌ Puntata non valida")
+
+            context.user_data["stake"] = stake
+            context.user_data["waiting_stake"] = False
+
+            keyboard = [
+                [InlineKeyboardButton("🎡 GIRA ROULETTE", callback_data="bet_number_value")]
+            ]
+
+            return await update.message.reply_text(
+                f"💰 Puntata: {stake} chips\n"
+                f"🎯 Numero: {context.user_data.get('bet_number', '-')}\n\n"
+                "Premi per girare la roulette 🎡",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+        except:
+            return await update.message.reply_text("❌ Inserisci un numero valido")
 
 
 # =========================
@@ -629,8 +651,13 @@ async def roulette_spin(update, context, bet):
     await q.answer()
 
     u = get_user(q.from_user.id)
+    stake = context.user_data.get("stake", 100)
 
-    # 🎡 animazione
+    if u["chips"] < stake:
+        return await q.message.reply_text(f"❌ Non hai abbastanza chips.\nSaldo: {u['chips']}")
+
+    u["chips"] -= stake
+
     await context.bot.send_animation(
         chat_id=q.message.chat_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
@@ -652,33 +679,32 @@ async def roulette_spin(update, context, bet):
     # =========================
     # 🎯 LOGICA
     # =========================
-
     if bet == "red":
         victory = n in red_numbers
-        win = 300 if victory else 0
+        win = stake * 2 if victory else 0
 
     elif bet == "black":
         victory = n != 0 and n not in red_numbers
-        win = 300 if victory else 0
+        win = stake * 2 if victory else 0
 
     elif bet == "even":
         victory = n != 0 and n % 2 == 0
-        win = 300 if victory else 0
+        win = stake * 2 if victory else 0
 
     elif bet == "odd":
         victory = n % 2 == 1
-        win = 300 if victory else 0
+        win = stake * 2 if victory else 0
 
     elif bet == "zero":
         victory = n == 0
-        win = 5000 if victory else 0
+        win = stake * 35 if victory else 0
 
     elif bet == "number":
         chosen = context.user_data.get("bet_number")
         victory = (n == chosen)
-        win = 10000 if victory else 0
+        win = stake * 35 if victory else 0
 
-    # 💰 update user
+    # 💰 update
     u["chips"] += win
     u["xp"] += win // 20
     save_user(u)
@@ -691,7 +717,6 @@ async def roulette_spin(update, context, bet):
     else:
         color = "⚫ NERO"
 
-    # 🏆 risultato
     text = (
         "╔════════════════════╗\n"
         f"   {'🎉 VITTORIA' if victory else '💀 PERSO'}\n"
@@ -702,17 +727,39 @@ async def roulette_spin(update, context, bet):
         f"🏦 SALDO: {u['chips']}"
     )
 
-    await context.bot.send_message(
-        chat_id=q.message.chat_id,
-        text=text
-    )
+    await context.bot.send_message(chat_id=q.message.chat_id, text=text)
 
     await context.bot.send_message(
         chat_id=q.message.chat_id,
         text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
+[15:48, 15/06/2026] Rosa: import asyncio
+import random
+import time
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+# =========================
+# 🎰 MENU ROULETTE
+# =========================
+async def roulette(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🔴 Rosso", callback_data="bet_red"),
+            InlineKeyboardButton("⚫ Nero", callback_data="bet_black")
+        ],
+        [
+            InlineKeyboardButton("🔢 Pari", callback_data="bet_even"),
+            InlineKeyboardButton("🔢 Dispari", callback_data="bet_odd")
+        ],
+        [
+            InlineKeyboardButton("🎯 Zero", callback_data="bet_zero")
+        ],
+        [
+            InlineKeyboardButton("🎲 Numero (0-36)", c…
 
 # =========================
 # 🎯 CALLBACK (ROUTER FIXATO)
