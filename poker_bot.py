@@ -549,7 +549,7 @@ async def finish_table(bot, table_id):
 # ROULETTE PRO MAX
 # =========================
 
-[14:52, 15/06/2026] Rosa: import asyncio
+import asyncio
 import random
 import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
