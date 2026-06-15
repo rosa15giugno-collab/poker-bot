@@ -814,7 +814,11 @@ async def cb(update, context):
             return await slot(update, context)
 
         elif data == "blackjack":
-            return await blackjack(update, context)
+            try:
+        return await blackjack(update, context)
+            except Exception as e:
+                print("BLACKJACK ERROR:", e)
+                return await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
 
         elif data == "hit":
             return await hit(update, context)
