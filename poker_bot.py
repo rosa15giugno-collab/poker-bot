@@ -568,7 +568,7 @@ async def roulette(update, context):
     # 🎡 ANIMAZIONE SPIN
     await context.bot.send_animation(
         chat_id=q.message.chat_id,
-        animation="FILE_ID_SPIN",
+        animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
         caption="🎡 LA ROULETTE STA GIRANDO..."
     )
 
