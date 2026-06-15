@@ -549,12 +549,46 @@ async def finish_table(bot, table_id):
 # ROULETTE PRO MAX
 # =========================
 
+import asyncio
+import random
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+
+# 🎰 1) MENU ROULETTE (IMMAGINE STATICA)
+async def roulette(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🔴 Rosso", callback_data="bet_red"),
+            InlineKeyboardButton("⚫ Nero", callback_data="bet_black")
+        ],
+        [
+            InlineKeyboardButton("🔢 Pari", callback_data="bet_even"),
+            InlineKeyboardButton("🔢 Dispari", callback_data="bet_odd")
+        ],
+        [
+            InlineKeyboardButton("🎯 Zero", callback_data="bet_zero")
+        ]
+    ]
+
+    await q.message.reply_photo(
+        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
+        caption="🎰 <b>ROULETTE CASINO</b>\n\nScegli la tua puntata:",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# 🎡 2) SPIN ROULETTE (ANIMAZIONE + RISULTATO)
 async def roulette_spin(update, context, bet):
     q = update.callback_query
     await q.answer()
 
     u = get_user(q.from_user.id)
 
+    # 🎥 ANIMAZIONE RUOTA
     await context.bot.send_animation(
         chat_id=q.message.chat_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
@@ -563,6 +597,7 @@ async def roulette_spin(update, context, bet):
 
     await asyncio.sleep(4)
 
+    # 🎯 NUMERO CASUALE
     n = random.randint(0, 36)
 
     red_numbers = {
@@ -573,6 +608,7 @@ async def roulette_spin(update, context, bet):
     win = 0
     victory = False
 
+    # 💰 LOGICA VINCITA
     if bet == "red":
         victory = n in red_numbers
         win = 300 if victory else 0
@@ -593,10 +629,12 @@ async def roulette_spin(update, context, bet):
         victory = n == 0
         win = 5000 if victory else 0
 
+    # 💾 UPDATE UTENTE
     u["chips"] += win
     u["xp"] += win // 20
     save_user(u)
 
+    # 🎨 COLORE
     if n == 0:
         color = "🟢 ZERO"
     elif n in red_numbers:
@@ -604,6 +642,7 @@ async def roulette_spin(update, context, bet):
     else:
         color = "⚫ NERO"
 
+    # 🏆 RISULTATO
     if victory:
         text = (
             "╔════════════════════╗\n"
@@ -625,148 +664,16 @@ async def roulette_spin(update, context, bet):
             f"🏦 SALDO: {u['chips']}"
         )
 
+    # 📩 RISULTATO
     await context.bot.send_message(
         chat_id=q.message.chat_id,
         text=text
     )
 
-    await safe_edit(
-        q.message,
-        "🎲 Vuoi giocare ancora?",
-        reply_markup=menu()
-    )
-# =========================
-# BLACKJACK
-# =========================
-
-def hand():
-    return [random.randint(2, 11), random.randint(2, 11)]
-
-
-def calc(h):
-    t = sum(h)
-    a = h.count(11)
-
-    while t > 21 and a:
-        t -= 10
-        a -= 1
-
-    return t
-
-
-async def blackjack(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    games[q.from_user.id] = {
-        "p": hand(),
-        "d": hand()
-    }
-
-    g = games[q.from_user.id]
-
-    await safe_edit(
-        q.message,
-        f"🃏 Blackjack\n\n"
-        f"Le tue carte: {g['p']}\n"
-        f"Totale: {calc(g['p'])}",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "➕ Carta",
-                    callback_data="hit"
-                ),
-                InlineKeyboardButton(
-                    "🛑 Stai",
-                    callback_data="stand"
-                )
-            ]
-        ])
-    )
-
-
-async def hit(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    g = games.get(q.from_user.id)
-
-    if not g:
-        return
-
-    g["p"].append(random.randint(2, 11))
-
-    if calc(g["p"]) > 21:
-        del games[q.from_user.id]
-
-        await safe_edit(
-            q.message,
-            "💥 Hai sballato!",
-            reply_markup=menu()
-        )
-        return
-
-    await safe_edit(
-        q.message,
-        f"🃏 Blackjack\n\n"
-        f"Le tue carte: {g['p']}\n"
-        f"Totale: {calc(g['p'])}",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "➕ Carta",
-                    callback_data="hit"
-                ),
-                InlineKeyboardButton(
-                    "🛑 Stai",
-                    callback_data="stand"
-                )
-            ]
-        ])
-    )
-
-
-async def stand(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    g = games.get(q.from_user.id)
-
-    if not g:
-        return
-
-    while calc(g["d"]) < 17:
-        g["d"].append(random.randint(2, 11))
-
-    p = calc(g["p"])
-    d = calc(g["d"])
-
-    u = get_user(q.from_user.id)
-
-    if d > 21 or p > d:
-        win = 900
-        u["wins"] += 1
-
-    elif p < d:
-        win = 0
-        u["losses"] += 1
-
-    else:
-        win = 200
-
-    u["chips"] += win
-    u["xp"] += win // 20
-
-    save_user(u)
-
-    del games[q.from_user.id]
-
-    await safe_edit(
-        q.message,
-        f"🃏 BLACKJACK\n\n"
-        f"👤 Tu: {p}\n"
-        f"🎰 Dealer: {d}\n\n"
-        f"💰 Vincita: +{win}",
+    # 🔄 MENU FINALE
+    await context.bot.send_message(
+        chat_id=q.message.chat_id,
+        text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
 # =========================
@@ -900,7 +807,11 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if data == "slot":
             return await slot(update, context)
 
-        # ROULETTE
+        # 🎰 ROULETTE MENU (FIX MANCANTE)
+        elif data == "roulette":
+            return await roulette(update, context)
+
+        # 🎯 ROULETTE BETS
         elif data == "bet_red":
             return await roulette_spin(update, context, "red")
 
@@ -972,13 +883,13 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "noop":
             return
 
-        # NON GESTITO
+        # ❌ NON GESTITO
         else:
-            print("⚠️ CALLBACK NON GESTITA:", data)
+            print("❌ CALLBACK NON GESTITA:", data)
 
             return await safe_edit(
                 q.message,
-                f"🚧 In sviluppo\n\nCallback: {data}",
+                f"🚧 Callback non gestita:\n\n{data}",
                 reply_markup=menu()
             )
 
