@@ -966,16 +966,35 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 async def fileid(update, context):
-    if update.message.reply_to_message and update.message.reply_to_message.photo:
-        photo = update.message.reply_to_message.photo[-1]
 
-        await update.message.reply_text(
-            f"📸 FILE ID:\n\n{photo.file_id}"
+    msg = update.message.reply_to_message
+
+    if not msg:
+        return await update.message.reply_text(
+            "📎 Rispondi a una foto, GIF o video con /fileid"
         )
-    else:
-        await update.message.reply_text(
-            "❌ Rispondi a una foto con /fileid"
+
+    if msg.photo:
+        return await update.message.reply_text(
+            msg.photo[-1].file_id
         )
+
+    if msg.animation:
+        return await update.message.reply_text(
+            msg.animation.file_id
+        )
+
+    if msg.video:
+        return await update.message.reply_text(
+            msg.video.file_id
+        )
+
+    if msg.document:
+        return await update.message.reply_text(
+            msg.document.file_id
+        )
+
+    await update.message.reply_text("❌ File non supportato")
 
 
 
