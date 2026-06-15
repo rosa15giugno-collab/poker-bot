@@ -580,7 +580,7 @@ async def roulette(update, context):
     ]
 
     await q.message.reply_photo(
-        photo="FILE_ID_O_URL_TAVOLO_ROULETTE",
+        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
         caption="🎰 <b>ROULETTE CASINO</b>\n\nScegli la tua puntata:",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
