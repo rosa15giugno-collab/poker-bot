@@ -750,9 +750,6 @@ async def roulette_spin(update, context, bet):
         text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
-# =========================
-# 🎯 CALLBACK ROUTER
-# =========================
 async def cb(update, context):
     q = update.callback_query
     await q.answer()
@@ -762,18 +759,23 @@ async def cb(update, context):
 
     try:
 
+        # =========================
+        # ROULETTE
+        # =========================
         if data == "roulette":
             return await roulette(update, context)
 
         elif data == "bet_number":
             context.user_data["waiting_number"] = True
             context.user_data["waiting_stake"] = False
-
-            return await q.message.reply_text(
-                "🎲 Scrivi un numero da 0 a 36"
-            )
+            return await q.message.reply_text("🎲 Scrivi un numero da 0 a 36")
 
         elif data == "bet_number_value":
+            if not context.user_data.get("bet_number"):
+                return await q.message.reply_text("❌ Numero non impostato")
+            if not context.user_data.get("stake"):
+                return await q.message.reply_text("❌ Puntata non impostata")
+
             return await roulette_spin(update, context, "number")
 
         elif data == "bet_red":
@@ -791,15 +793,25 @@ async def cb(update, context):
         elif data == "bet_zero":
             return await roulette_spin(update, context, "zero")
 
+        # =========================
+        # BLACKJACK
+        # =========================
         elif data == "blackjack":
             try:
                 return await blackjack(update, context)
-            except:
+            except Exception as e:
+                print("BLACKJACK ERROR:", e)
                 return await q.message.reply_text("🃏 Blackjack non disponibile")
 
+        # =========================
+        # PVP
+        # =========================
         elif data == "pvp":
             return await pvp(update, context)
 
+        # =========================
+        # EXTRA
+        # =========================
         elif data == "bonus":
             return await bonus(update, context)
 
@@ -812,9 +824,40 @@ async def cb(update, context):
         elif data == "shop":
             return await shop(update, context)
 
+        # =========================
+        # FALLBACK
+        # =========================
         else:
+            print("❌ CALLBACK NON GESTITA:", data)
             return await q.message.reply_text(f"🚧 Callback non gestita: {data}")
 
     except Exception as e:
-        print("CB ERROR:", e)
+        print("❌ CB ERROR:", e)
         return await q.message.reply_text("⚠️ Errore bot")
+
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    # =========================
+    # COMMANDS
+    # =========================
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("fileid", fileid))
+
+    # =========================
+    # CALLBACKS
+    # =========================
+    app.add_handler(CallbackQueryHandler(cb))
+
+    # =========================
+    # MESSAGGI TESTO
+    # =========================
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+
+    print("🟢 CASINO PRO ONLINE AVVIATO")
+
+    app.run_polling(drop_pending_updates=True)
+
+
+if __name__ == "__main__":
+    main()
