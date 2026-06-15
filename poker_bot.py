@@ -552,9 +552,12 @@ async def finish_table(bot, table_id):
 import asyncio
 import random
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import MessageHandler, filters
 
 
-# 🎰 1) MENU ROULETTE (IMMAGINE STATICA)
+# =========================
+# 🎰 MENU ROULETTE (STEP 1)
+# =========================
 async def roulette(update, context):
     q = update.callback_query
     await q.answer()
@@ -570,18 +573,47 @@ async def roulette(update, context):
         ],
         [
             InlineKeyboardButton("🎯 Zero", callback_data="bet_zero")
+        ],
+        [
+            InlineKeyboardButton("🎲 Numero (0-36)", callback_data="bet_number")
         ]
     ]
 
     await q.message.reply_photo(
-        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
+        photo="FILE_ID_O_URL_TAVOLO_ROULETTE",
         caption="🎰 <b>ROULETTE CASINO</b>\n\nScegli la tua puntata:",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-# 🎡 2) SPIN ROULETTE (ANIMAZIONE + RISULTATO)
+# =========================
+# ⌨️ INPUT NUMERO (STEP 1B)
+# =========================
+async def text_handler(update, context):
+    if not context.user_data.get("waiting_number"):
+        return
+
+    try:
+        n = int(update.message.text)
+
+        if n < 0 or n > 36:
+            return await update.message.reply_text("❌ Inserisci un numero da 0 a 36")
+
+        context.user_data["waiting_number"] = False
+        context.user_data["bet_number"] = n
+
+        await update.message.reply_text(
+            f"🎯 Puntata su numero {n} registrata!\nOra gira la roulette!"
+        )
+
+    except:
+        await update.message.reply_text("❌ Numero non valido")
+
+
+# =========================
+# 🎡 SPIN ROULETTE (STEP 2)
+# =========================
 async def roulette_spin(update, context, bet):
     q = update.callback_query
     await q.answer()
@@ -597,7 +629,6 @@ async def roulette_spin(update, context, bet):
 
     await asyncio.sleep(4)
 
-    # 🎯 NUMERO CASUALE
     n = random.randint(0, 36)
 
     red_numbers = {
@@ -608,7 +639,10 @@ async def roulette_spin(update, context, bet):
     win = 0
     victory = False
 
-    # 💰 LOGICA VINCITA
+    # =========================
+    # 🎯 LOGICA GIOCO
+    # =========================
+
     if bet == "red":
         victory = n in red_numbers
         win = 300 if victory else 0
@@ -629,12 +663,17 @@ async def roulette_spin(update, context, bet):
         victory = n == 0
         win = 5000 if victory else 0
 
-    # 💾 UPDATE UTENTE
+    elif bet == "number":
+        chosen = context.user_data.get("bet_number")
+        victory = (n == chosen)
+        win = 10000 if victory else 0
+
+    # 💰 UPDATE UTENTE
     u["chips"] += win
     u["xp"] += win // 20
     save_user(u)
 
-    # 🎨 COLORE
+    # 🎨 COLORE RISULTATO
     if n == 0:
         color = "🟢 ZERO"
     elif n in red_numbers:
@@ -642,7 +681,7 @@ async def roulette_spin(update, context, bet):
     else:
         color = "⚫ NERO"
 
-    # 🏆 RISULTATO
+    # 🏆 OUTPUT
     if victory:
         text = (
             "╔════════════════════╗\n"
@@ -664,13 +703,11 @@ async def roulette_spin(update, context, bet):
             f"🏦 SALDO: {u['chips']}"
         )
 
-    # 📩 RISULTATO
     await context.bot.send_message(
         chat_id=q.message.chat_id,
         text=text
     )
 
-    # 🔄 MENU FINALE
     await context.bot.send_message(
         chat_id=q.message.chat_id,
         text="🎲 Vuoi giocare ancora?",
