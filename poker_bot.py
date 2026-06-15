@@ -549,23 +549,12 @@ async def finish_table(bot, table_id):
 # ROULETTE PRO MAX
 # =========================
 
-async def roulette(update, context):
+async def roulette_spin(update, context, bet):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
-    u = get_user(uid)
+    u = get_user(q.from_user.id)
 
-    # 🎰 TAVOLO ROULETTE
-    await context.bot.send_photo(
-        chat_id=q.message.chat_id,
-        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
-        caption="🎰 ROULETTE CASINO\n\n💰 Puntata registrata\n🎡 Preparazione estrazione..."
-    )
-
-    await asyncio.sleep(1)
-
-    # 🎡 ANIMAZIONE SPIN
     await context.bot.send_animation(
         chat_id=q.message.chat_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
@@ -574,42 +563,76 @@ async def roulette(update, context):
 
     await asyncio.sleep(4)
 
-    # 🎯 ESTRAZIONE
     n = random.randint(0, 36)
 
-    if n == 0:
-        win = 1500
-        esito = "🟢 JACKPOT ZERO!"
-    elif n % 2 == 0:
-        win = 300
-        esito = "🔴 NUMERO PARI"
-    else:
-        win = 0
-        esito = "⚫ NUMERO DISPARI"
+    red_numbers = {
+        1,3,5,7,9,12,14,16,18,19,
+        21,23,25,27,30,32,34,36
+    }
+
+    win = 0
+    victory = False
+
+    if bet == "red":
+        victory = n in red_numbers
+        win = 300 if victory else 0
+
+    elif bet == "black":
+        victory = n != 0 and n not in red_numbers
+        win = 300 if victory else 0
+
+    elif bet == "even":
+        victory = n != 0 and n % 2 == 0
+        win = 300 if victory else 0
+
+    elif bet == "odd":
+        victory = n % 2 == 1
+        win = 300 if victory else 0
+
+    elif bet == "zero":
+        victory = n == 0
+        win = 5000 if victory else 0
 
     u["chips"] += win
-    u["xp"] += win // 30
+    u["xp"] += win // 20
     save_user(u)
 
-    # 🎯 RISULTATO FINALE
-    risultato = (
-        "╔══════════════╗\n"
-        "🎰 RISULTATO 🎰\n"
-        "╚══════════════╝\n\n"
-        f"🎯 NUMERO USCITO\n\n"
-        f"⭐ ⭐ {n} ⭐ ⭐\n\n"
-        f"{esito}\n\n"
-        f"💰 VINCITA: +{win} CHIPS"
-    )
+    if n == 0:
+        color = "🟢 ZERO"
+    elif n in red_numbers:
+        color = "🔴 ROSSO"
+    else:
+        color = "⚫ NERO"
+
+    if victory:
+        text = (
+            "╔════════════════════╗\n"
+            "      🎉 VITTORIA 🎉\n"
+            "╚════════════════════╝\n\n"
+            f"🎯 NUMERO USCITO: {n}\n"
+            f"{color}\n\n"
+            f"💰 VINCITA: +{win} CHIPS\n\n"
+            f"🏦 SALDO: {u['chips']}"
+        )
+    else:
+        text = (
+            "╔════════════════════╗\n"
+            "       💀 PERSO 💀\n"
+            "╚════════════════════╝\n\n"
+            f"🎯 NUMERO USCITO: {n}\n"
+            f"{color}\n\n"
+            "❌ Nessuna vincita\n\n"
+            f"🏦 SALDO: {u['chips']}"
+        )
 
     await context.bot.send_message(
         chat_id=q.message.chat_id,
-        text=risultato
+        text=text
     )
 
     await safe_edit(
         q.message,
-        f"🎲 Ultimo numero: {n}",
+        "🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
 # =========================
@@ -878,8 +901,20 @@ async def cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return await slot(update, context)
 
         # ROULETTE
-        elif data == "roulette":
-            return await roulette(update, context)
+        elif data == "bet_red":
+            return await roulette_spin(update, context, "red")
+
+        elif data == "bet_black":
+            return await roulette_spin(update, context, "black")
+
+        elif data == "bet_even":
+            return await roulette_spin(update, context, "even")
+
+        elif data == "bet_odd":
+            return await roulette_spin(update, context, "odd")
+
+        elif data == "bet_zero":
+            return await roulette_spin(update, context, "zero")
 
         # BLACKJACK
         elif data == "blackjack":
