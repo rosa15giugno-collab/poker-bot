@@ -743,7 +743,7 @@ async def roulette_spin(update, context, bet):
     )
 
 # =========================
-# 🎯 CALLBACK (ROUTER FIXATO)
+# 🎯 CALLBACK ROUTER
 # =========================
 async def cb(update, context):
     q = update.callback_query
@@ -772,7 +772,7 @@ async def cb(update, context):
             )
 
         # =========================
-        # 🎡 SPIN DOPO NUMERO + STAKE
+        # 🎡 SPIN NUMERO
         # =========================
         elif data == "bet_number_value":
 
@@ -807,5 +807,67 @@ async def cb(update, context):
             context.user_data["stake"] = context.user_data.get("stake", 100)
             return await roulette_spin(update, context, "zero")
 
-        if __name__ == "__main__":
-    main()
+        # =========================
+        # 🃏 BLACKJACK SAFE
+        # =========================
+        elif data == "blackjack":
+            try:
+                return await blackjack(update, context)
+            except Exception as e:
+                print("BLACKJACK ERROR:", e)
+                return await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
+
+        elif data == "hit":
+            return await hit(update, context)
+
+        elif data == "stand":
+            return await stand(update, context)
+
+        # =========================
+        # 🎮 PVP
+        # =========================
+        elif data == "pvp":
+            return await pvp(update, context)
+
+        elif data == "hit_mp":
+            try:
+                return await hit_mp(update, context)
+            except Exception as e:
+                print("❌ HIT_MP ERROR:", e)
+                return await safe_edit(q.message, "⚠️ Errore HIT MP", reply_markup=menu())
+
+        elif data == "stand_mp":
+            try:
+                return await stand_mp(update, context)
+            except Exception as e:
+                print("❌ STAND_MP ERROR:", e)
+                return await safe_edit(q.message, "⚠️ Errore STAND MP", reply_markup=menu())
+
+        # =========================
+        # 🎁 EXTRA
+        # =========================
+        elif data == "bonus":
+            return await bonus(update, context)
+
+        elif data == "profilo":
+            return await profilo(update, context)
+
+        elif data == "classifica":
+            return await classifica(update, context)
+
+        elif data == "shop":
+            return await shop(update, context)
+
+        elif data == "noop":
+            return
+
+        # =========================
+        # ❌ NON GESTITO
+        # =========================
+        else:
+            print("❌ CALLBACK NON GESTITA:", data)
+            return await q.message.reply_text(f"🚧 Callback non gestita: {data}")
+
+    except Exception as e:
+        print("❌ CB ERROR:", e)
+        return await q.message.reply_text("⚠️ Errore interno bot")
