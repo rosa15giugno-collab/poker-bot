@@ -544,35 +544,72 @@ async def finish_table(bot, table_id):
     await bot.send_message(t["chat_id"], txt)
 
     del tables[table_id]
-
-
+    
 # =========================
-# ROULETTE
+# ROULETTE PRO MAX
 # =========================
 
 async def roulette(update, context):
     q = update.callback_query
     await q.answer()
 
-    u = get_user(q.from_user.id)
+    uid = str(q.from_user.id)
+    u = get_user(uid)
 
+    # 🎰 TAVOLO ROULETTE
+    await context.bot.send_photo(
+        chat_id=q.message.chat_id,
+        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
+        caption="🎰 ROULETTE CASINO\n\n💰 Puntata registrata\n🎡 Preparazione estrazione..."
+    )
+
+    await asyncio.sleep(1)
+
+    # 🎡 ANIMAZIONE SPIN
+    await context.bot.send_animation(
+        chat_id=q.message.chat_id,
+        animation="FILE_ID_SPIN",
+        caption="🎡 LA ROULETTE STA GIRANDO..."
+    )
+
+    await asyncio.sleep(4)
+
+    # 🎯 ESTRAZIONE
     n = random.randint(0, 36)
 
     if n == 0:
         win = 1500
+        esito = "🟢 JACKPOT ZERO!"
     elif n % 2 == 0:
         win = 300
+        esito = "🔴 NUMERO PARI"
     else:
         win = 0
+        esito = "⚫ NUMERO DISPARI"
 
     u["chips"] += win
     u["xp"] += win // 30
-
     save_user(u)
+
+    # 🎯 RISULTATO FINALE
+    risultato = (
+        "╔══════════════╗\n"
+        "🎰 RISULTATO 🎰\n"
+        "╚══════════════╝\n\n"
+        f"🎯 NUMERO USCITO\n\n"
+        f"⭐ ⭐ {n} ⭐ ⭐\n\n"
+        f"{esito}\n\n"
+        f"💰 VINCITA: +{win} CHIPS"
+    )
+
+    await context.bot.send_message(
+        chat_id=q.message.chat_id,
+        text=risultato
+    )
 
     await safe_edit(
         q.message,
-        f"🎲 Numero: {n}\n💰 +{win}",
+        f"🎲 Ultimo numero: {n}",
         reply_markup=menu()
     )
 # =========================
