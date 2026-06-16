@@ -900,19 +900,23 @@ async def cb(update, context):
 # =========================
 async def bonus(update, context):
     q = update.callback_query
+    await q.answer()
+
     u = get_user(q.from_user.id)
+
+    # 🔥 controllo bonus già preso
+    if u.get("daily_bonus_taken"):
+        await q.message.reply_text("❌ Hai già ricevuto il tuo bonus giornaliero.")
+        return
 
     bonus_chips = 500
     u["chips"] += bonus_chips
+    u["daily_bonus_taken"] = True
     save_user(u)
 
-    await safe_edit(
-        q.message,
-        f"🎁 BONUS GIORNALIERO\n\n"
-        f"💰 Hai ricevuto +{bonus_chips} chips!",
-        reply_markup=menu()
+    await q.message.reply_text(
+        f"🎁 BONUS GIORNALIERO\n\n💰 Hai ricevuto +{bonus_chips} chips!"
     )
-
 
 # =========================
 # 👤 PROFILO
