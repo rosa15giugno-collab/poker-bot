@@ -17,55 +17,38 @@ from telegram.ext import (
     filters
 )
 
-logging.basicConfig(level=logging.INFO)
-
-
-#=======================
-# 🛡️ SAFE EDIT MODULE
-#=======================
 from telegram.error import BadRequest
-import logging
+
+logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
-
-async def safe_edit(message, text, reply_markup=None, parse_mode=None):
-    """
-    Safe edit per evitare:
-    ❌ Message is not modified
-    ❌ crash callback query
-    """
-
+# =========================
+# SAFE EDIT (FIXATO SOLO QUI)  *****
+# =========================
+async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        await safe_edit(
+        return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
-        return True
-
     except BadRequest as e:
-        error = str(e)
-
-        # messaggio identico → ignoriamo
-        if "Message is not modified" in error:
+        if "Message is not modified" in str(e):
             return False
 
-        # fallback: micro-variazione invisibile
         try:
-            await safe_edit(
+            return await msg.edit_text(
                 text=text + "\u200b",
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
-            return True
-
         except Exception as e2:
             logger.error(f"safe_edit failed: {e2}")
             return False
-
+            
 # =========================
-# DATABASE (OBBLIGATORIO PRIMO)
+# DATABASE (OBBLIGATORIO PRIMO)   ****
 # =========================
 
 conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
@@ -87,6 +70,16 @@ conn.commit()
 
 # LOCK (FIXATO)
 lock = threading.Lock()
+
+
+#=========================
+#  TOKEN CONFIG  ******
+#=========================
+TOKEN = os.getenv("CASINO_TOKEN")
+
+if not TOKEN:
+    raise ValueError("CASINO_TOKEN mancante")
+
 
 #=======================
 # SAVE USER
@@ -114,24 +107,33 @@ active_matches = {}
 tables = {}
 user_tables = {}
 
-#=========================
-#  TOKEN CONFIG
-#=========================
-TOKEN = os.getenv("CASINO_TOKEN")
 
-if not TOKEN:
-    raise ValueError("CASINO_TOKEN mancante")
 
 # =========================
 # SAFE EDIT
 # =========================
-async def safe_edit(msg, text, reply_markup=None):
+async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        return await safe_edit(msg,text, reply_markup=reply_markup)
-    except:
-        return await msg.edit_caption(text, reply_markup=reply_markup)
+        return await msg.edit_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            return False
+
+        try:
+            return await msg.edit_text(
+                text=text + "\u200b",
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+        except Exception as e2:
+            logger.error(f"safe_edit failed: {e2}")
+            return False
 # =========================
-# USER SYSTEM
+# USER SYSTEM ******
 # =========================
 def get_user(user_id, name="Player"):
     uid = str(user_id)
@@ -170,7 +172,7 @@ def get_user(user_id, name="Player"):
         }
 
 # =========================
-# MENU
+# MENU               ******
 # =========================
 
 def menu():
@@ -194,7 +196,7 @@ def menu():
     ])
 
 # =========================
-# START
+# START               *************
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -219,101 +221,71 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=menu()
     )
-# =========================
-# SLOT
-# =========================
 
-SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣", "🍀", "⭐"]
-
-PAYOUT = {
-    "jackpot": 15000,
-    "triple": 5000,
-    "double": 1200
-}
-
-VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
-
-COOLDOWN = {}
-
-# =========================
-# 🎰 SLOT ULTRA CASINO
-# =========================
-SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣", "🍀", "⭐"]
-
-PAYOUT = {
-    "jackpot": 15000,
-    "triple": 5000,
-    "double": 1200
-}
-
-VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
-
-COOLDOWN = {}
 
 async def slot(update, context):
     q = update.callback_query
-    await q.answer()
+
+    try:
+        await q.answer()
+    except:
+        pass
 
     uid = q.from_user.id
     now = time.time()
 
-    # 🛡️ anti spam serio
+    # 🛡️ anti spam
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2.5:
         return
-
     COOLDOWN[uid] = now
 
     u = get_user(uid)
 
-    # 🎰 messaggio iniziale
     msg = await q.message.reply_text(
         "🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
-    # =========================
-    # 🎞️ SPIN CINEMATICA
-    # =========================
-
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎡 fase 1
-    for _ in range(2):
-        reels[0] = random.choice(SYMBOLS)
-        await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
-        await asyncio.sleep(0.7)
+    # =========================
+    # 🎡 ANIMAZIONE SICURA
+    # =========================
+    try:
 
-    await asyncio.sleep(0.4)
+        for _ in range(2):
+            reels[0] = random.choice(SYMBOLS)
+            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
+            await asyncio.sleep(0.7)
 
-    # 🎡 fase 2
-    for _ in range(2):
-        reels[1] = random.choice(SYMBOLS)
-        await safe_edit(msf, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
-        await asyncio.sleep(0.75)
+        await asyncio.sleep(0.4)
 
-    await asyncio.sleep(0.5)
+        for _ in range(2):
+            reels[1] = random.choice(SYMBOLS)
+            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
+            await asyncio.sleep(0.75)
 
-    # 🎡 fase 3 (suspense finale)
-    for _ in range(3):
-        reels[2] = random.choice(SYMBOLS)
-        await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
-        await asyncio.sleep(0.9)
+        await asyncio.sleep(0.5)
+
+        for _ in range(3):
+            reels[2] = random.choice(SYMBOLS)
+            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
+            await asyncio.sleep(0.9)
+
+    except Exception as e:
+        print("SLOT ANIMATION ERROR:", e)
 
     # =========================
-    # 🎯 RISULTATO CASINO COERENTE
+    # 🎯 RISULTATO
     # =========================
-
     vip = random.choice(VIP_MULT)
-
     jackpot_roll = random.randint(1, 200)
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
-
     else:
         r = reels
 
-        # 🎭 near win (leggero e realistico)
         if random.randint(1, 100) <= 15:
             r[1] = r[0]
 
@@ -326,17 +298,10 @@ async def slot(update, context):
 
     win = int(win * vip * u.get("multiplier", 1.0))
 
-    # =========================
-    # 💰 UPDATE PLAYER
-    # =========================
-
+    # 💰 update
     u["chips"] = u.get("chips", 0) + win
     u["xp"] = u.get("xp", 0) + max(1, win // 20)
     save_user(u)
-
-    # =========================
-    # 💥 IMPACT RESULT (UI FINALE)
-    # =========================
 
     if win >= PAYOUT["jackpot"]:
         status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
@@ -359,7 +324,6 @@ async def slot(update, context):
     )
 
     await safe_edit(msg, text, reply_markup=menu())
-    
 # =========================
 # CREATE TABLE
 # =========================
