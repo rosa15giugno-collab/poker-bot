@@ -261,8 +261,9 @@ async def slot(update, context):
 
     u = get_user(uid)
 
-    msg = await q.message.reply_text(
-        "🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+    msg = await q.message.reply_photo(
+        photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA"
+        caprion="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     reels = ["🎰", "🎰", "🎰"]
@@ -274,21 +275,21 @@ async def slot(update, context):
 
         for _ in range(2):
             reels[0] = random.choice(SYMBOLS)
-            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
+            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
             await asyncio.sleep(0.7)
 
         await asyncio.sleep(0.4)
 
         for _ in range(2):
             reels[1] = random.choice(SYMBOLS)
-            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
+            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
             await asyncio.sleep(0.75)
 
         await asyncio.sleep(0.5)
 
         for _ in range(3):
             reels[2] = random.choice(SYMBOLS)
-            await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
+            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
             await asyncio.sleep(0.9)
 
     except Exception as e:
