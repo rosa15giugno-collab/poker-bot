@@ -905,18 +905,27 @@ async def bonus(update, context):
     u = get_user(q.from_user.id)
 
     # 🔥 controllo bonus già preso
-    if u.get("daily_bonus_taken"):
-        await q.message.reply_text("❌ Hai già ricevuto il tuo bonus giornaliero.")
-        return
+    import time
 
-    bonus_chips = 500
-    u["chips"] += bonus_chips
-    u["daily_bonus_taken"] = True
-    save_user(u)
+    async def bonus(update, context):
+        q = update.callback_query
+        await q.answer()
 
-    await q.message.reply_text(
-        f"🎁 BONUS GIORNALIERO\n\n💰 Hai ricevuto +{bonus_chips} chips!"
-    )
+        uid = q.from_user.id
+        u = get_user(uid)
+
+        now = time.time()
+
+        # 24h cooldown
+        if u["last_bonus"] and now - u["last_bonus"] < 86400:
+            return await q.message.reply_text("❌ Hai già ricevuto il bonus oggi.")
+
+        u["chips"] += 500
+        u["last_bonus"] = now
+
+        save_user(u)
+
+        await q.message.reply_text("🎁 BONUS GIORNALIERO\n\n💰 +500 chips!")
 
 # =========================
 # 👤 PROFILO
