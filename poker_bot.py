@@ -17,7 +17,7 @@ from telegram.ext import (
     filters
 )
 
-COOLDOWN = {}
+
 from telegram.error import BadRequest
 
 logging.basicConfig(level=logging.INFO)
@@ -107,7 +107,7 @@ pvp_queue = deque()
 active_matches = {}
 tables = {}
 user_tables = {}
-
+COOLDOWN = {}
 
 
 # =========================
