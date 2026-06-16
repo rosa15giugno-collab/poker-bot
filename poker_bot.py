@@ -895,6 +895,10 @@ async def cb(update, context):
         except:
             pass
 
+
+
+BONUS_LOCK = {}
+
 # =========================
 # 🎁 BONUS
 # =========================
@@ -902,30 +906,28 @@ async def bonus(update, context):
     q = update.callback_query
     await q.answer()
 
-    u = get_user(q.from_user.id)
+    uid = q.from_user.id
+    now = time.time()
 
-    # 🔥 controllo bonus già preso
-    import time
+    # 🔥 anti doppio click
+    last = BONUS_LOCK.get(uid, 0)
+    if now - last < 2:
+        return
 
-    async def bonus(update, context):
-        q = update.callback_query
-        await q.answer()
+    BONUS_LOCK[uid] = now
 
-        uid = q.from_user.id
-        u = get_user(uid)
+    u = get_user(uid)
 
-        now = time.time()
+    # 24h cooldown
+    if u["last_bonus"] and now - u["last_bonus"] < 86400:
+        return await q.message.reply_text("❌ Hai già ricevuto il bonus oggi.")
 
-        # 24h cooldown
-        if u["last_bonus"] and now - u["last_bonus"] < 86400:
-            return await q.message.reply_text("❌ Hai già ricevuto il bonus oggi.")
+    u["chips"] += 500
+    u["last_bonus"] = now
 
-        u["chips"] += 500
-        u["last_bonus"] = now
+    save_user(u)
 
-        save_user(u)
-
-        await q.message.reply_text("🎁 BONUS GIORNALIERO\n\n💰 +500 chips!")
+    await q.message.reply_text("🎁 BONUS GIORNALIERO\n\n💰 +500 chips!")
 
 # =========================
 # 👤 PROFILO
