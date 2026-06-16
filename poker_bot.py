@@ -37,25 +37,24 @@ COOLDOWN = {}
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
+        # 📸 FOTO → caption
+        if getattr(msg, "photo", None):
+            return await msg.edit_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+
+        # 💬 TESTO → text
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
-    except BadRequest as e:
-        if "Message is not modified" in str(e):
-            return False
 
-        try:
-            return await msg.edit_text(
-                text=text + "\u200b",
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-        except Exception as e2:
-            logger.error(f"safe_edit failed: {e2}")
-            return False
-            
+    except Exception as e:
+        logger.error(f"safe_edit failed: {e}")
+        return False
 # =========================
 # DATABASE (OBBLIGATORIO PRIMO)   ****
 # =========================
