@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 from telegram.error import BadRequest
 import logging
 
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
 
 async def safe_edit(message, text, reply_markup=None, parse_mode=None):
