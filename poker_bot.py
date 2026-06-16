@@ -37,17 +37,29 @@ COOLDOWN = {}
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        # 📸 FOTO → caption
-        if getattr(msg, "photo", None):
+        # 📸 se ha caption → SEMPRE caption mode
+        if msg.content_type == "photo" or getattr(msg, "caption", None) is not None:
+            if msg.caption == text:
+                return False
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
 
-        # 💬 TESTO → text
-        return await msg.edit_text(
-            text=text,
+        # 💬 testo puro
+        if getattr(msg, "text", None):
+            if msg.text == text:
+                return False
+            return await msg.edit_text(
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+
+        # fallback sicuro
+        return await msg.edit_caption(
+            caption=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
