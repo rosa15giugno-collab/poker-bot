@@ -24,6 +24,14 @@ logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
+games = {}
+pvp_queue = deque()
+active_matches = {}
+tables = {}
+user_tables = {}
+COOLDOWN = {}
+
+
 # =========================
 # SAFE EDIT (FIXATO SOLO QUI)  *****
 # =========================
@@ -102,12 +110,7 @@ def save_user(u):
 # STATE
 # =========================
 
-games = {}
-pvp_queue = deque()
-active_matches = {}
-tables = {}
-user_tables = {}
-COOLDOWN = {}
+
 
 
 # =========================
@@ -222,8 +225,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=menu()
     )
+# =========================
+# 🎰 SLOT CONFIG
+# =========================
+SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣", "🍀", "⭐"]
 
+PAYOUT = {
+    "jackpot": 15000,
+    "triple": 5000,
+    "double": 1200
+}
 
+VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
+
+COOLDOWN = {}
+
+# =========================
+# 🎰 SLOT ULTRA CASINO
+# =========================
 async def slot(update, context):
     q = update.callback_query
 
