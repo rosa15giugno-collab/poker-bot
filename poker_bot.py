@@ -384,13 +384,13 @@ async def update_table(bot, t):
             parse_mode="HTML"
         )
     except Exception as e:
-    import traceback
-    traceback.print_exc()
+        import traceback
+        traceback.print_exc()
 
-    try:
-        await q.message.reply_text(f"⚠️ Errore:\n{e}")
-    except:
-        pass
+        try:
+            await q.message.reply_text(f"⚠️ Errore:\n{e}")
+        except:
+            pass
 
 
 # =========================
