@@ -1335,6 +1335,16 @@ async def shop(update, context):
         reply_markup=menu()
     )
 
+
+async def text_handler(update, context):
+    message = update.message.text.lower()
+
+    # esempio base (puoi espanderlo)
+    if "ciao" in message:
+        return await update.message.reply_text("👋 Ciao!")
+
+    return
+
 # =========================
 # MAIN
 # =========================
