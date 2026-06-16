@@ -1260,10 +1260,10 @@ async def cb_router(update, context):
 # ❌ FALLBACK
 # =====================
 print("❌ CALLBACK NON GESTITA:", data)
-try:
-    await q.message.reply_text(f"🚧 Callback non gestita:\n\n{data}")
-except:
-    pass
+    try:
+        await q.message.reply_text(f"🚧 Callback non gestita:\n\n{data}")
+    except:
+        pass
 
 BONUS_LOCK = {}
 
