@@ -263,7 +263,7 @@ async def slot(update, context):
 
     msg = await q.message.reply_photo(
         photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA"
-        caprion="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+        caption="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     reels = ["🎰", "🎰", "🎰"]
