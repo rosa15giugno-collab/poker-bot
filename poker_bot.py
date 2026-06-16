@@ -17,7 +17,7 @@ from telegram.ext import (
     filters
 )
 
-COOLDEWN = {}
+COOLDOWN = {}
 from telegram.error import BadRequest
 
 logging.basicConfig(level=logging.INFO)
