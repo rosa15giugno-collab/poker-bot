@@ -844,9 +844,6 @@ async def roulette_spin(update, context, bet):
     )
 
 
-# =========================
-# 🎯 CALLBACK ROUTER
-# =========================
 async def cb(update, context):
     q = update.callback_query
     await q.answer()
@@ -857,9 +854,15 @@ async def cb(update, context):
     try:
 
         # =========================
+        # 🎰 SLOT
+        # =========================
+        if data == "slot":
+            return await slot(update, context)
+
+        # =========================
         # 🎰 ROULETTE MENU
         # =========================
-        if data == "roulette":
+        elif data == "roulette":
             return await roulette(update, context)
 
         # =========================
@@ -910,7 +913,7 @@ async def cb(update, context):
             return await roulette_spin(update, context, "zero")
 
         # =========================
-        # 🃏 BLACKJACK SAFE
+        # 🃏 BLACKJACK
         # =========================
         elif data == "blackjack":
             try:
@@ -942,7 +945,7 @@ async def cb(update, context):
             try:
                 return await stand_mp(update, context)
             except Exception as e:
-                print("❌ STAND_MP ERROR:", e)
+                print("❌ STAND MP ERROR:", e)
                 return await safe_edit(q.message, "⚠️ Errore STAND MP", reply_markup=menu())
 
         # =========================
@@ -968,16 +971,14 @@ async def cb(update, context):
         # =========================
         else:
             print("❌ CALLBACK NON GESTITA:", data)
-
             return await q.message.reply_text(
                 f"🚧 Callback non gestita:\n\n{data}"
             )
 
     except Exception as e:
         print("❌ CB ERROR:", e)
-
         try:
-            return await q.message.reply_text("⚠️ Errore interno roulette")
+            return await q.message.reply_text("⚠️ Errore interno casino")
         except:
             pass
 
