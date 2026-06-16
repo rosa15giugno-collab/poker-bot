@@ -910,14 +910,23 @@ async def roulette_spin(update, context, bet):
         text="🎲 Vuoi giocare ancora?",
         reply_markup=menu()
     )
-
+# =======================
+# 🎛️ CB HANDLER STABILE
+# =======================
 
 async def cb(update, context):
     q = update.callback_query
-    await q.answer()
-
     data = q.data
+
     print("🔥 CB:", q.from_user.id, data)
+
+    # =========================
+    # 🛡️ ANSWER SICURO (NON BLOCCA MAI)
+    # =========================
+    try:
+        await q.answer()
+    except Exception as e:
+        print("q.answer error:", e)
 
     try:
 
@@ -925,13 +934,15 @@ async def cb(update, context):
         # 🎰 SLOT
         # =========================
         if data == "slot":
-            return await slot(update, context)
+            await slot(update, context)
+            return
 
         # =========================
         # 🎰 ROULETTE MENU
         # =========================
         elif data == "roulette":
-            return await roulette(update, context)
+            await roulette(update, context)
+            return
 
         # =========================
         # 🎲 INPUT NUMERO
@@ -940,9 +951,10 @@ async def cb(update, context):
             context.user_data["waiting_number"] = True
             context.user_data["waiting_stake"] = False
 
-            return await q.message.reply_text(
+            await q.message.reply_text(
                 "🎲 PUNTATA NUMERO\n\nScrivi un numero da 0 a 36 👇"
             )
+            return
 
         # =========================
         # 🎡 SPIN NUMERO
@@ -950,86 +962,104 @@ async def cb(update, context):
         elif data == "bet_number_value":
 
             if not context.user_data.get("bet_number"):
-                return await q.message.reply_text("❌ Devi prima scegliere il numero")
+                await q.message.reply_text("❌ Devi prima scegliere il numero")
+                return
 
             if not context.user_data.get("stake"):
-                return await q.message.reply_text("❌ Devi prima inserire la puntata")
+                await q.message.reply_text("❌ Devi prima inserire la puntata")
+                return
 
-            return await roulette_spin(update, context, "number")
+            await roulette_spin(update, context, "number")
+            return
 
         # =========================
         # 🎯 BET CLASSICHE
         # =========================
         elif data == "bet_red":
             context.user_data["stake"] = context.user_data.get("stake", 100)
-            return await roulette_spin(update, context, "red")
+            await roulette_spin(update, context, "red")
+            return
 
         elif data == "bet_black":
             context.user_data["stake"] = context.user_data.get("stake", 100)
-            return await roulette_spin(update, context, "black")
+            await roulette_spin(update, context, "black")
+            return
 
         elif data == "bet_even":
             context.user_data["stake"] = context.user_data.get("stake", 100)
-            return await roulette_spin(update, context, "even")
+            await roulette_spin(update, context, "even")
+            return
 
         elif data == "bet_odd":
             context.user_data["stake"] = context.user_data.get("stake", 100)
-            return await roulette_spin(update, context, "odd")
+            await roulette_spin(update, context, "odd")
+            return
 
         elif data == "bet_zero":
             context.user_data["stake"] = context.user_data.get("stake", 100)
-            return await roulette_spin(update, context, "zero")
+            await roulette_spin(update, context, "zero")
+            return
 
         # =========================
         # 🃏 BLACKJACK
         # =========================
         elif data == "blackjack":
             try:
-                return await blackjack(update, context)
+                await blackjack(update, context)
             except Exception as e:
                 print("BLACKJACK ERROR:", e)
-                return await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
+                await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
+            return
 
         elif data == "hit":
-            return await hit(update, context)
+            await hit(update, context)
+            return
 
         elif data == "stand":
-            return await stand(update, context)
+            await stand(update, context)
+            return
 
         # =========================
         # 🎮 PVP
         # =========================
         elif data == "pvp":
-            return await pvp(update, context)
+            await pvp(update, context)
+            return
 
         elif data == "hit_mp":
             try:
-                return await hit_mp(update, context)
+                await hit_mp(update, context)
             except Exception as e:
                 print("❌ HIT_MP ERROR:", e)
-                return await safe_edit(q.message, "⚠️ Errore HIT MP", reply_markup=menu())
+                await safe_edit(q.message, "⚠️ Errore HIT MP", reply_markup=menu())
+            return
 
         elif data == "stand_mp":
             try:
-                return await stand_mp(update, context)
+                await stand_mp(update, context)
             except Exception as e:
-                print("❌ STAND MP ERROR:", e)
-                return await safe_edit(q.message, "⚠️ Errore STAND MP", reply_markup=menu())
+                print("❌ STAND_MP ERROR:", e)
+                await safe_edit(q.message, "⚠️ Errore STAND MP", reply_markup=menu())
+            return
 
         # =========================
         # 🎁 EXTRA
         # =========================
         elif data == "bonus":
-            return await bonus(update, context)
+            await bonus(update, context)
+            return
 
         elif data == "profilo":
-            return await profilo(update, context)
+            await profilo(update, context)
+            return
 
         elif data == "classifica":
-            return await classifica(update, context)
+            await classifica(update, context)
+            return
 
         elif data == "shop":
-            return await shop(update, context)
+            await shop(update, context)
+            return
 
         elif data == "noop":
             return
@@ -1039,17 +1069,16 @@ async def cb(update, context):
         # =========================
         else:
             print("❌ CALLBACK NON GESTITA:", data)
-            return await q.message.reply_text(
-                f"🚧 Callback non gestita:\n\n{data}"
-            )
+            await q.message.reply_text(f"🚧 Callback non gestita:\n\n{data}")
+            return
 
     except Exception as e:
         print("❌ CB ERROR:", e)
+
         try:
-            return await q.message.reply_text("⚠️ Errore interno casino")
+            await q.message.reply_text("⚠️ Errore interno casino")
         except:
             pass
-
 
 
 BONUS_LOCK = {}
