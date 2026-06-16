@@ -1393,7 +1393,7 @@ async def cb_router(update, context):
     if data == "classifica":
         return await classifica(update, context)
 
-    # 🎲 ROULETTE BETS (FIX CHE TI MANCA)
+    # 🎲 ROULETTE BETS
     if data == "bet_red":
         return await bet_red(update, context)
 
@@ -1403,24 +1403,23 @@ async def cb_router(update, context):
     if data.startswith("bet_"):
         return await bet_number(update, context)
 
+    print("❌ CALLBACK NON GESTITA:", data)
 
+
+# =========================
+# MAIN
+# =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # =========================
     # COMMANDS
-    # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("fileid", fileid))
 
-    # =========================
-    # CALLBACK (UNICO ROUTER)
-    # =========================
+    # CALLBACK ROUTER
     app.add_handler(CallbackQueryHandler(cb_router))
 
-    # =========================
     # TEXT HANDLER
-    # =========================
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     print("🟢 CASINO DEFINITIVO ONLINE")
@@ -1428,5 +1427,8 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 
-    if __name__ == "__main__":
-        main()
+# =========================
+# ENTRY POINT (CORRETTO)
+# =========================
+if __name__ == "__main__":
+    main()
