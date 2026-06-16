@@ -193,6 +193,18 @@ COOLDOWN = {}
 # =========================
 # 🎰 SLOT ULTRA CASINO
 # =========================
+SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣", "🍀", "⭐"]
+
+PAYOUT = {
+    "jackpot": 15000,
+    "triple": 5000,
+    "double": 1200
+}
+
+VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
+
+COOLDOWN = {}
+
 async def slot(update, context):
     q = update.callback_query
     await q.answer()
@@ -200,52 +212,64 @@ async def slot(update, context):
     uid = q.from_user.id
     now = time.time()
 
-    # 🛡️ anti spam
-    if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
+    # 🛡️ anti spam serio
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 2.5:
         return
 
     COOLDOWN[uid] = now
 
     u = get_user(uid)
 
+    # 🎰 messaggio iniziale
     msg = await q.message.reply_text(
-        "🎰 CASINO ULTRA SLOT\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+        "🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     # =========================
-    # 🎞️ SPIN REELS (REALISTICO)
+    # 🎞️ SPIN CINEMATICA
     # =========================
-    r1 = r2 = r3 = "🎰"
 
-    for i in range(7):
-        r1 = random.choice(SYMBOLS)
-        r2 = random.choice(SYMBOLS)
-        r3 = random.choice(SYMBOLS)
+    reels = ["🎰", "🎰", "🎰"]
 
-        await msg.edit_text(
-            "🎰 SPINNING ULTRA CASINO...\n\n"
-            f"┃ {r1} | {r2} | {r3} ┃"
-        )
+    # 🎡 fase 1
+    for _ in range(2):
+        reels[0] = random.choice(SYMBOLS)
+        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
+        await asyncio.sleep(0.7)
 
-        await asyncio.sleep(0.22 + i * 0.07)
+    await asyncio.sleep(0.4)
+
+    # 🎡 fase 2
+    for _ in range(2):
+        reels[1] = random.choice(SYMBOLS)
+        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
+        await asyncio.sleep(0.75)
+
+    await asyncio.sleep(0.5)
+
+    # 🎡 fase 3 (suspense finale)
+    for _ in range(3):
+        reels[2] = random.choice(SYMBOLS)
+        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
+        await asyncio.sleep(0.9)
 
     # =========================
-    # 🎯 LOGICA CASINO ULTRA
+    # 🎯 RISULTATO CASINO COERENTE
     # =========================
 
     vip = random.choice(VIP_MULT)
 
-    jackpot_roll = random.randint(1, 180)
+    jackpot_roll = random.randint(1, 200)
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
 
     else:
-        r = [random.choice(SYMBOLS) for _ in range(3)]
+        r = reels
 
-        # 🎭 near miss controllato (casino psychology)
-        if random.randint(1, 100) <= 18:
+        # 🎭 near win (leggero e realistico)
+        if random.randint(1, 100) <= 15:
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
@@ -260,39 +284,37 @@ async def slot(update, context):
     # =========================
     # 💰 UPDATE PLAYER
     # =========================
+
     u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 18)
+    u["xp"] = u.get("xp", 0) + max(1, win // 20)
     save_user(u)
 
     # =========================
-    # 💀 GAMBLE FEATURE (RISCHIO)
+    # 💥 IMPACT RESULT (UI FINALE)
     # =========================
-    gamble_text = ""
-    if win >= 1200:
-        gamble_text = "\n💀 Usa /double per rischiare il doppio!"
 
-    # =========================
-    # 🎨 UI FINALE
-    # =========================
     if win >= PAYOUT["jackpot"]:
-        status = "🔥 JACKPOT ULTRA LEGEND 🔥"
+        status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
+        vibe = "💥💥💥"
     elif win > 0:
         status = "🟢 WIN!"
+        vibe = "✨"
     else:
         status = "🔴 LOSS"
+        vibe = "💀"
 
     text = (
-        "💎 CASINO ULTRA EDITION 💎\n\n"
+        f"{vibe} CASINO ULTRA PRO {vibe}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"{status}\n"
         f"💰 Vincita: +{win} chips\n"
         f"⭐ VIP x{vip}\n"
         f"💎 Balance: {u['chips']}\n"
-        f"⚡ XP: +{max(1, win // 18)}"
-        f"{gamble_text}"
+        f"⚡ XP: +{max(1, win // 20)}"
     )
 
     await msg.edit_text(text, reply_markup=menu())
+    
 # =========================
 # CREATE TABLE
 # =========================
