@@ -19,6 +19,51 @@ from telegram.ext import (
 
 logging.basicConfig(level=logging.INFO)
 
+
+#=======================
+# 🛡️ SAFE EDIT MODULE
+#=======================
+from telegram.error import BadRequest
+import logging
+
+logger = logging.getLogger(_name_)
+
+
+async def safe_edit(message, text, reply_markup=None, parse_mode=None):
+    """
+    Safe edit per evitare:
+    ❌ Message is not modified
+    ❌ crash callback query
+    """
+
+    try:
+        await safe_edit(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+        return True
+
+    except BadRequest as e:
+        error = str(e)
+
+        # messaggio identico → ignoriamo
+        if "Message is not modified" in error:
+            return False
+
+        # fallback: micro-variazione invisibile
+        try:
+            await safe_edit(
+                text=text + "\u200b",
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+            return True
+
+        except Exception as e2:
+            logger.error(f"safe_edit failed: {e2}")
+            return False
+
 # =========================
 # DATABASE (OBBLIGATORIO PRIMO)
 # =========================
@@ -82,7 +127,7 @@ if not TOKEN:
 # =========================
 async def safe_edit(msg, text, reply_markup=None):
     try:
-        return await msg.edit_text(text, reply_markup=reply_markup)
+        return await safe_edit(msg,text, reply_markup=reply_markup)
     except:
         return await msg.edit_caption(text, reply_markup=reply_markup)
 # =========================
@@ -234,7 +279,7 @@ async def slot(update, context):
     # 🎡 fase 1
     for _ in range(2):
         reels[0] = random.choice(SYMBOLS)
-        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
+        await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
         await asyncio.sleep(0.7)
 
     await asyncio.sleep(0.4)
@@ -242,7 +287,7 @@ async def slot(update, context):
     # 🎡 fase 2
     for _ in range(2):
         reels[1] = random.choice(SYMBOLS)
-        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
+        await safe_edit(msf, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
         await asyncio.sleep(0.75)
 
     await asyncio.sleep(0.5)
@@ -250,7 +295,7 @@ async def slot(update, context):
     # 🎡 fase 3 (suspense finale)
     for _ in range(3):
         reels[2] = random.choice(SYMBOLS)
-        await msg.edit_text(f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
+        await safe_edit(msg, f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
         await asyncio.sleep(0.9)
 
     # =========================
@@ -313,7 +358,7 @@ async def slot(update, context):
         f"⚡ XP: +{max(1, win // 20)}"
     )
 
-    await msg.edit_text(text, reply_markup=menu())
+    await safe_edit(msg, text, reply_markup=menu())
     
 # =========================
 # CREATE TABLE
@@ -430,7 +475,8 @@ async def pvp(update, context):
 
         t["order"] = [p["id"] for p in t["players"]]
 
-        await q.message.edit_text(
+        await safe_edit(
+            q.message,
             render_table(t),
             reply_markup=table_buttons(t)
         )
@@ -496,7 +542,7 @@ async def update_table(bot, t):
         traceback.print_exc()
 
         try:
-            await q.message.reply_text(f"⚠️ Errore:\n{e}")
+            await safe_edit(q.message, f"⚠️ Errore:\n{e}")
         except:
             pass
 
