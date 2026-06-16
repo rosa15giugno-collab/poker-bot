@@ -341,7 +341,10 @@ async def slot(update, context):
         f"⚡ XP: +{max(1, win // 20)}"
     )
 
-    await safe_edit(msg, text, reply_markup=menu())
+    await msg.edit_caption(
+    caption=text,
+    reply_markup=menu()
+    )
 # =========================
 # CREATE TABLE
 # =========================
