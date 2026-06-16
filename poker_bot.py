@@ -951,7 +951,214 @@ async def roulette_spin(update, context, bet):
     )
 
 # =========================
-# 🎛️ CALLBACK ROUTER (UNICO + STABILE)
+# 🎰 ROULETTE PRO DEFINITIVA FIXED
+# =========================
+
+import asyncio
+import random
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+# =========================
+# 🎰 COLORI ROSSI
+# =========================
+red_numbers = {
+    1,3,5,7,9,12,14,16,18,19,
+    21,23,25,27,30,32,34,36
+}
+
+# =========================
+# 🎰 MENU ROULETTE
+# =========================
+async def roulette(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🔴 ROSSO", callback_data="bet_red"),
+            InlineKeyboardButton("⚫ NERO", callback_data="bet_black")
+        ],
+        [
+            InlineKeyboardButton("🔢 PARI", callback_data="bet_even"),
+            InlineKeyboardButton("🔢 DISPARI", callback_data="bet_odd")
+        ],
+        [
+            InlineKeyboardButton("🎯 ZERO", callback_data="bet_zero")
+        ],
+        [
+            InlineKeyboardButton("🎲 NUMERO (0-36)", callback_data="bet_number")
+        ]
+    ]
+
+    await q.message.reply_photo(
+        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
+        caption="🎰 <b>ROULETTE PRO CASINO</b>\n\nScegli la puntata:",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================
+# 🎯 BET SEMPLICI (100 FIX)
+# =========================
+async def bet_red(update, context):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["stake"] = 100
+    return await roulette_spin(update, context, "red")
+
+
+async def bet_black(update, context):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["stake"] = 100
+    return await roulette_spin(update, context, "black")
+
+
+async def bet_even(update, context):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["stake"] = 100
+    return await roulette_spin(update, context, "even")
+
+
+async def bet_odd(update, context):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["stake"] = 100
+    return await roulette_spin(update, context, "odd")
+
+
+async def bet_zero(update, context):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["stake"] = 100
+    return await roulette_spin(update, context, "zero")
+
+
+# =========================
+# 🎲 SELEZIONE NUMERO (STEP 1)
+# =========================
+async def bet_number(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = []
+    row = []
+
+    for i in range(37):
+        row.append(InlineKeyboardButton(str(i), callback_data=f"num_{i}"))
+        if len(row) == 6:
+            keyboard.append(row)
+            row = []
+
+    if row:
+        keyboard.append(row)
+
+    await q.message.reply_text(
+        "🎲 Scegli un numero da 0 a 36:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================
+# 🎲 NUMERO SELEZIONATO (STEP 2)
+# =========================
+async def select_number(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    n = int(q.data.split("_")[1])
+
+    context.user_data["bet_number"] = n
+    context.user_data["stake"] = 100
+
+    keyboard = [
+        [InlineKeyboardButton("🎡 GIRA ROULETTE", callback_data="bet_number_value")]
+    ]
+
+    await q.message.reply_text(
+        f"🎯 Numero scelto: {n}\n💰 Puntata base: 100",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================
+# 🎡 SPIN ROULETTE (CORE FIXED)
+# =========================
+async def roulette_spin(update, context, bet):
+    q = update.callback_query
+    await q.answer()
+
+    u = get_user(q.from_user.id)
+    stake = context.user_data.get("stake", 100)
+
+    if u["chips"] < stake:
+        return await q.message.reply_text("❌ Chips insufficienti")
+
+    u["chips"] -= stake
+
+    # 🎡 animazione
+    await context.bot.send_animation(
+        chat_id=q.message.chat_id,
+        animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
+        caption="🎡 ROULETTE GIRANDO..."
+    )
+
+    await asyncio.sleep(3)
+
+    n = random.randint(0, 36)
+
+    win = 0
+    victory = False
+
+    if bet == "red":
+        victory = n in red_numbers
+        win = stake * 2 if victory else 0
+
+    elif bet == "black":
+        victory = n != 0 and n not in red_numbers
+        win = stake * 2 if victory else 0
+
+    elif bet == "even":
+        victory = n != 0 and n % 2 == 0
+        win = stake * 2 if victory else 0
+
+    elif bet == "odd":
+        victory = n % 2 == 1
+        win = stake * 2 if victory else 0
+
+    elif bet == "zero":
+        victory = n == 0
+        win = stake * 35 if victory else 0
+
+    elif bet == "number":
+        chosen = context.user_data.get("bet_number")
+        victory = (n == chosen)
+        win = stake * 35 if victory else 0
+
+    u["chips"] += win
+    u["xp"] = u.get("xp", 0) + max(1, win // 20)
+    save_user(u)
+
+    color = "🟢 ZERO" if n == 0 else ("🔴 ROSSO" if n in red_numbers else "⚫ NERO")
+
+    await context.bot.send_message(
+        chat_id=q.message.chat_id,
+        text=(
+            "╔════════════╗\n"
+            f"{'🎉 VITTORIA' if victory else '💀 PERSO'}\n"
+            "╚════════════╝\n\n"
+            f"🎯 Numero: {n} - {color}\n"
+            f"💰 +{win}\n"
+            f"🏦 SALDO: {u['chips']}"
+        ),
+        reply_markup=menu()
+    )
+
+
+# =========================
+# 🎛️ CALLBACK ROUTER (UNICO E SENZA ERRORI)
 # =========================
 async def cb_router(update, context):
     q = update.callback_query
@@ -962,11 +1169,9 @@ async def cb_router(update, context):
     except:
         pass
 
-    # MENU
     if data == "roulette":
         return await roulette(update, context)
 
-    # BET BASE
     if data == "bet_red":
         return await bet_red(update, context)
 
@@ -982,7 +1187,6 @@ async def cb_router(update, context):
     if data == "bet_zero":
         return await bet_zero(update, context)
 
-    # NUMERO FLOW
     if data == "bet_number":
         return await bet_number(update, context)
 
