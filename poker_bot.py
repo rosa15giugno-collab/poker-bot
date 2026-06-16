@@ -37,31 +37,15 @@ COOLDOWN = {}
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        # 📸 SEMPRE caption se è stato inviato come photo
         if msg.content_type == "photo" or hasattr(msg, "caption"):
-            if getattr(msg, "caption", None) == text:
-                return False
-
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
 
-        # 💬 SOLO se è messaggio testo vero
-        if hasattr(msg, "text"):
-            if msg.text == text:
-                return False
-
-            return await msg.edit_text(
-                text=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-
-        # fallback SICURO (non edit_text!)
-        return await msg.edit_caption(
-            caption=text,
+        return await msg.edit_text(
+            text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
