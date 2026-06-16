@@ -1196,7 +1196,6 @@ async def shop(update, context):
 # =========================
 
 async def fileid(update, context):
-
     msg = update.message.reply_to_message
 
     if not msg:
@@ -1205,28 +1204,60 @@ async def fileid(update, context):
         )
 
     if msg.photo:
-        return await update.message.reply_text(
-            msg.photo[-1].file_id
-        )
+        return await update.message.reply_text(msg.photo[-1].file_id)
 
     if msg.animation:
-        return await update.message.reply_text(
-            msg.animation.file_id
-        )
+        return await update.message.reply_text(msg.animation.file_id)
 
     if msg.video:
-        return await update.message.reply_text(
-            msg.video.file_id
-        )
+        return await update.message.reply_text(msg.video.file_id)
 
     if msg.document:
-        return await update.message.reply_text(
-            msg.document.file_id
-        )
+        return await update.message.reply_text(msg.document.file_id)
 
     await update.message.reply_text("❌ File non supportato")
 
 
+# =========================
+# CALLBACK ROUTER (ROULETTE FIX)
+# =========================
+async def cb_router(update, context):
+    q = update.callback_query
+    data = q.data
+
+    try:
+        await q.answer()
+    except:
+        pass
+
+    # 🎰 MAIN MENU
+    if data == "slot":
+        return await slot(update, context)
+
+    if data == "roulette":
+        return await roulette(update, context)
+
+    if data == "pvp":
+        return await pvp(update, context)
+
+    if data == "shop":
+        return await shop(update, context)
+
+    if data == "profilo":
+        return await profilo(update, context)
+
+    if data == "classifica":
+        return await classifica(update, context)
+
+    # 🎲 ROULETTE BETS (FIX CHE TI MANCA)
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data.startswith("bet_"):
+        return await bet_number(update, context)
 
 
 def main():
@@ -1239,16 +1270,13 @@ def main():
     app.add_handler(CommandHandler("fileid", fileid))
 
     # =========================
-    # CALLBACK ROUTING (FIX IMPORTANTE)
+    # CALLBACK (UNICO ROUTER)
     # =========================
-    app.add_handler(CallbackQueryHandler(slot, pattern="^slot$"))
-    app.add_handler(CallbackQueryHandler(roulette, pattern="^roulette$"))
-    app.add_handler(CallbackQueryHandler(pvp, pattern="^pvp$"))
-    app.add_handler(CallbackQueryHandler(shop, pattern="^shop$"))
-    app.add_handler(CallbackQueryHandler(profilo, pattern="^profilo$"))
-    app.add_handler(CallbackQueryHandler(classifica, pattern="^classifica$"))
+    app.add_handler(CallbackQueryHandler(cb_router))
 
-    # fallback (opzionale)
+    # =========================
+    # TEXT HANDLER
+    # =========================
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     print("🟢 CASINO DEFINITIVO ONLINE")
