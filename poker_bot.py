@@ -285,7 +285,7 @@ async def pvp(update, context):
     # 🖼️ IMMAGINE ENTRATA (effetto casino PvP)
     await context.bot.send_photo(
         chat_id=q.message.chat_id,
-        photo="AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA",
+        photo="AgACAgQAAxkBAAMkai8flTPIwC3PRtw-ITOGKdLzjBsAAokPaxsMTHhRw0yUgC0hQVYBAAMCAAN5AAM8BA",
         caption=(
             f"🎰 CASINO ROYALE\n"
             f"🃏 PvP Blackjack\n\n"
