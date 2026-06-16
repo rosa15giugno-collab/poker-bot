@@ -178,35 +178,121 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SLOT
 # =========================
 
+SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣", "🍀", "⭐"]
+
+PAYOUT = {
+    "jackpot": 15000,
+    "triple": 5000,
+    "double": 1200
+}
+
+VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
+
+COOLDOWN = {}
+
+# =========================
+# 🎰 SLOT ULTRA CASINO
+# =========================
 async def slot(update, context):
     q = update.callback_query
     await q.answer()
 
-    u = get_user(q.from_user.id)
+    uid = q.from_user.id
+    now = time.time()
 
-    r = [random.choice(["🍒", "🍋", "🔔", "💎", "7️⃣"]) for _ in range(3)]
+    # 🛡️ anti spam
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
+        return
 
-    win = 0
-    if r[0] == r[1] == r[2]:
-        win = 2500
-    elif r[0] == r[1] or r[1] == r[2]:
-        win = 700
+    COOLDOWN[uid] = now
 
-    win = int(win * u["multiplier"])
+    u = get_user(uid)
 
-    u["chips"] += win
-    u["xp"] += win // 30
+    msg = await q.message.reply_text(
+        "🎰 CASINO ULTRA SLOT\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+    )
 
+    # =========================
+    # 🎞️ SPIN REELS (REALISTICO)
+    # =========================
+    r1 = r2 = r3 = "🎰"
+
+    for i in range(7):
+        r1 = random.choice(SYMBOLS)
+        r2 = random.choice(SYMBOLS)
+        r3 = random.choice(SYMBOLS)
+
+        await msg.edit_text(
+            "🎰 SPINNING ULTRA CASINO...\n\n"
+            f"┃ {r1} | {r2} | {r3} ┃"
+        )
+
+        await asyncio.sleep(0.22 + i * 0.07)
+
+    # =========================
+    # 🎯 LOGICA CASINO ULTRA
+    # =========================
+
+    vip = random.choice(VIP_MULT)
+
+    jackpot_roll = random.randint(1, 180)
+
+    if jackpot_roll == 1:
+        r = ["7️⃣", "7️⃣", "7️⃣"]
+        win = PAYOUT["jackpot"]
+
+    else:
+        r = [random.choice(SYMBOLS) for _ in range(3)]
+
+        # 🎭 near miss controllato (casino psychology)
+        if random.randint(1, 100) <= 18:
+            r[1] = r[0]
+
+        if r[0] == r[1] == r[2]:
+            win = PAYOUT["triple"]
+        elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
+            win = PAYOUT["double"]
+        else:
+            win = 0
+
+    win = int(win * vip * u.get("multiplier", 1.0))
+
+    # =========================
+    # 💰 UPDATE PLAYER
+    # =========================
+    u["chips"] = u.get("chips", 0) + win
+    u["xp"] = u.get("xp", 0) + max(1, win // 18)
     save_user(u)
 
-    await safe_edit(
-        q.message,
-        f"🎰 SLOT CASINO PRO\n\n"
-        f"┃ {' | '.join(r)} ┃\n\n"
-        f"💰 Vincita: +{win}\n"
-        f"💎 Chips: {u['chips']}",
-        reply_markup=menu()
+    # =========================
+    # 💀 GAMBLE FEATURE (RISCHIO)
+    # =========================
+    gamble_text = ""
+    if win >= 1200:
+        gamble_text = "\n💀 Usa /double per rischiare il doppio!"
+
+    # =========================
+    # 🎨 UI FINALE
+    # =========================
+    if win >= PAYOUT["jackpot"]:
+        status = "🔥 JACKPOT ULTRA LEGEND 🔥"
+    elif win > 0:
+        status = "🟢 WIN!"
+    else:
+        status = "🔴 LOSS"
+
+    text = (
+        "💎 CASINO ULTRA EDITION 💎\n\n"
+        f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
+        f"{status}\n"
+        f"💰 Vincita: +{win} chips\n"
+        f"⭐ VIP x{vip}\n"
+        f"💎 Balance: {u['chips']}\n"
+        f"⚡ XP: +{max(1, win // 18)}"
+        f"{gamble_text}"
     )
+
+    await msg.edit_text(text, reply_markup=menu())
 # =========================
 # CREATE TABLE
 # =========================
