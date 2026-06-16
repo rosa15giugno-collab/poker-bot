@@ -1211,49 +1211,49 @@ async def cb_router(update, context):
     if data.startswith("bet_"):
         return await bet_number(update, context)
 
-    # =====================
+# =====================
 # 🃏 BLACKJACK
 # =====================
-if data == "blackjack":
-    return await blackjack(update, context)
+    if data == "blackjack":
+        return await blackjack(update, context)
 
-if data == "hit":
-    return await hit(update, context)
+    if data == "hit":
+        return await hit(update, context)
 
-if data == "stand":
-    return await stand(update, context)
+    if data == "stand":
+        return await stand(update, context)
 
 
 # =====================
 # 🎮 PVP
 # =====================
-if data == "pvp":
-    return await pvp(update, context)
+    if data == "pvp":
+        return await pvp(update, context)
 
-if data == "hit_mp":
-    return await hit_mp(update, context)
+    if data == "hit_mp":
+        return await hit_mp(update, context)
 
-if data == "stand_mp":
-    return await stand_mp(update, context)
+    if data == "stand_mp":
+        return await stand_mp(update, context)
 
 
 # =====================
 # 🎁 EXTRA
 # =====================
-if data == "bonus":
-    return await bonus(update, context)
+    if data == "bonus":
+        return await bonus(update, context)
 
-if data == "profilo":
-    return await profilo(update, context)
+    if data == "profilo":
+        return await profilo(update, context)
 
-if data == "classifica":
-    return await classifica(update, context)
+    if data == "classifica":
+        return await classifica(update, context)
 
-if data == "shop":
-    return await shop(update, context)
+    if data == "shop":
+        return await shop(update, context)
 
-if data == "noop":
-    return
+    if data == "noop":
+        return
 
 
 # =====================
