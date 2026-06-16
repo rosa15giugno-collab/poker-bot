@@ -888,6 +888,67 @@ async def cb(update, context):
             return await q.message.reply_text("⚠️ Errore interno roulette")
         except:
             pass
+
+# =========================
+# 🎁 BONUS
+# =========================
+async def bonus(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    bonus_chips = 500
+    u["chips"] += bonus_chips
+    save_user(u)
+
+    await safe_edit(
+        q.message,
+        f"🎁 BONUS GIORNALIERO\n\n"
+        f"💰 Hai ricevuto +{bonus_chips} chips!",
+        reply_markup=menu()
+    )
+
+
+# =========================
+# 👤 PROFILO
+# =========================
+async def profilo(update, context):
+    q = update.callback_query
+    u = get_user(q.from_user.id)
+
+    await safe_edit(
+        q.message,
+        f"👤 PROFILO\n\n"
+        f"💰 Chips: {u['chips']}\n"
+        f"⭐ XP: {u['xp']}",
+        reply_markup=menu()
+    )
+
+
+# =========================
+# 🏆 CLASSIFICA
+# =========================
+async def classifica(update, context):
+    q = update.callback_query
+
+    await safe_edit(
+        q.message,
+        "🏆 CLASSIFICA\n\n🚧 In arrivo...",
+        reply_markup=menu()
+    )
+
+
+# =========================
+# 🛒 SHOP
+# =========================
+async def shop(update, context):
+    q = update.callback_query
+
+    await safe_edit(
+        q.message,
+        "🛒 SHOP\n\n🚧 In arrivo...",
+        reply_markup=menu()
+    )
+
 # =========================
 # MAIN
 # =========================
