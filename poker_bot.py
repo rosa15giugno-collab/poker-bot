@@ -1169,6 +1169,9 @@ async def cb_router(update, context):
     except:
         pass
 
+    # =====================
+    # 🎰 ROULETTE
+    # =====================
     if data == "roulette":
         return await roulette(update, context)
 
@@ -1196,28 +1199,28 @@ async def cb_router(update, context):
     if data == "bet_number_value":
         return await roulette_spin(update, context, "number")
 
-    print("❌ CALLBACK NON GESTITA:", data)
+    # =====================
+    # 🃏 BLACKJACK
+    # =====================
+    if data == "blackjack":
+        try:
+            await blackjack(update, context)
+        except Exception as e:
+            print("BLACKJACK ERROR:", e)
+            await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
+        return
 
-   
-        # =========================
-        # 🃏 BLACKJACK
-        # =========================
-        elif data == "blackjack":
-            try:
-                await blackjack(update, context)
-            except Exception as e:
-                print("BLACKJACK ERROR:", e)
-                await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
-            return
+    if data == "hit":
+        return await hit(update, context)
 
-        elif data == "hit":
-            await hit(update, context)
-            return
+    if data == "stand":
+        return await stand(update, context)
 
-        elif data == "stand":
-            await stand(update, context)
-            return
-
+   # =====================
+    # ❌ FALLBACK
+    # =====================
+    print("❌ CALLBACK NON GESTITA:", data)     
+        
         # =========================
         # 🎮 PVP
         # =========================
