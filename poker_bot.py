@@ -1157,9 +1157,9 @@ async def roulette_spin(update, context, bet):
     )
 
 
-# =========================
-# 🎛️ CALLBACK ROUTER (UNICO E SENZA ERRORI)
-# =========================
+# =====================
+# 🎛️ CALLBACK ROUTER UNICO
+# =====================
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
@@ -1170,11 +1170,29 @@ async def cb_router(update, context):
         pass
 
     # =====================
-    # 🎰 ROULETTE
+    # 🎰 MENU
     # =====================
+    if data == "slot":
+        return await slot(update, context)
+
     if data == "roulette":
         return await roulette(update, context)
 
+    if data == "shop":
+        return await shop(update, context)
+
+    if data == "profilo":
+        return await profilo(update, context)
+
+    if data == "classifica":
+        return await classifica(update, context)
+
+    if data == "pvp":
+        return await pvp(update, context)
+
+    # =====================
+    # 🎲 ROULETTE
+    # =====================
     if data == "bet_red":
         return await bet_red(update, context)
 
@@ -1190,25 +1208,14 @@ async def cb_router(update, context):
     if data == "bet_zero":
         return await bet_zero(update, context)
 
-    if data == "bet_number":
+    if data.startswith("bet_"):
         return await bet_number(update, context)
-
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data == "bet_number_value":
-        return await roulette_spin(update, context, "number")
 
     # =====================
     # 🃏 BLACKJACK
     # =====================
     if data == "blackjack":
-        try:
-            await blackjack(update, context)
-        except Exception as e:
-            print("BLACKJACK ERROR:", e)
-            await q.message.reply_text("🃏 Blackjack momentaneamente non disponibile")
-        return
+        return await blackjack(update, context)
 
     if data == "hit":
         return await hit(update, context)
@@ -1216,14 +1223,22 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-   # =====================
+    # =====================
+    # 🎮 PVP
+    # =====================
+    if data == "hit_mp":
+        return await hit_mp(update, context)
+
+    if data == "stand_mp":
+        return await stand_mp(update, context)
+
+    # =====================
     # ❌ FALLBACK
     # =====================
-    print("❌ CALLBACK NON GESTITA:", data)     
-        
-        # =========================
-        # 🎮 PVP
-        # =========================
+    print("❌ CALLBACK NON GESTITA:", data)
+
+
+    
         elif data == "pvp":
             await pvp(update, context)
             return
