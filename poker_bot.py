@@ -238,6 +238,33 @@ VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
 COOLDOWN = {}
 
 # =========================
+# 🎰 SLOT SYMBOLS
+# =========================
+
+def weighted_symbol():
+    table = [
+        ("🍒", 30),
+        ("🍋", 25),
+        ("🍀", 20),
+        ("🔔", 12),
+        ("⭐", 8),
+        ("💎", 4),
+        ("7️⃣", 1),
+    ]
+
+    total = sum(w for _, w in table)
+    r = random.randint(1, total)
+
+    upto = 0
+    for sym, w in table:
+        upto += w
+        if r <= upto:
+            return sym
+
+    return "🍒"
+
+
+# =========================
 # 🎰 SLOT ULTRA CASINO
 # =========================
 async def slot(update, context):
@@ -259,35 +286,57 @@ async def slot(update, context):
     u = get_user(uid)
 
     msg = await q.message.reply_photo(
-    photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA",
-    caption="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
-)
+        photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA",
+        caption="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+    )
 
     reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎡 ANIMAZIONE SICURA
+    # 🎡 ANIMAZIONE ULTRA STABILE
     # =========================
     try:
+        last_caption = ""
 
+        # REEL 1
         for _ in range(2):
-            reels[0] = random.choice(SYMBOLS)
-            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃")
+            reels[0] = weighted_symbol()
+
+            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃"
+
+            if new_caption != last_caption:
+                await msg.edit_caption(caption=new_caption)
+                last_caption = new_caption
+
+            await asyncio.sleep(0.6)
+
+        await asyncio.sleep(0.3)
+
+        # REEL 2
+        for _ in range(2):
+            reels[1] = weighted_symbol()
+
+            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃"
+
+            if new_caption != last_caption:
+                await msg.edit_caption(caption=new_caption)
+                last_caption = new_caption
+
             await asyncio.sleep(0.7)
 
         await asyncio.sleep(0.4)
 
-        for _ in range(2):
-            reels[1] = random.choice(SYMBOLS)
-            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃")
-            await asyncio.sleep(0.75)
-
-        await asyncio.sleep(0.5)
-
+        # REEL 3
         for _ in range(3):
-            reels[2] = random.choice(SYMBOLS)
-            await msg.edit_caption(caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃")
-            await asyncio.sleep(0.9)
+            reels[2] = weighted_symbol()
+
+            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+
+            if new_caption != last_caption:
+                await msg.edit_caption(caption=new_caption)
+                last_caption = new_caption
+
+            await asyncio.sleep(0.85)
 
     except Exception as e:
         print("SLOT ANIMATION ERROR:", e)
@@ -321,6 +370,9 @@ async def slot(update, context):
     u["xp"] = u.get("xp", 0) + max(1, win // 20)
     save_user(u)
 
+    # =========================
+    # 🎯 OUTPUT
+    # =========================
     if win >= PAYOUT["jackpot"]:
         status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
         vibe = "💥💥💥"
@@ -342,8 +394,8 @@ async def slot(update, context):
     )
 
     await msg.edit_caption(
-    caption=text,
-    reply_markup=menu()
+        caption=text,
+        reply_markup=menu()
     )
 # =========================
 # CREATE TABLE
@@ -1180,10 +1232,25 @@ async def fileid(update, context):
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # =========================
+    # COMMANDS
+    # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("fileid", fileid))
-    app.add_handler(CallbackQueryHandler(cb))
+
+    # =========================
+    # CALLBACK ROUTING (FIX IMPORTANTE)
+    # =========================
+    app.add_handler(CallbackQueryHandler(slot, pattern="^slot$"))
+    app.add_handler(CallbackQueryHandler(roulette, pattern="^roulette$"))
+    app.add_handler(CallbackQueryHandler(pvp, pattern="^pvp$"))
+    app.add_handler(CallbackQueryHandler(shop, pattern="^shop$"))
+    app.add_handler(CallbackQueryHandler(profilo, pattern="^profilo$"))
+    app.add_handler(CallbackQueryHandler(classifica, pattern="^classifica$"))
+
+    # fallback (opzionale)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+
     print("🟢 CASINO DEFINITIVO ONLINE")
 
     app.run_polling(drop_pending_updates=True)
