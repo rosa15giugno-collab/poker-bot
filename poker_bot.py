@@ -789,6 +789,30 @@ async def roulette(update, context):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# =========================
+# 🎲 ROULETTE BET FIX (OBBLIGATORIO)
+# =========================
+
+async def bet_red(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    await q.message.reply_text("🔴 Puntata sul ROSSO registrata")
+
+
+async def bet_black(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    await q.message.reply_text("⚫ Puntata sul NERO registrata")
+
+
+async def bet_number(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    await q.message.reply_text(f"🎯 Puntata registrata: {q.data}")
+    
 
 # =========================
 # ⌨️ INPUT UTENTE
