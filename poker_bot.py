@@ -1223,7 +1223,6 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-
 # =====================
 # 🎮 PVP
 # =====================
@@ -1235,7 +1234,6 @@ async def cb_router(update, context):
 
     if data == "stand_mp":
         return await stand_mp(update, context)
-
 
 # =====================
 # 🎁 EXTRA
@@ -1255,16 +1253,15 @@ async def cb_router(update, context):
     if data == "noop":
         return
 
-
 # =====================
 # ❌ FALLBACK
 # =====================
-print("❌ CALLBACK NON GESTITA:", data)
+    print("❌ CALLBACK NON GESTITA:", data)
+
     try:
         await q.message.reply_text(f"🚧 Callback non gestita:\n\n{data}")
     except:
         pass
-
 BONUS_LOCK = {}
 
 # =========================
