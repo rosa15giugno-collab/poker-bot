@@ -83,7 +83,9 @@ def card_value(hand):
     aces = 0
 
     for card in hand:
-        value = card[:-1].replace("️", "").strip()
+        # 🔥 pulizia totale emoji + simboli
+        value = card[:-1]
+        value = value.replace("️", "").replace("♦️", "").replace("♠️", "").replace("♥️", "").replace("♣️", "").strip()
 
         if value in ["J", "Q", "K"]:
             total += 10
@@ -1584,13 +1586,18 @@ async def menu(update, context):
 
 async def cb_router(update, context):
     q = update.callback_query
-    data = q.data
+    data = (q.data or "").strip()
 
     await q.answer()
 
-    # 🎯 BLACKJACK BET (PRIMA)
+    # 🎯 BLACKJACK BET (PRIMA DI TUTTO)
     if data.startswith("bj_bet_"):
-        return await blackjack_bet(update, context, int(data.split("_")[-1]))
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            return await q.answer("❌ Puntata non valida", show_alert=True)
+
+        return await blackjack_bet(update, context, amount)
 
     # 🎯 BLACKJACK GAME
     if data == "blackjack":
@@ -1602,13 +1609,14 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
+    # 🎯 PVP
     if data == "hit_mp":
         return await hit_mp(update, context)
 
     if data == "stand_mp":
         return await stand_mp(update, context)
 
-    # 🎯 GENERICO HANDLERS
+    # 🎯 HANDLERS PRINCIPALI
     handlers = {
         "slot": slot,
         "roulette": roulette,
@@ -1623,9 +1631,13 @@ async def cb_router(update, context):
     if data in handlers:
         return await handlers[data](update, context)
 
-    # 🎯 BET NUMBERS FALLBACK
+    # 🎯 BET GENERIC (ULTIMO FALLBACK)
     if data.startswith("bet_"):
-        return await bet_number(update, context)
+        try:
+            return await bet_number(update, context)
+        except Exception as e:
+            print("BET ERROR:", e)
+            return
 
     print("❌ CALLBACK NON GESTITA:", data)
 
