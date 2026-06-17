@@ -81,7 +81,7 @@ def card_value(hand):
     aces = 0
 
     for card in hand:
-        value = card[:-1]
+        value = card[:-1].replace("️", "")
 
         if value in ["J", "Q", "K"]:
             total += 10
