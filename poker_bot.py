@@ -306,9 +306,8 @@ async def slot(update, context):
         reply_markup=keyboard
     )
 # =========================
-# 🎰 SLOT SPIN ANIMATION
+# 🎰 SLOT SPIN ANIMATION (FIXED)
 # =========================
-
 
 async def spin_slot(update, context):
 
@@ -316,16 +315,15 @@ async def spin_slot(update, context):
     await q.answer()
 
     msg = q.message
-
     uid = q.from_user.id
 
+    # 🛡️ COOLDOWN
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
     reels = ["🎰", "🎰", "🎰"]
-
     last_text = ""
 
     # =========================
@@ -336,41 +334,41 @@ async def spin_slot(update, context):
 
         for i in range(steps):
 
-    # 🎯 rallentamento progressivo (IMPORTANTISSIMO)
-    delay = min(0.35, 0.12 + (i * 0.03))
+            # 🎯 velocità progressiva (più realistico)
+            delay = min(0.35, 0.12 + (i * 0.03))
 
-    # 🎰 simulazione spin realistica
-    if i < 4:
-        reels[0] = weighted_symbol()
-    elif i < 7:
-        reels[1] = weighted_symbol()
-    else:
-        reels[2] = weighted_symbol()
+            # 🎰 rotazione simboli
+            if i < 4:
+                reels[0] = weighted_symbol()
+            elif i < 7:
+                reels[1] = weighted_symbol()
+            else:
+                reels[2] = weighted_symbol()
 
-    text = (
-        "🎰 SPIN IN CORSO...\n\n"
-        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-    )
+            text = (
+                "🎰 SPIN IN CORSO...\n\n"
+                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            )
 
-    # 🛡️ evita edit identici
-    if text != last_text:
-        try:
-            await msg.edit_caption(caption=text)
-            last_text = text
-        except Exception:
-            # 🔥 se Telegram blocca, NON fermare la slot
-            pass
+            # 🛡️ evita flood + edit identici
+            if text != last_text:
+                try:
+                    await msg.edit_caption(caption=text)
+                    last_text = text
+                except Exception:
+                    pass
 
-    await asyncio.sleep(delay)
-await asyncio.sleep(0.5)
+            await asyncio.sleep(delay)
+
+        await asyncio.sleep(0.5)
 
     except Exception as e:
         print("SLOT ERROR:", e)
 
     # =========================
-    # 🎯 UTENTE + RISULTATO
+    # 🎯 RISULTATO UTENTE
     # =========================
-    u = get_user(q.from_user.id)
+    u = get_user(uid)
 
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
@@ -416,11 +414,13 @@ await asyncio.sleep(0.5)
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await msg.edit_caption(
-        caption=final,
-        reply_markup=keyboard
-    )
-
+    try:
+        await msg.edit_caption(
+            caption=final,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("EDIT FINAL ERROR:", e)
 # =========================
 # CREATE TABLE
 # =========================
