@@ -105,7 +105,8 @@ TOKEN = os.getenv("CASINO_TOKEN")
 
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
-
+    
+MENU_PHOTO = "AgACAgQAAxkBAAMuai-rfso9kJ2iwjIUkpuI6bbceWEAAlcOaxsMTIBR2F1G_QHjrzcBAAMCAAN5AAM8BA"
 
 #=======================
 # SAVE USER
@@ -124,8 +125,21 @@ def save_user(u):
 
 
 # =========================
-# STATE
+# 🧠 UTILITY / MENU SYSTEM
 # =========================
+
+async def send_main_menu(chat_id, context):
+    caption = (
+        "🏠 MENU PRINCIPALE\n\n"
+        "Scegli un gioco:"
+    )
+
+    await context.bot.send_photo(
+        chat_id=chat_id,
+        photo=MENU_PHOTO,
+        caption=caption,
+        reply_markup=main_menu_keyboard()
+    )
 
 
 
@@ -1372,7 +1386,10 @@ async def cb_router(update, context):
 
     # MENU (AGGIUNGI QUI)
     if data == "menu":
-        return await menu(update, context)
+        return await send_main_menu(q.message.chat_id, context)
+
+    if data == "go_menu":
+        return await send_main_menu(q.message.chat_id, context) 
 
     # 🎲 ROULETTE MENU
     if data == "roulette":
