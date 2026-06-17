@@ -12,11 +12,11 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ContextTypes
+    MessageHandler,
+    ContextTypes,
+    filters
 )
-
-from telegram.error import BadRequest
-
+from telegram.error import BadRequest, RetryAfter
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
