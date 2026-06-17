@@ -1376,12 +1376,16 @@ async def cb_router(update, context):
     except:
         pass
 
-    # 🎰 SLOT
+    # SLOT
     if data == "slot":
         return await slot(update, context)
 
     if data == "spin_slot":
         return await spin_slot(update, context)
+
+    # MENU (AGGIUNGI QUI)
+    if data == "menu":
+        return await menu(update, context)
 
     # 🎲 ROULETTE MENU
     if data == "roulette":
