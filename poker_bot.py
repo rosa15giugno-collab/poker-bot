@@ -1560,16 +1560,17 @@ async def menu(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    print("CB:", data)
+
+    print("CB:", data)  # debug
 
     await q.answer()
 
-    # 🔥 PRIMA TUTTI I BJ BET (OBBLIGATORIO)
+    # 🃏 BLACKJACK BET (PRIORITÀ MASSIMA)
     if data.startswith("bj_bet_"):
         amount = int(data.split("_")[-1])
         return await blackjack_bet(update, context, amount)
 
-    # 🎯 GAME BLACKJACK
+    # 🃏 BLACKJACK GAME
     if data == "blackjack":
         return await blackjack(update, context)
 
@@ -1585,6 +1586,7 @@ async def cb_router(update, context):
     if data == "stand_mp":
         return await stand_mp(update, context)
 
+    # 🎮 MENU / GENERICI
     handlers = {
         "menu": menu,
         "slot": slot,
