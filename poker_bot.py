@@ -89,7 +89,7 @@ def card_value(hand):
             total += 11
             aces += 1
         else:
-            total += int(value)
+            total += int(value) 
 
     while total > 21 and aces:
         total -= 10
