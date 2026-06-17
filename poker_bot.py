@@ -267,9 +267,10 @@ def weighted_symbol():
 # =========================
 # 🎰 SLOT GOD MODE (FIXED)
 # =========================
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 async def slot(update, context):
 
-    # ✅ FIX: supporta sia /slot che callback
     q = update.callback_query
 
     if q:
@@ -295,6 +296,23 @@ async def slot(update, context):
     u = get_user(uid)
 
     reels = ["🎰", "🎰", "🎰"]
+
+    # =========================
+    # 🎬 MESSAGGIO INIZIALE CON BOTTONE
+    # =========================
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎰 SPIN", callback_data="spin_slot")]
+    ])
+
+    msg = await send_target.reply_animation(
+        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+        caption="🎰 SLOT MACHINE\n\nPremi SPIN per iniziare!",
+        reply_markup=keyboard
+    )
+
+    # qui finisce slot entry
+    # 👉 NON partire ancora con animazione
+    # 👉 quella va in spin_slot
 
     # =========================
     # 🎬 MESSAGGIO INIZIALE
@@ -1351,9 +1369,6 @@ async def fileid(update, context):
     await update.message.reply_text("❌ File non supportato")
 
 
-# =========================
-# CALLBACK ROUTER (ROULETTE FIX)
-# =========================
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
@@ -1363,24 +1378,20 @@ async def cb_router(update, context):
     except:
         pass
 
-    # 🎰 MENU
+    # 🎰 SLOT
     if data == "slot":
         return await slot(update, context)
 
     if data == "spin_slot":
         return await spin_slot(update, context)
 
+    # 🎲 ROULETTE MENU
     if data == "roulette":
         return await roulette(update, context)
 
-    if data == "pvp":
-        return await pvp(update, context)
-
-    # 🎲 NUMERI (PRIMA DI bet_)
     if data.startswith("num_"):
         return await select_number(update, context)
 
-    # 🎲 BETS ROULETTE
     if data == "bet_red":
         return await bet_red(update, context)
 
@@ -1399,8 +1410,12 @@ async def cb_router(update, context):
     if data == "bet_number_value":
         return await roulette_spin(update, context, "number")
 
-    if data == "bet_number":
+    if data.startswith("bet_"):
         return await bet_number(update, context)
+
+    # 🎮 ALTRO
+    if data == "pvp":
+        return await pvp(update, context)
 
     print("❌ CALLBACK NON GESTITA:", data)
 
