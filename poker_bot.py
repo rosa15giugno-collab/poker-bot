@@ -50,6 +50,53 @@ tables = {}
 user_tables = {}
 COOLDOWN = {}
 
+# =========================
+# 🃏 BLACKJACK / PVP
+# =========================
+bj_games = {}
+
+BLACKJACK_BETS = [100, 500, 1000]
+
+CARDS = [
+    "A♠️","A♥️","A♦️","A♣️",
+    "2♠️","2♥️","2♦️","2♣️",
+    "3♠️","3♥️","3♦️","3♣️",
+    "4♠️","4♥️","4♦️","4♣️",
+    "5♠️","5♥️","5♦️","5♣️",
+    "6♠️","6♥️","6♦️","6♣️",
+    "7♠️","7♥️","7♦️","7♣️",
+    "8♠️","8♥️","8♦️","8♣️",
+    "9♠️","9♥️","9♦️","9♣️",
+    "10♠️","10♥️","10♦️","10♣️",
+    "J♠️","J♥️","J♦️","J♣️",
+    "Q♠️","Q♥️","Q♦️","Q♣️",
+    "K♠️","K♥️","K♦️","K♣️"
+]
+
+#===========================
+# CARD BLACK E PVP
+#===========================
+def card_value(hand):
+    total = 0
+    aces = 0
+
+    for card in hand:
+        value = card[:-1]
+
+        if value in ["J", "Q", "K"]:
+            total += 10
+        elif value == "A":
+            total += 11
+            aces += 1
+        else:
+            total += int(value)
+
+    while total > 21 and aces:
+        total -= 10
+        aces -= 1
+
+    return total
+
 
 # =========================
 # SAFE EDIT (FIXATO SOLO QUI)  *****
@@ -447,6 +494,243 @@ async def spin_slot(update, context):
         )
     except Exception as e:
         print("FINAL EDIT ERROR:", e)
+
+
+# =========================
+# 🃏 BLACKJACK
+# =========================
+async def blackjack(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("💰 100", callback_data="bj_bet_100"),
+         InlineKeyboardButton("💰 500", callback_data="bj_bet_500")],
+        [InlineKeyboardButton("💰 1000", callback_data="bj_bet_1000")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
+
+    await q.message.edit_text(
+        "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
+        reply_markup=keyboard
+    )
+
+    uid = q.from_user.id
+
+    deck = CARDS.copy()
+    random.shuffle(deck)
+
+    player = [deck.pop(), deck.pop()]
+    dealer = [deck.pop(), deck.pop()]
+
+    bj_games[uid] = {
+        "deck": deck,
+        "player": player,
+        "dealer": dealer
+    }
+
+    testo = (
+        "🃏 BLACKJACK\n\n"
+        f"🃏 Le tue carte:\n{' '.join(player)}\n"
+        f"Totale: {card_value(player)}\n\n"
+        f"🎩 Carte del banco:\n{dealer[0]} ❓"
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
+            InlineKeyboardButton("✋ STAI", callback_data="stand")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    await q.message.reply_text(
+        testo,
+        reply_markup=keyboard
+    )
+
+#==========================
+#  START BJ
+#==========================
+
+async def start_bj(update, context, bet):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+    u = get_user(uid)
+
+    if u["chips"] < bet:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    u["chips"] -= bet
+    save_user(u)
+
+    deck = CARDS.copy()
+    random.shuffle(deck)
+
+    player = [deck.pop(), deck.pop()]
+    dealer = [deck.pop(), deck.pop()]
+
+    bj_games[uid] = {
+        "deck": deck,
+        "player": player,
+        "dealer": dealer,
+        "bet": bet
+    }
+
+    text = (
+        "🃏 BLACKJACK\n\n"
+        f"💰 Puntata: {bet}\n\n"
+        f"🎩 Banco: {dealer[0]} ❓\n"
+        f"👤 Tu: {' '.join(player)}\n"
+        f"📊 Totale: {card_value(player)}"
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ CARTA", callback_data="hit"),
+         InlineKeyboardButton("✋ STAI", callback_data="stand")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
+
+    await q.message.edit_text(text, reply_markup=keyboard)
+
+# =========================
+# ➕ HIT
+# =========================
+async def hit(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+
+    if uid not in bj_games:
+        try:
+            await q.message.edit_text("❌ Nessuna partita attiva.\n\n🏠 Usa MENU")
+        except:
+            pass
+        return
+
+    game = bj_games[uid]
+
+    # 🧠 sicurezza deck
+    if not game["deck"]:
+        game["deck"] = CARDS.copy()
+        random.shuffle(game["deck"])
+
+    game["player"].append(game["deck"].pop())
+
+    player = game["player"]
+    dealer = game["dealer"]
+
+    p_total = card_value(player)
+
+    # 💥 BUST
+    if p_total > 21:
+
+        text = (
+            "💥 SBALLATO!\n\n"
+            f"🃏 TU: {' '.join(player)} ({p_total})\n\n"
+            f"🎩 BANCO: {' '.join(dealer)} ({card_value(dealer)})\n\n"
+            "💰 RISULTATO: -puntata"
+        )
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🃏 GIOCA ANCORA", callback_data="blackjack")],
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
+
+        bj_games.pop(uid, None)
+
+        await q.message.edit_text(text, reply_markup=keyboard)
+        return
+
+    # 🃏 BLACKJACK NATURALE LIVE CHECK
+    if p_total == 21:
+
+        text = (
+            "🔥 BLACKJACK!\n\n"
+            f"🃏 TU: {' '.join(player)} (21)\n\n"
+            f"🎩 BANCO: {dealer[0]} ❓\n\n"
+            "👉 puoi STARE o continuare"
+        )
+
+    else:
+
+        text = (
+            "🃏 BLACKJACK\n\n"
+            f"🃏 TU: {' '.join(player)} ({p_total})\n\n"
+            f"🎩 BANCO: {dealer[0]} ❓"
+        )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
+            InlineKeyboardButton("✋ STAI", callback_data="stand")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    await q.message.edit_text(text, reply_markup=keyboard)
+# =========================
+# ✋ STAND
+# =========================
+async def stand(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+
+    if uid not in bj_games:
+        return
+
+    game = bj_games[uid]
+
+    player = game["player"]
+    dealer = game["dealer"]
+
+    while card_value(dealer) < 17:
+        dealer.append(game["deck"].pop())
+
+    p = card_value(player)
+    d = card_value(dealer)
+
+    if d > 21:
+        risultato = "🎉 HAI VINTO!"
+    elif p > d:
+        risultato = "🎉 HAI VINTO!"
+    elif p < d:
+        risultato = "😔 HAI PERSO"
+    else:
+        risultato = "🤝 PAREGGIO"
+
+    testo = (
+        f"{risultato}\n\n"
+        f"🃏 Le tue carte:\n{' '.join(player)}\n"
+        f"Totale: {p}\n\n"
+        f"🎩 Carte del banco:\n{' '.join(dealer)}\n"
+        f"Totale banco: {d}"
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🃏 GIOCA ANCORA", callback_data="blackjack")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    del bj_games[uid]
+
+    await q.message.edit_text(
+        testo,
+        reply_markup=keyboard
+    )
 # =========================
 # CREATE TABLE
 # =========================
@@ -1423,6 +1707,15 @@ async def cb_router(update, context):
     if data == "pvp":
         return await pvp(update, context)
 
+    # BLACKJACK
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+       return await stand(update, context)
     print("❌ CALLBACK NON GESTITA:", data)
 
 # =========================
