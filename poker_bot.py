@@ -327,26 +327,28 @@ async def spin_slot(update, context):
     reels = ["🎰", "🎰", "🎰"]
 
     try:
-        steps = 12
+        steps = 10
+last_text = ""
 
-        for i in range(steps):
+for i in range(steps):
 
-            delay = 0.12
+    delay = 0.18
 
-            reels[i % 3] = weighted_symbol()
+    reels[i % 3] = weighted_symbol()
 
-            text = (
-                "🎰 SPIN IN CORSO...\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-            )
+    text = (
+        "🎰 SPIN IN CORSO...\n\n"
+        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+    )
 
-            try:
-                await msg.edit_caption(caption=text)
-            except Exception:
-                pass
+    try:
+        if text != last_text:
+            await msg.edit_caption(caption=text)
+            last_text = text
+    except Exception:
+        pass
 
-            await asyncio.sleep(delay)
-
+    await asyncio.sleep(delay)
     except Exception as e:
         print("SLOT ERROR:", e)
 
