@@ -295,13 +295,16 @@ async def slot(update, context):
         [InlineKeyboardButton("🎰 SPIN", callback_data="spin_slot")]
     ])
 
-    # 📸 MESSAGGIO INIZIALE (STATICA)
-    await target.reply_photo(
-        photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA",
-        caption="🎰 SLOT MACHINE\n\nPremi SPIN per giocare!",
+    # 🎬 MESSAGGIO INIZIALE (VERSIONE PRO)
+    await target.reply_animation(
+        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+        caption=(
+            "🎰 SLOT MACHINE\n\n"
+            "💰 Premi SPIN per giocare!\n"
+            "🔥 Vinci fino a JACKPOT!"
+        ),
         reply_markup=keyboard
     )
-
 # =========================
 # 🎰 SLOT SPIN ANIMATION
 # =========================
@@ -339,7 +342,7 @@ async def spin_slot(update, context):
 
             try:
                 await msg.edit_caption(caption=text)
-            except Excepion:
+            except Exception:
                 pass
 
             await asyncio.sleep(delay)
@@ -347,7 +350,7 @@ async def spin_slot(update, context):
     except Exception as e:
         print("SLOT ERROR:", e)
 
-    # 🎯 UTENTE (FIX MANCANTE)
+    # 🎯 UTENTE
     u = get_user(q.from_user.id)
 
     vip = random.choice(VIP_MULT)
@@ -386,9 +389,17 @@ async def spin_slot(update, context):
         f"💎 saldo: {u['chips']}"
     )
 
-    await msg.edit_caption(caption=final)
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
 
+    await msg.edit_caption(
+        caption=final,
+        reply_markup=keyboard
+    )
 
 # =========================
 # CREATE TABLE
