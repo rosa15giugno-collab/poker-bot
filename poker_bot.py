@@ -1,4 +1,4 @@
-import os   
+import os
 import random
 import sqlite3
 import time
@@ -7,7 +7,10 @@ import asyncio
 import logging
 from collections import deque
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
+from telegram.error import BadRequest
 
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
