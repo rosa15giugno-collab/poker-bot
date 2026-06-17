@@ -1560,7 +1560,7 @@ async def menu(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    print(cb:", data)
+    print("CB:", data)
 
     await q.answer()
 
