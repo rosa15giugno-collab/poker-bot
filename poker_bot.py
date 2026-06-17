@@ -65,6 +65,7 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
 
         return await msg.edit_text(
             text=text,
+        
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
@@ -1190,6 +1191,21 @@ async def roulette_spin(update, context, bet):
         ),
         reply_markup=menu()
     )
+
+# =====================
+# 🏠 MENU HANDLER
+# =====================
+async def menu(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    await q.message.edit_caption(
+        caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+        reply_markup=main_menu_keyboard()
+    )
+
+
+
 
 
 async def cb_router(update, context):
