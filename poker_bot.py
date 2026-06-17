@@ -1553,26 +1553,25 @@ async def menu(update, context):
         reply_markup=main_menu_keyboard()
     )
 
-
+#========================
+# CB
+#=======================
+PRINT(cb:", data)
 
 
 
 async def cb_router(update, context):
     q = update.callback_query
-    data = (q.data or "").strip()
+    data = q.data
 
     await q.answer()
 
-    # 🎯 BLACKJACK BET (PRIMA DI TUTTO)
+    # 🔥 PRIMA TUTTI I BJ BET (OBBLIGATORIO)
     if data.startswith("bj_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-        except:
-            return await q.answer("❌ Puntata non valida", show_alert=True)
-
+        amount = int(data.split("_")[-1])
         return await blackjack_bet(update, context, amount)
 
-    # 🎯 BLACKJACK GAME
+    # 🎯 GAME BLACKJACK
     if data == "blackjack":
         return await blackjack(update, context)
 
@@ -1582,38 +1581,30 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-    # 🎯 PVP
     if data == "hit_mp":
         return await hit_mp(update, context)
 
     if data == "stand_mp":
         return await stand_mp(update, context)
 
-    # 🎯 HANDLERS PRINCIPALI
     handlers = {
+        "menu": menu,
         "slot": slot,
         "roulette": roulette,
-        "menu": menu,
+        "pvp": pvp,
+        "bonus": bonus,
         "shop": shop,
         "profilo": profilo,
         "classifica": classifica,
-        "pvp": pvp,
-        "bonus": bonus,
     }
 
     if data in handlers:
         return await handlers[data](update, context)
 
-    # 🎯 BET GENERIC (ULTIMO FALLBACK)
     if data.startswith("bet_"):
-        try:
-            return await bet_number(update, context)
-        except Exception as e:
-            print("BET ERROR:", e)
-            return
+        return await bet_number(update, context)
 
     print("❌ CALLBACK NON GESTITA:", data)
-
 # =========================
 # 🎁 BONUS
 # =========================
