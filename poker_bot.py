@@ -1394,21 +1394,28 @@ async def cb_router(update, context):
     if data == "pvp":
         return await pvp(update, context)
 
-    if data == "shop":
-        return await shop(update, context)
+    # 🎲 NUMERI (PRIMA DI BET_)
+    if data.startswith("num_"):
+        return await select_number(update, context)
 
-    if data == "profilo":
-        return await profilo(update, context)
-
-    if data == "classifica":
-        return await classifica(update, context)
-
-    # 🎲 ROULETTE BETS
+    # 🎲 BETS
     if data == "bet_red":
         return await bet_red(update, context)
 
     if data == "bet_black":
         return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+   if data == "bet_zero":
+        return await bet_zero(update, context)
+
+   if data == "bet_number_value":
+        return await roulette_spin(update, context, "number")
 
     if data.startswith("bet_"):
         return await bet_number(update, context)
