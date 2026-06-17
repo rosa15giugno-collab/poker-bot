@@ -83,9 +83,20 @@ def card_value(hand):
     aces = 0
 
     for card in hand:
-        # 🔥 pulizia totale emoji + simboli
-        value = card[:-1]
-        value = value.replace("️", "").replace("♦️", "").replace("♠️", "").replace("♥️", "").replace("♣️", "").strip()
+        # 🔥 pulizia totale simboli Telegram
+        value = (
+            card
+            .replace("♠️", "")
+            .replace("♥️", "")
+            .replace("♦️", "")
+            .replace("♣️", "")
+            .replace("♠️", "")
+            .replace("♥️", "")
+            .replace("♦️", "")
+            .replace("♣️", "")
+            .replace("️", "")
+            .strip()
+        )
 
         if value in ["J", "Q", "K"]:
             total += 10
@@ -512,64 +523,26 @@ async def spin_slot(update, context):
         print("FINAL EDIT ERROR:", e)
 
 
-# =========================
-# 🃏 BLACKJACK
-# =========================
-    await q.message.reply_photo(
-        photo=PHOTO_BLACKJACK,
-        caption=caption,
-        reply_markup=keyboard
-    )
-
 async def blackjack(update, context):
     q = update.callback_query
     await q.answer()
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 100", callback_data="bj_bet_100"),
-         InlineKeyboardButton("💰 500", callback_data="bj_bet_500")],
-        [InlineKeyboardButton("💰 1000", callback_data="bj_bet_1000")],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-    ])
-
-    await q.message.edit_caption(
-    caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-    reply_markup=keyboard
-    )
-
-    uid = q.from_user.id
-
-    deck = CARDS.copy()
-    random.shuffle(deck)
-
-    player = [deck.pop(), deck.pop()]
-    dealer = [deck.pop(), deck.pop()]
-
-    bj_games[uid] = {
-        "deck": deck,
-        "player": player,
-        "dealer": dealer
-    }
-
-    testo = (
-        "🃏 BLACKJACK\n\n"
-        f"🃏 Le tue carte:\n{' '.join(player)}\n"
-        f"Totale: {card_value(player)}\n\n"
-        f"🎩 Carte del banco:\n{dealer[0]} ❓"
-    )
-
+    # 🎰 MENU PUNTATE (SOLO QUESTO QUI)
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
-            InlineKeyboardButton("✋ STAI", callback_data="stand")
+            InlineKeyboardButton("💰 100", callback_data="bj_bet_100"),
+            InlineKeyboardButton("💰 500", callback_data="bj_bet_500")
+        ],
+        [
+            InlineKeyboardButton("💰 1000", callback_data="bj_bet_1000")
         ],
         [
             InlineKeyboardButton("🏠 MENU", callback_data="menu")
         ]
     ])
 
-    await q.message.reply_text(
-        testo,
+    await q.message.edit_caption(
+        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
 
