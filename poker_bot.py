@@ -326,33 +326,40 @@ async def spin_slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
+    last_text = ""
+
+    # =========================
+    # 🎡 ANIMAZIONE SLOT
+    # =========================
     try:
         steps = 10
-last_text = ""
 
-for i in range(steps):
+        for i in range(steps):
 
-    delay = 0.18
+            delay = 0.18
 
-    reels[i % 3] = weighted_symbol()
+            reels[i % 3] = weighted_symbol()
 
-    text = (
-        "🎰 SPIN IN CORSO...\n\n"
-        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-    )
+            text = (
+                "🎰 SPIN IN CORSO...\n\n"
+                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            )
 
-    try:
-        if text != last_text:
-            await msg.edit_caption(caption=text)
-            last_text = text
-    except Exception:
-        pass
+            try:
+                if text != last_text:
+                    await msg.edit_caption(caption=text)
+                    last_text = text
+            except Exception:
+                pass
 
-    await asyncio.sleep(delay)
+            await asyncio.sleep(delay)
+
     except Exception as e:
         print("SLOT ERROR:", e)
 
-    # 🎯 UTENTE
+    # =========================
+    # 🎯 UTENTE + RISULTATO
+    # =========================
     u = get_user(q.from_user.id)
 
     vip = random.choice(VIP_MULT)
@@ -380,18 +387,19 @@ for i in range(steps):
 
     win = int(win * vip * u.get("multiplier", 1.0))
 
-    u["chips"] += win
-    u["xp"] += max(1, win // 15)
+    u["chips"] = u.get("chips", 0) + win
+    u["xp"] = u.get("xp", 0) + max(1, win // 15)
     save_user(u)
 
+    # =========================
+    # 🎯 OUTPUT FINALE + MENU
+    # =========================
     final = (
         f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"💰 +{win} chips\n"
         f"💎 saldo: {u['chips']}"
     )
-
-    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot")],
