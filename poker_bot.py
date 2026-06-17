@@ -204,14 +204,21 @@ async def menu(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.edit_caption(
-        caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
-            [InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")]
-        ])
-    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
+        [InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")]
+    ])
 
+    try:
+        await q.message.edit_caption(
+            caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+            reply_markup=keyboard
+        )
+    except:
+        await q.message.reply_text(
+            "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+            reply_markup=keyboard
+        )
 
 # =========================
 # START               *************
@@ -1218,6 +1225,9 @@ async def cb_router(update, context):
 
     if data == "roulette":
         return await roulette(update, context)
+
+    if data == "menu":
+        return await menu(update, context)
 
     if data == "shop":
         return await shop(update, context)
