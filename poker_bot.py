@@ -929,33 +929,33 @@ async def pvp(update, context):
 def render_table(t):
     txt = "🃏 <b>BLACKJACK PvP LIVE</b>\n\n"
 
-current_uid = None
+    current_uid = None
 
-if t["order"] and t["turn_index"] < len(t["order"]):
-    current_uid = t["order"][t["turn_index"]]
+    if t["order"] and t["turn_index"] < len(t["order"]):
+        current_uid = t["order"][t["turn_index"]]
 
-for p in t["players"]:
-    uid = p["id"]
-    name = p["name"]
-    hand = t["hands"].get(uid) or []
+    for p in t["players"]:
+        uid = p["id"]
+        name = p["name"]
+        hand = t["hands"].get(uid) or []
 
-    marker = "👉" if uid == current_uid else "👤"
+        marker = "👉" if uid == current_uid else "👤"
 
-    txt += f"{marker} <b>{name}</b>: {card_value(hand)} {hand}\n"
+        txt += f"{marker} <b>{name}</b>: {card_value(hand)} {hand}\n"
 
-txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
+    txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
 
-if current_uid:
-    current_name = next(
-        (p["name"] for p in t["players"] if p["id"] == current_uid),
-        "?"
-    )
+    if current_uid:
+        current_name = next(
+            (p["name"] for p in t["players"] if p["id"] == current_uid),
+            "?"
+        )
 
-    txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
+        txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
 
-txt += f"\n💰 Pot: {t['pot']}"
+    txt += f"\n💰 Pot: {t['pot']}"
 
-return txt
+    return txt
 
 #==========================
 # UPDATE
