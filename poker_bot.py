@@ -7,16 +7,23 @@ import asyncio
 import logging
 from collections import deque
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup
+)
+
 from telegram.ext import (
     ApplicationBuilder,
+    ContextTypes,
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
-    ContextTypes,
     filters
 )
-from telegram.error import BadRequest, RetryAfter
+
+from telegram.error import BadRequest
+
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
@@ -246,7 +253,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     caption = (
         "👑 Benvenuto in CASINO PRO\n\n"
-        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔:è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
+        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
         "   …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
         "🎰 Slot | 🎲 Roulette | 🃏 Blackjack | 🆚 PvP\n"
         "🏆 Classifiche live | 🎁 Bonus giornaliero\n\n"
@@ -256,7 +263,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
         photo=photo_id,
         caption=caption,
-        reply_markup=main_menu_keYboard()
+        reply_markup=main_menu_keyboard()
     )
 # =========================
 # 🎰 SLOT CONFIG
