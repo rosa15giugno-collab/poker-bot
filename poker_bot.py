@@ -749,7 +749,52 @@ async def stand(update, context):
         caption=text,
         reply_markup=keyboard
     )
-    
+#==========================
+# BLACKJACK ASYNC
+#==========================
+
+async def blackjack_bet(update, context, amount):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+
+    bj_games[uid] = {
+        "deck": CARDS.copy(),
+        "player": [],
+        "dealer": []
+    }
+
+    random.shuffle(bj_games[uid]["deck"])
+
+    game = bj_games[uid]
+
+    game["player"] = [game["deck"].pop(), game["deck"].pop()]
+    game["dealer"] = [game["deck"].pop(), game["deck"].pop()]
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
+            InlineKeyboardButton("✋ STAI", callback_data="stand")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    text = (
+        f"🃏 BLACKJACK\n\n"
+        f"💰 Puntata: {amount}\n\n"
+        f"🃏 Tu: {' '.join(game['player'])}\n"
+        f"🎩 Banco: {game['dealer'][0]} ❓"
+    )
+
+    await q.message.edit_caption(
+        caption=text,
+        reply_markup=keyboard
+    )
+
+
 # =========================
 # CREATE TABLE
 # =========================
@@ -1528,7 +1573,18 @@ async def menu(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
+     # blackjack
+    if data == "blackjack":
+        return await blackjack(update, context)
 
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+        return await stand(update, context)
+
+    if data.startswith("bj_bet_"):
+        return await blackjack_bet(update, context, int(data.split("_")[-1]))
     data = data.strip()
 
     await q.answer()
