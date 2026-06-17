@@ -154,6 +154,7 @@ if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
     
 MENU_PHOTO = "AgACAgQAAxkBAANFajK3EgT-sXBmbmi9vwS-ia3oNPYAAp4SaxuGHZhRRK7nT0alIxkBAAMCAAN5AAM8BA"
+BLACKJACK_PHOTO = "AgACAgQAAxkBAANIajL7PfXN3cYXM6NliybRfiPCbP0AAk4PaxvsDJlRLQrkmC2DxfsBAAMCAAN5AAM8BA"
 
 #=======================
 # SAVE USER
