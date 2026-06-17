@@ -1223,105 +1223,40 @@ async def roulette_spin(update, context, bet):
     )
 
 
-# =====================
-# 🎛️ CALLBACK ROUTER UNICO
-# =====================
 async def cb_router(update, context):
-
     q = update.callback_query
     data = q.data
 
-    try:
-        await q.answer()
-    except:
-        pass
+    await q.answer()
 
-    # =====================
-    # 🏠 MENU / GENERALI
-    # =====================
-    if data == "slot":
-        return await slot(update, context)
+    handlers = {
+        "slot": slot,
+        "roulette": roulette,
+        "menu": menu,
+        "shop": shop,
+        "profilo": profilo,
+        "classifica": classifica,
+        "pvp": pvp,
 
-    if data == "roulette":
-        return await roulette(update, context)
+        "blackjack": blackjack,
+        "hit": hit,
+        "stand": stand,
 
-    if data == "menu":
-        return await menu(update, context)
+        "hit_mp": hit_mp,
+        "stand_mp": stand_mp,
 
-    if data == "shop":
-        return await shop(update, context)
+        "bonus": bonus,
+    }
 
-    if data == "profilo":
-        return await profilo(update, context)
-
-    if data == "classifica":
-        return await classifica(update, context)
-
-    if data == "pvp":
-        return await pvp(update, context)
-
-    # =====================
-    # 🎲 ROULETTE BETS
-    # =====================
-    if data == "bet_red":
-        return await bet_red(update, context)
-
-    if data == "bet_black":
-        return await bet_black(update, context)
-
-    if data == "bet_even":
-        return await bet_even(update, context)
-
-    if data == "bet_odd":
-        return await bet_odd(update, context)
-
-    if data == "bet_zero":
-        return await bet_zero(update, context)
+    if data in handlers:
+        return await handlers[data](update, context)
 
     if data.startswith("bet_"):
+        if data in globals():
+            return await globals()[data](update, context)
         return await bet_number(update, context)
 
-    # =====================
-    # 🃏 BLACKJACK
-    # =====================
-    if data == "blackjack":
-        return await blackjack(update, context)
-
-    if data == "hit":
-        return await hit(update, context)
-
-    if data == "stand":
-        return await stand(update, context)
-
-    # =====================
-    # 🎮 PVP ACTIONS
-    # =====================
-    if data == "hit_mp":
-        return await hit_mp(update, context)
-
-    if data == "stand_mp":
-        return await stand_mp(update, context)
-
-    # =====================
-    # 🎁 EXTRA
-    # =====================
-    if data == "bonus":
-        return await bonus(update, context)
-
-    if data == "noop":
-        return
-
-    # =====================
-    # ❌ FALLBACK
-    # =====================
     print("❌ CALLBACK NON GESTITA:", data)
-
-    try:
-        await q.message.reply_text(
-            f"🚧 Callback non gestita:\n\n{data}"
-        )
-    except:
-        pass
 BONUS_LOCK = {}
 
 # =========================
