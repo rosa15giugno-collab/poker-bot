@@ -263,11 +263,11 @@ def weighted_symbol():
 
     return "🍒"
 
-
 # =========================
-# 🎰 SLOT GOD MODE (FIXED)
+# 🎰 SLOT MENU ENTRATA
 # =========================
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import time
 
 async def slot(update, context):
 
@@ -280,79 +280,76 @@ async def slot(update, context):
             pass
 
         uid = q.from_user.id
-        send_target = q.message
-
+        target = q.message
     else:
         uid = update.effective_user.id
-        send_target = update.message
+        target = update.message
 
     now = time.time()
 
-    # 🛡️ anti spam
     if uid in COOLDOWN and now - COOLDOWN[uid] < 3:
         return
     COOLDOWN[uid] = now
 
-    u = get_user(uid)
-
-    reels = ["🎰", "🎰", "🎰"]
-
-    # =========================
-    # 🎬 MESSAGGIO INIZIALE CON BOTTONE
-    # =========================
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN", callback_data="spin_slot")]
     ])
 
-    msg = await send_target.reply_animation(
-        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 SLOT MACHINE\n\nPremi SPIN per iniziare!",
+    # 📸 MESSAGGIO INIZIALE (STATICA)
+    await target.reply_photo(
+        photo="AgACAgQAAxkBAAM-ajFPve9kLbqJRTheodVY0vKxdCIAArcNaxuGHZBRgIAQQ1HBjSIBAAMCAAN5AAM8BA",
+        caption="🎰 SLOT MACHINE\n\nPremi SPIN per giocare!",
         reply_markup=keyboard
     )
 
-    # qui finisce slot entry
-    # 👉 NON partire ancora con animazione
-    # 👉 quella va in spin_slot
+# =========================
+# 🎰 SLOT SPIN ANIMATION
+# =========================
 
-    # =========================
-    # 🎬 MESSAGGIO INIZIALE
-    # =========================
-    msg = await send_target.reply_animation(
-        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 SLOT IN CORSO...\n\n┃ 🎰 | 🎰 | 🎰 ┃"
-    )
 
-    # =========================
-    # 🎡 ANIMAZIONE VELOCE
-    # =========================
+async def spin_slot(update, context):
+
+    q = update.callback_query
+    await q.answer()
+
+    msg = q.message
+
+    uid = q.from_user.id
+
+    now = time.time()
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
+        return
+    COOLDOWN[uid] = now
+
+    reels = ["🎰", "🎰", "🎰"]
+
     try:
-        steps = 10
+        steps = 12
 
         for i in range(steps):
 
-            delay = 0.10 + (i * 0.03)
+            delay = 0.12
 
-            if i < 4:
-                reels[0] = weighted_symbol()
-            elif i < 7:
-                reels[1] = weighted_symbol()
-            else:
-                reels[2] = weighted_symbol()
+            reels[i % 3] = weighted_symbol()
 
-            await msg.edit_caption(
-                caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            text = (
+                "🎰 SPIN IN CORSO...\n\n"
+                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
             )
 
-            await asyncio.sleep(delay)
+            try:
+                await msg.edit_caption(caption=text)
+            except Excepion:
+                pass
 
-        await asyncio.sleep(0.4)
+            await asyncio.sleep(delay)
 
     except Exception as e:
         print("SLOT ERROR:", e)
 
-    # =========================
-    # 🎯 RISULTATO
-    # =========================
+    # 🎯 UTENTE (FIX MANCANTE)
+    u = get_user(q.from_user.id)
+
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
@@ -360,7 +357,6 @@ async def slot(update, context):
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
         status = "🔥 JACKPOT!"
-
     else:
         r = reels
 
@@ -379,13 +375,10 @@ async def slot(update, context):
 
     win = int(win * vip * u.get("multiplier", 1.0))
 
-    u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 15)
+    u["chips"] += win
+    u["xp"] += max(1, win // 15)
     save_user(u)
 
-    # =========================
-    # 🎯 OUTPUT FINALE
-    # =========================
     final = (
         f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
@@ -394,6 +387,9 @@ async def slot(update, context):
     )
 
     await msg.edit_caption(caption=final)
+
+
+
 # =========================
 # CREATE TABLE
 # =========================
