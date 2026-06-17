@@ -197,6 +197,23 @@ def menu():
     ])
 
 # =========================
+# 🏠 MENU
+# =========================
+async def menu(update, context):
+
+    q = update.callback_query
+    await q.answer()
+
+    await q.message.edit_caption(
+        caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
+            [InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")]
+        ])
+    )
+
+
+# =========================
 # START               *************
 # =========================
 
@@ -1184,6 +1201,7 @@ async def roulette_spin(update, context, bet):
 # 🎛️ CALLBACK ROUTER UNICO
 # =====================
 async def cb_router(update, context):
+
     q = update.callback_query
     data = q.data
 
@@ -1193,7 +1211,7 @@ async def cb_router(update, context):
         pass
 
     # =====================
-    # 🎰 MENU
+    # 🏠 MENU / GENERALI
     # =====================
     if data == "slot":
         return await slot(update, context)
@@ -1214,7 +1232,7 @@ async def cb_router(update, context):
         return await pvp(update, context)
 
     # =====================
-    # 🎲 ROULETTE
+    # 🎲 ROULETTE BETS
     # =====================
     if data == "bet_red":
         return await bet_red(update, context)
@@ -1234,9 +1252,9 @@ async def cb_router(update, context):
     if data.startswith("bet_"):
         return await bet_number(update, context)
 
-# =====================
-# 🃏 BLACKJACK
-# =====================
+    # =====================
+    # 🃏 BLACKJACK
+    # =====================
     if data == "blackjack":
         return await blackjack(update, context)
 
@@ -1246,43 +1264,33 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-# =====================
-# 🎮 PVP
-# =====================
-    if data == "pvp":
-        return await pvp(update, context)
-
+    # =====================
+    # 🎮 PVP ACTIONS
+    # =====================
     if data == "hit_mp":
         return await hit_mp(update, context)
 
     if data == "stand_mp":
         return await stand_mp(update, context)
 
-# =====================
-# 🎁 EXTRA
-# =====================
+    # =====================
+    # 🎁 EXTRA
+    # =====================
     if data == "bonus":
         return await bonus(update, context)
-
-    if data == "profilo":
-        return await profilo(update, context)
-
-    if data == "classifica":
-        return await classifica(update, context)
-
-    if data == "shop":
-        return await shop(update, context)
 
     if data == "noop":
         return
 
-# =====================
-# ❌ FALLBACK
-# =====================
+    # =====================
+    # ❌ FALLBACK
+    # =====================
     print("❌ CALLBACK NON GESTITA:", data)
 
     try:
-        await q.message.reply_text(f"🚧 Callback non gestita:\n\n{data}")
+        await q.message.reply_text(
+            f"🚧 Callback non gestita:\n\n{data}"
+        )
     except:
         pass
 BONUS_LOCK = {}
