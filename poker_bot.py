@@ -1556,13 +1556,11 @@ async def menu(update, context):
 #========================
 # CB
 #=======================
-PRINT(cb:", data)
-
-
 
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
+    print(cb:", data)
 
     await q.answer()
 
