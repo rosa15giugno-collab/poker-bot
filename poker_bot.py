@@ -265,7 +265,7 @@ def weighted_symbol():
 
 
 # =========================
-# 🎰 SLOT ULTRA CASINO
+# 🎰 SLOT PRO CASINO
 # =========================
 async def slot(update, context):
     q = update.callback_query
@@ -285,59 +285,38 @@ async def slot(update, context):
 
     u = get_user(uid)
 
-    # 🎰 messaggio iniziale (SOLO UNO)
-    msg = await q.message.reply_animation(
-        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
-    )
-
     reels = ["🎰", "🎰", "🎰"]
 
+    # 🎬 SOLO UN MESSAGGIO (IMPORTANTE)
+    msg = await q.message.reply_animation(
+        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+        caption="🎰 SLOT PRO CASINO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+    )
+
     # =========================
-    # 🎡 ANIMAZIONE
+    # 🎡 ANIMAZIONE PRO (FLUIDA)
     # =========================
     try:
-        last_caption = ""
+        for step in range(10):
 
-        # REEL 1
-        for _ in range(2):
-            reels[0] = weighted_symbol()
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃"
+            # slow reveal progressivo
+            if step < 4:
+                reels[0] = weighted_symbol()
+            elif step < 7:
+                reels[1] = weighted_symbol()
+            else:
+                reels[2] = weighted_symbol()
 
-            if new_caption != last_caption:
-                await msg.edit_caption(new_caption)
-                last_caption = new_caption
+            caption = (
+                "🎰 SPINNING SLOT PRO...\n\n"
+                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            )
 
+            await msg.edit_caption(caption=caption)
             await asyncio.sleep(0.6)
 
-        await asyncio.sleep(0.3)
-
-        # REEL 2
-        for _ in range(2):
-            reels[1] = weighted_symbol()
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃"
-
-            if new_caption != last_caption:
-                await msg.edit_caption(new_caption)
-                last_caption = new_caption
-
-            await asyncio.sleep(0.7)
-
-        await asyncio.sleep(0.4)
-
-        # REEL 3
-        for _ in range(3):
-            reels[2] = weighted_symbol()
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-
-            if new_caption != last_caption:
-                await msg.edit_caption(new_caption)
-                last_caption = new_caption
-
-            await asyncio.sleep(0.85)
-
     except Exception as e:
-        print("SLOT ANIMATION ERROR:", e)
+        print("SLOT PRO ERROR:", e)
 
     # =========================
     # 🎯 RISULTATO
@@ -348,10 +327,12 @@ async def slot(update, context):
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
+
     else:
         r = reels
 
-        if random.randint(1, 100) <= 15:
+        # 🎯 small fake boost (casino feeling)
+        if random.randint(1, 100) <= 18:
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
@@ -363,7 +344,7 @@ async def slot(update, context):
 
     win = int(win * vip * u.get("multiplier", 1.0))
 
-    # 💰 update user
+    # 💰 update
     u["chips"] = u.get("chips", 0) + win
     u["xp"] = u.get("xp", 0) + max(1, win // 20)
     save_user(u)
@@ -372,7 +353,7 @@ async def slot(update, context):
     # 🎯 OUTPUT FINALE
     # =========================
     if win >= PAYOUT["jackpot"]:
-        status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
+        status = "🔥 JACKPOT LEGENDARIO 🔥"
         vibe = "💥💥💥"
     elif win > 0:
         status = "🟢 WIN!"
@@ -381,18 +362,18 @@ async def slot(update, context):
         status = "🔴 LOSS"
         vibe = "💀"
 
-    text = (
-        f"{vibe} CASINO ULTRA PRO {vibe}\n\n"
+    final_text = (
+        f"{vibe} SLOT PRO CASINO {vibe}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"{status}\n"
-        f"💰 Vincita: +{win} chips\n"
+        f"💰 +{win} chips\n"
         f"⭐ VIP x{vip}\n"
         f"💎 Balance: {u['chips']}\n"
-        f"⚡ XP: +{max(1, win // 20)}"
+        f"⚡ XP +{max(1, win // 20)}"
     )
 
     await msg.edit_caption(
-        caption=text,
+        caption=final_text,
         reply_markup=menu()
     )
 # =========================
