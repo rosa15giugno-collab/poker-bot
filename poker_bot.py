@@ -1384,7 +1384,7 @@ async def cb_router(update, context):
     except:
         pass
 
-    # 🎰 MAIN MENU
+    # 🎰 MENU
     if data == "slot":
         return await slot(update, context)
 
@@ -1394,11 +1394,11 @@ async def cb_router(update, context):
     if data == "pvp":
         return await pvp(update, context)
 
-    # 🎲 NUMERI (PRIMA DI BET_)
+    # 🎲 NUMERI (PRIMA DI bet_)
     if data.startswith("num_"):
         return await select_number(update, context)
 
-    # 🎲 BETS
+    # 🎲 BETS ROULETTE
     if data == "bet_red":
         return await bet_red(update, context)
 
@@ -1411,17 +1411,16 @@ async def cb_router(update, context):
     if data == "bet_odd":
         return await bet_odd(update, context)
 
-   if data == "bet_zero":
+    if data == "bet_zero":
         return await bet_zero(update, context)
 
-   if data == "bet_number_value":
+    if data == "bet_number_value":
         return await roulette_spin(update, context, "number")
 
-    if data.startswith("bet_"):
+    if data == "bet_number":
         return await bet_number(update, context)
 
     print("❌ CALLBACK NON GESTITA:", data)
-
 
 # =========================
 # MAIN
