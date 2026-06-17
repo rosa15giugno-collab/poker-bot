@@ -336,23 +336,32 @@ async def spin_slot(update, context):
 
         for i in range(steps):
 
-            delay = 0.18
+    # 🎯 rallentamento progressivo (IMPORTANTISSIMO)
+    delay = min(0.35, 0.12 + (i * 0.03))
 
-            reels[i % 3] = weighted_symbol()
+    # 🎰 simulazione spin realistica
+    if i < 4:
+        reels[0] = weighted_symbol()
+    elif i < 7:
+        reels[1] = weighted_symbol()
+    else:
+        reels[2] = weighted_symbol()
 
-            text = (
-                "🎰 SPIN IN CORSO...\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-            )
+    text = (
+        "🎰 SPIN IN CORSO...\n\n"
+        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+    )
 
-            try:
-                if text != last_text:
-                    await msg.edit_caption(caption=text)
-                    last_text = text
-            except Exception:
-                pass
+    # 🛡️ evita edit identici
+    if text != last_text:
+        try:
+            await msg.edit_caption(caption=text)
+            last_text = text
+        except Exception:
+            # 🔥 se Telegram blocca, NON fermare la slot
+            pass
 
-            await asyncio.sleep(delay)
+    await asyncio.sleep(delay)
 
     except Exception as e:
         print("SLOT ERROR:", e)
