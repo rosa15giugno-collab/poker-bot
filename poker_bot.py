@@ -317,30 +317,30 @@ async def spin_slot(update, context):
     msg = q.message
     uid = q.from_user.id
 
-    # 🛡️ COOLDOWN
+    # 🛡️ cooldown
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
     reels = ["🎰", "🎰", "🎰"]
-    last_text = ""
 
     # =========================
-    # 🎡 ANIMAZIONE SLOT
+    # 🎡 ANIMAZIONE STABILE (NO FLOOD)
     # =========================
     try:
-        steps = 10
+        steps = 6
+        last_text = ""
 
         for i in range(steps):
 
-            # 🎯 velocità progressiva (più realistico)
-            delay = min(0.35, 0.12 + (i * 0.03))
+            # 🎯 delay sicuro (Telegram friendly)
+            await asyncio.sleep(0.55)
 
-            # 🎰 rotazione simboli
-            if i < 4:
+            # 🎰 animazione progressiva
+            if i < 2:
                 reels[0] = weighted_symbol()
-            elif i < 7:
+            elif i < 4:
                 reels[1] = weighted_symbol()
             else:
                 reels[2] = weighted_symbol()
@@ -350,23 +350,22 @@ async def spin_slot(update, context):
                 f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
             )
 
-            # 🛡️ evita flood + edit identici
-            if text != last_text:
+            # 🔥 SOLO OGNI 2 STEP → evita flood
+            if i % 2 == 0 and text != last_text:
                 try:
                     await msg.edit_caption(caption=text)
                     last_text = text
-                except Exception:
+                except:
                     pass
-
-            await asyncio.sleep(delay)
-
-        await asyncio.sleep(0.5)
 
     except Exception as e:
         print("SLOT ERROR:", e)
 
+    # pausa finale stabilità Telegram
+    await asyncio.sleep(0.7)
+
     # =========================
-    # 🎯 RISULTATO UTENTE
+    # 🎯 RISULTATO
     # =========================
     u = get_user(uid)
 
@@ -420,7 +419,7 @@ async def spin_slot(update, context):
             reply_markup=keyboard
         )
     except Exception as e:
-        print("EDIT FINAL ERROR:", e)
+        print("FINAL EDIT ERROR:", e)
 # =========================
 # CREATE TABLE
 # =========================
