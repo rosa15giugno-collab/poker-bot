@@ -294,38 +294,41 @@ async def slot(update, context):
     )
 
     # =========================
-    # 🎡 ANIMAZIONE
-    # =========================
-    try:
-        steps = 14
+# 🎡 ANIMAZIONE VELOCE (FIX LAG)
+# =========================
+try:
+    steps = 8  # 🔥 più veloce
 
-        for i in range(steps):
+    for i in range(steps):
 
-            delay = 0.12 + (i * 0.05)
+        # ⚡ velocità controllata (non cresce troppo)
+        delay = 0.10 if i < 4 else 0.18
 
-            if i < 5:
-                reels[0] = weighted_symbol()
-            elif i < 9:
-                reels[1] = weighted_symbol()
-            else:
-                reels[2] = weighted_symbol()
+        # 🎰 stop progressivo più rapido
+        if i < 3:
+            reels[0] = weighted_symbol()
+        elif i < 6:
+            reels[1] = weighted_symbol()
+        else:
+            reels[2] = weighted_symbol()
 
-            percentuale = int((i / steps) * 100)
+        percentuale = int((i / steps) * 100)
 
-            testo = (
-                "🎰 STO FACENDO GIRARE LE SLOT...\n"
-                f"⏳ CARICAMENTO: {percentuale}%\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-            )
+        testo = (
+            "🎰 STO FACENDO GIRARE LE SLOT...\n"
+            f"⏳ CARICAMENTO: {percentuale}%\n\n"
+            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+        )
 
-            await msg.edit_caption(caption=testo)
-            await asyncio.sleep(delay)
+        await msg.edit_caption(caption=testo)
 
-        await asyncio.sleep(0.8)
+        # ⚡ micro delay più stabile
+        await asyncio.sleep(delay)
 
-    except Exception as e:
-        print("SLOT GOD ERROR:", e)
+    await asyncio.sleep(0.4)
 
+except Exception as e:
+    print("SLOT GOD ERROR:", e)
     # =========================
     # 🎯 RISULTATO
     # =========================
