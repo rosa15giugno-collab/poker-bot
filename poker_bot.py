@@ -927,7 +927,7 @@ async def pvp(update, context):
 # =========================
 
 def render_table(t):
-    txt = "🃏 <txt = "<b>BLACKJACK PvP LIVE</b>\n\n"
+    txt = "🃏 <b>BLACKJACK PvP LIVE</b>\n\n"
 
 current_uid = None
 
