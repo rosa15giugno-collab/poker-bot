@@ -195,49 +195,18 @@ def get_user(user_id, name="Player"):
 # MENU               ******
 # =========================
 
-def menu():
+def main_menu_keyboard():
     return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🎰 Slot", callback_data="slot"),
-            InlineKeyboardButton("🎲 Roulette", callback_data="roulette")
-        ],
-        [
-            InlineKeyboardButton("🃏 Blackjack", callback_data="blackjack"),
-            InlineKeyboardButton("🆚 PvP", callback_data="pvp")
-        ],
-        [
-            InlineKeyboardButton("🎁 Bonus", callback_data="bonus"),
-            InlineKeyboardButton("💰 Shop", callback_data="shop")
-        ],
-        [
-            InlineKeyboardButton("👤 Profilo", callback_data="profilo"),
-            InlineKeyboardButton("🏆 Classifica", callback_data="classifica")
-        ]
+        [InlineKeyboardButton("🎰 SLOT", callback_data="slot"),
+         InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")],
+        [InlineKeyboardButton("🃏 BLACKJACK", callback_data="blackjack"),
+         InlineKeyboardButton("🆚 PVP", callback_data="pvp")],
+        [InlineKeyboardButton("🎁 BONUS", callback_data="bonus"),
+         InlineKeyboardButton("💰 SHOP", callback_data="shop")],
+        [InlineKeyboardButton("👤 PROFILO", callback_data="profilo"),
+         InlineKeyboardButton("🏆 CLASSIFICA", callback_data="classifica")]
     ])
 
-# =========================
-# 🏠 MENU
-# =========================
-async def menu(update, context):
-
-    q = update.callback_query
-    await q.answer()
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
-        [InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")]
-    ])
-
-    try:
-        await q.message.edit_caption(
-            caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
-            reply_markup=keyboard
-        )
-    except:
-        await q.message.reply_text(
-            "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
-            reply_markup=keyboard
-        )
 
 # =========================
 # START               *************
@@ -1226,6 +1195,8 @@ async def roulette_spin(update, context, bet):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
+
+    data = data.strip()
 
     await q.answer()
 
