@@ -75,15 +75,15 @@ CARDS = [
     "K♠️","K♥️","K♦️","K♣️"
 ]
 
-#===========================
-# CARD BLACK E PVP
-#===========================
+# =========================
+# CARD VALUE (BLACKJACK + PVP)
+# =========================
 def card_value(hand):
     total = 0
     aces = 0
 
     for card in hand:
-        value = card[:-1].replace("️", "")
+        value = card[:-1].replace("️", "").strip()
 
         if value in ["J", "Q", "K"]:
             total += 10
@@ -91,7 +91,7 @@ def card_value(hand):
             total += 11
             aces += 1
         else:
-            total += int(value) 
+            total += int(value)
 
     while total > 21 and aces:
         total -= 10
@@ -101,20 +101,21 @@ def card_value(hand):
 
 
 # =========================
-# SAFE EDIT (FIXATO SOLO QUI)  *****
+# SAFE EDIT (STABILE TELEGRAM)
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        if msg.content_type == "photo" or hasattr(msg, "caption"):
+        # 📸 se il messaggio è una foto → edit caption
+        if getattr(msg, "photo", None):
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
 
+        # 💬 altrimenti testo normale
         return await msg.edit_text(
             text=text,
-        
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
@@ -197,26 +198,36 @@ async def send_main_menu(chat_id, context):
 # =========================
 # SAFE EDIT
 # =========================
+from telegram.error import BadRequest
+
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
+        # se è una foto → caption
+        if getattr(msg, "photo", None):
+            return await msg.edit_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+
+        # altrimenti testo normale
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
+
     except BadRequest as e:
+        # messaggio identico → ignora
         if "Message is not modified" in str(e):
             return False
 
-        try:
-            return await msg.edit_text(
-                text=text + "\u200b",
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-        except Exception as e2:
-            logger.error(f"safe_edit failed: {e2}")
-            return False
+        logger.error(f"safe_edit failed: {e}")
+        return False
+
+    except Exception as e:
+        logger.error(f"safe_edit fatal: {e}")
+        return False
 # =========================
 # USER SYSTEM ******
 # =========================
