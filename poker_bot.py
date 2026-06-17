@@ -1380,7 +1380,7 @@ async def cb_router(update, context):
     if data == "slot":
         return await slot(update, context)
 
-     if data == "spin_slot":
+    if data == "spin_slot":
         return await spin_slot(update, context)
 
     if data == "roulette":
