@@ -362,6 +362,7 @@ async def spin_slot(update, context):
             pass
 
     await asyncio.sleep(delay)
+await asyncio.sleep(0.5)
 
     except Exception as e:
         print("SLOT ERROR:", e)
