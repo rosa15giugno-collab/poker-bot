@@ -8,7 +8,12 @@ import logging
 from collections import deque
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
 
 from telegram.error import BadRequest
 
