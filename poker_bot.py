@@ -265,17 +265,26 @@ def weighted_symbol():
 
 
 # =========================
-# 🎰 SLOT GOD MODE (FAST FIX)
+# 🎰 SLOT GOD MODE (FIXED)
 # =========================
 async def slot(update, context):
+
+    # ✅ FIX: supporta sia /slot che callback
     q = update.callback_query
 
-    try:
-        await q.answer()
-    except:
-        pass
+    if q:
+        try:
+            await q.answer()
+        except:
+            pass
 
-    uid = q.from_user.id
+        uid = q.from_user.id
+        send_target = q.message
+
+    else:
+        uid = update.effective_user.id
+        send_target = update.message
+
     now = time.time()
 
     # 🛡️ anti spam
@@ -287,40 +296,35 @@ async def slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 messaggio iniziale (animazione Telegram)
-    msg = await q.message.reply_animation(
+    # =========================
+    # 🎬 MESSAGGIO INIZIALE
+    # =========================
+    msg = await send_target.reply_animation(
         animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
         caption="🎰 SLOT IN CORSO...\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     # =========================
-    # 🎡 ANIMAZIONE VELOCE (FIX LAG)
+    # 🎡 ANIMAZIONE VELOCE
     # =========================
     try:
-        steps = 7  # ⚡ più veloce
+        steps = 10
 
         for i in range(steps):
 
-            # ⚡ delay stabile e veloce
-            delay = 0.09 if i < 4 else 0.15
+            delay = 0.10 + (i * 0.03)
 
-            # 🎰 rotazione progressiva
-            if i < 3:
+            if i < 4:
                 reels[0] = weighted_symbol()
-            elif i < 5:
+            elif i < 7:
                 reels[1] = weighted_symbol()
             else:
                 reels[2] = weighted_symbol()
 
-            percentuale = int((i / steps) * 100)
-
-            testo = (
-                "🎰 STO GIRANDO LE SLOT...\n"
-                f"⏳ PROGRESSO: {percentuale}%\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            await msg.edit_caption(
+                caption=f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
             )
 
-            await msg.edit_caption(caption=testo)
             await asyncio.sleep(delay)
 
         await asyncio.sleep(0.4)
@@ -332,63 +336,46 @@ async def slot(update, context):
     # 🎯 RISULTATO
     # =========================
     vip = random.choice(VIP_MULT)
-    jackpot_roll = random.randint(1, 250)
+    jackpot_roll = random.randint(1, 200)
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
-        bonus_mult = 5
-        stato = "🔥 JACKPOT LEGENDARIO!"
+        status = "🔥 JACKPOT!"
 
     else:
         r = reels
-        bonus_mult = 1
 
         if random.randint(1, 100) <= 20:
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
             win = PAYOUT["triple"]
-            stato = "🟢 HAI VINTO ALLA GRANDE!"
-        elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
+            status = "🟢 HAI VINTO!"
+        elif r[0] == r[1] or r[1] == r[2]:
             win = PAYOUT["double"]
-            stato = "🟡 BUONA VITTORIA!"
+            status = "🟡 QUASI!"
         else:
             win = 0
-            stato = "🔴 HAI PERSO!"
+            status = "🔴 HAI PERSO"
 
-    win = int(win * vip * bonus_mult * u.get("multiplier", 1.0))
+    win = int(win * vip * u.get("multiplier", 1.0))
 
-    # 💰 update utente
     u["chips"] = u.get("chips", 0) + win
     u["xp"] = u.get("xp", 0) + max(1, win // 15)
     save_user(u)
 
     # =========================
-    # 🎯 OUTPUT FINALE (ITALIANO)
+    # 🎯 OUTPUT FINALE
     # =========================
-    if jackpot_roll == 1:
-        vibe = "💥💥💥"
-    elif win > 0:
-        vibe = "✨✨"
-    else:
-        vibe = "💀"
-
-    finale = (
-        f"{vibe} SLOT GOD MODE {vibe}\n\n"
+    final = (
+        f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"{stato}\n\n"
-        f"💰 Vincita: +{win} chips\n"
-        f"⭐ VIP: x{vip}\n"
-        f"⚡ Bonus: x{bonus_mult}\n"
-        f"💎 Saldo: {u['chips']}\n"
-        f"📈 XP: +{max(1, win // 15)}"
+        f"💰 +{win} chips\n"
+        f"💎 saldo: {u['chips']}"
     )
 
-    await msg.edit_caption(
-        caption=finale,
-        reply_markup=menu()
-    )
+    await msg.edit_caption(caption=final)
 # =========================
 # CREATE TABLE
 # =========================
