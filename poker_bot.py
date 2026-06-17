@@ -293,83 +293,122 @@ async def slot(update, context):
     reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎡 ANIMAZIONE ULTRA STABILE
+    # 🎰 INVIO SLOT ANIMATA
     # =========================
-    try:
-        last_caption = ""
+    msg = await q.message.reply_animation(
+        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+        caption="🎰 CASINO SLOT ULTRA PRO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+     )
 
-        # REEL 1
-        for _ in range(2):
-            reels[0] = weighted_symbol()
-
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃"
-
-            if new_caption != last_caption:
-                await msg.edit_caption(caption=new_caption)
-                last_caption = new_caption
-
-            await asyncio.sleep(0.6)
-
-        await asyncio.sleep(0.3)
-
-        # REEL 2
-        for _ in range(2):
-            reels[1] = weighted_symbol()
-
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃"
-
-            if new_caption != last_caption:
-                await msg.edit_caption(caption=new_caption)
-                last_caption = new_caption
-
-            await asyncio.sleep(0.7)
-
-        await asyncio.sleep(0.4)
-
-        # REEL 3
-        for _ in range(3):
-            reels[2] = weighted_symbol()
-
-            new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-
-            if new_caption != last_caption:
-                await msg.edit_caption(caption=new_caption)
-                last_caption = new_caption
-
-            await asyncio.sleep(0.85)
-
-    except Exception as e:
-        print("SLOT ANIMATION ERROR:", e)
+    reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎯 RISULTATO
-    # =========================
-    vip = random.choice(VIP_MULT)
-    jackpot_roll = random.randint(1, 200)
+# 🎡 ANIMAZIONE ULTRA STABILE
+# =========================
+try:
+    last_caption = ""
 
-    if jackpot_roll == 1:
-        r = ["7️⃣", "7️⃣", "7️⃣"]
-        win = PAYOUT["jackpot"]
+    # REEL 1
+    for _ in range(2):
+        reels[0] = weighted_symbol()
+
+        new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | 🎰 | 🎰 ┃"
+
+        if new_caption != last_caption:
+            await msg.edit_caption(caption=new_caption)
+            last_caption = new_caption
+
+        await asyncio.sleep(0.6)
+
+    await asyncio.sleep(0.3)
+
+    # REEL 2
+    for _ in range(2):
+        reels[1] = weighted_symbol()
+
+        new_caption = (
+            f"🎰 SPINNING...\n\n"
+            f"┃ {reels[0]} | {reels[1]} | 🎰 ┃"
+        )
+
+        if new_caption != last_caption:
+            await msg.edit_caption(caption=new_caption)
+            last_caption = new_caption
+
+        await asyncio.sleep(0.7)
+
+    await asyncio.sleep(0.4)
+
+    # REEL 3
+    for _ in range(3):
+        reels[2] = weighted_symbol()
+
+        new_caption = (
+            f"🎰 SPINNING...\n\n"
+            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+        )
+
+        if new_caption != last_caption:
+            await msg.edit_caption(caption=new_caption)
+            last_caption = new_caption
+
+        await asyncio.sleep(0.85)
+
+except Exception as e:
+    print("SLOT ANIMATION ERROR:", e)
+
+# =========================
+# 🎯 RISULTATO
+# =========================
+vip = random.choice(VIP_MULT)
+jackpot_roll = random.randint(1, 200)
+
+if jackpot_roll == 1:
+    r = ["7️⃣", "7️⃣", "7️⃣"]
+    win = PAYOUT["jackpot"]
+else:
+    r = reels
+
+    if random.randint(1, 100) <= 15:
+        r[1] = r[0]
+
+    if r[0] == r[1] == r[2]:
+        win = PAYOUT["triple"]
+    elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
+        win = PAYOUT["double"]
     else:
-        r = reels
+        win = 0
 
-        if random.randint(1, 100) <= 15:
-            r[1] = r[0]
+win = int(win * vip * u.get("multiplier", 1.0))
 
-        if r[0] == r[1] == r[2]:
-            win = PAYOUT["triple"]
-        elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
-            win = PAYOUT["double"]
-        else:
-            win = 0
+u["chips"] = u.get("chips", 0) + win
+u["xp"] = u.get("xp", 0) + max(1, win // 20)
+save_user(u)
 
-    win = int(win * vip * u.get("multiplier", 1.0))
+if win >= PAYOUT["jackpot"]:
+    status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
+    vibe = "💥💥💥"
+elif win > 0:
+    status = "🟢 WIN!"
+    vibe = "✨"
+else:
+    status = "🔴 LOSS"
+    vibe = "💀"
 
-    # 💰 update
-    u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 20)
-    save_user(u)
+text = (
+    f"{vibe} CASINO ULTRA PRO {vibe}\n\n"
+    f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
+    f"{status}\n"
+    f"💰 Vincita: +{win} chips\n"
+    f"⭐ VIP x{vip}\n"
+    f"💎 Balance: {u['chips']}\n"
+    f"⚡ XP: +{max(1, win // 20)}"
+)
 
+await msg.edit_caption(
+    caption=text,
+    reply_markup=menu()
+)
     # =========================
     # 🎯 OUTPUT
     # =========================
