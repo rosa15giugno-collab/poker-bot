@@ -499,6 +499,12 @@ async def spin_slot(update, context):
 # =========================
 # 🃏 BLACKJACK
 # =========================
+    await q.message.reply_photo(
+        photo=PHOTO_BLACKJACK,
+        caption=caption,
+        reply_markup=keyboard
+    )
+
 async def blackjack(update, context):
     q = update.callback_query
     await q.answer()
@@ -510,9 +516,9 @@ async def blackjack(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await q.message.edit_text(
-        "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-        reply_markup=keyboard
+    await q.message.edit_caption(
+    caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
+    reply_markup=keyboard
     )
 
     uid = q.from_user.id
@@ -595,7 +601,10 @@ async def start_bj(update, context, bet):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await q.message.edit_text(text, reply_markup=keyboard)
+    await q.message.edit_caption(
+    caption=text,
+    reply_markup=keyboard
+    )
 
 # =========================
 # ➕ HIT
@@ -608,9 +617,11 @@ async def hit(update, context):
 
     if uid not in bj_games:
         try:
-            await q.message.edit_text("❌ Nessuna partita attiva.\n\n🏠 Usa MENU")
+            await q.message.edit_caption(
+                caption="❌ Nessuna partita attiva.\n\n🏠 Usa MENU"
+            )
         except:
-            pass
+            await q.message.reply_text("❌ Nessuna partita attiva.\n\n🏠 Usa MENU")
         return
 
     game = bj_games[uid]
@@ -644,7 +655,10 @@ async def hit(update, context):
 
         bj_games.pop(uid, None)
 
-        await q.message.edit_text(text, reply_markup=keyboard)
+        await q.message.edit_caption(
+            caption=text,
+            reply_markup=keyboard
+        )
         return
 
     # 🃏 BLACKJACK NATURALE LIVE CHECK
@@ -675,7 +689,10 @@ async def hit(update, context):
         ]
     ])
 
-    await q.message.edit_text(text, reply_markup=keyboard)
+        await q.message.edit_caption(
+            caption=text,
+            reply_markup=keyboard
+        )
 # =========================
 # ✋ STAND
 # =========================
@@ -727,10 +744,11 @@ async def stand(update, context):
 
     del bj_games[uid]
 
-    await q.message.edit_text(
-        testo,
-        reply_markup=keyboard
-    )
+        await q.message.edit_caption(
+            caption=text,
+            reply_markup=keyboard
+        )
+    
 # =========================
 # CREATE TABLE
 # =========================
