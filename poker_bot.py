@@ -265,7 +265,7 @@ def weighted_symbol():
 
 
 # =========================
-# 🎰 SLOT PRO CASINO
+# 🎰 SLOT ULTRA REAL CASINO
 # =========================
 async def slot(update, context):
     q = update.callback_query
@@ -279,7 +279,7 @@ async def slot(update, context):
     now = time.time()
 
     # 🛡️ anti spam
-    if uid in COOLDOWN and now - COOLDOWN[uid] < 2.5:
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 2.8:
         return
     COOLDOWN[uid] = now
 
@@ -287,42 +287,48 @@ async def slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 SOLO UN MESSAGGIO (IMPORTANTE)
+    # 🎬 messaggio unico
     msg = await q.message.reply_animation(
         animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 SLOT PRO CASINO\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+        caption="🎰 SLOT ULTRA REAL\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     # =========================
-    # 🎡 ANIMAZIONE PRO (FLUIDA)
+    # 🎡 ANIMAZIONE REALISTICA (SLOW STOP)
     # =========================
     try:
-        for step in range(10):
+        speed = [0.15, 0.20, 0.28, 0.35, 0.45, 0.55, 0.65, 0.80]
 
-            # slow reveal progressivo
-            if step < 4:
+        for i, delay in enumerate(speed):
+
+            # stop progressivo dei reel
+            if i < 3:
                 reels[0] = weighted_symbol()
-            elif step < 7:
+            elif i < 5:
                 reels[1] = weighted_symbol()
             else:
                 reels[2] = weighted_symbol()
 
             caption = (
-                "🎰 SPINNING SLOT PRO...\n\n"
+                "🎰 SPINNING...\n"
+                f"🎲 velocità: {round(delay, 2)}s\n\n"
                 f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
             )
 
             await msg.edit_caption(caption=caption)
-            await asyncio.sleep(0.6)
+            await asyncio.sleep(delay)
+
+        # 🔥 micro suspense finale
+        await asyncio.sleep(0.6)
 
     except Exception as e:
-        print("SLOT PRO ERROR:", e)
+        print("SLOT ULTRA REAL ERROR:", e)
 
     # =========================
     # 🎯 RISULTATO
     # =========================
     vip = random.choice(VIP_MULT)
-    jackpot_roll = random.randint(1, 200)
+    jackpot_roll = random.randint(1, 220)
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
@@ -331,8 +337,8 @@ async def slot(update, context):
     else:
         r = reels
 
-        # 🎯 small fake boost (casino feeling)
-        if random.randint(1, 100) <= 18:
+        # 🎲 fake casino behavior
+        if random.randint(1, 100) <= 20:
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
@@ -346,34 +352,34 @@ async def slot(update, context):
 
     # 💰 update
     u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 20)
+    u["xp"] = u.get("xp", 0) + max(1, win // 18)
     save_user(u)
 
     # =========================
-    # 🎯 OUTPUT FINALE
+    # 🎯 OUTPUT FINALE CINEMATICO
     # =========================
     if win >= PAYOUT["jackpot"]:
         status = "🔥 JACKPOT LEGENDARIO 🔥"
-        vibe = "💥💥💥"
+        vibe = "💥💥💥💥"
     elif win > 0:
         status = "🟢 WIN!"
-        vibe = "✨"
+        vibe = "✨✨"
     else:
         status = "🔴 LOSS"
         vibe = "💀"
 
-    final_text = (
-        f"{vibe} SLOT PRO CASINO {vibe}\n\n"
+    final = (
+        f"{vibe} SLOT ULTRA REAL {vibe}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"{status}\n"
         f"💰 +{win} chips\n"
         f"⭐ VIP x{vip}\n"
         f"💎 Balance: {u['chips']}\n"
-        f"⚡ XP +{max(1, win // 20)}"
+        f"⚡ XP +{max(1, win // 18)}"
     )
 
     await msg.edit_caption(
-        caption=final_text,
+        caption=final,
         reply_markup=menu()
     )
 # =========================
