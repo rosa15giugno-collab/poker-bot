@@ -302,7 +302,7 @@ async def slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # =========================
+# =========================
 # 🎡 ANIMAZIONE ULTRA STABILE
 # =========================
 try:
@@ -326,10 +326,7 @@ try:
     for _ in range(2):
         reels[1] = weighted_symbol()
 
-        new_caption = (
-            f"🎰 SPINNING...\n\n"
-            f"┃ {reels[0]} | {reels[1]} | 🎰 ┃"
-        )
+        new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | 🎰 ┃"
 
         if new_caption != last_caption:
             await msg.edit_caption(caption=new_caption)
@@ -343,10 +340,7 @@ try:
     for _ in range(3):
         reels[2] = weighted_symbol()
 
-        new_caption = (
-            f"🎰 SPINNING...\n\n"
-            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-        )
+        new_caption = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
 
         if new_caption != last_caption:
             await msg.edit_caption(caption=new_caption)
@@ -381,10 +375,14 @@ else:
 
 win = int(win * vip * u.get("multiplier", 1.0))
 
+# 💰 update user
 u["chips"] = u.get("chips", 0) + win
 u["xp"] = u.get("xp", 0) + max(1, win // 20)
 save_user(u)
 
+# =========================
+# 🎯 OUTPUT
+# =========================
 if win >= PAYOUT["jackpot"]:
     status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
     vibe = "💥💥💥"
@@ -409,33 +407,6 @@ await msg.edit_caption(
     caption=text,
     reply_markup=menu()
 )
-    # =========================
-    # 🎯 OUTPUT
-    # =========================
-    if win >= PAYOUT["jackpot"]:
-        status = "🔥🔥 JACKPOT LEGENDARIO 🔥🔥"
-        vibe = "💥💥💥"
-    elif win > 0:
-        status = "🟢 WIN!"
-        vibe = "✨"
-    else:
-        status = "🔴 LOSS"
-        vibe = "💀"
-
-    text = (
-        f"{vibe} CASINO ULTRA PRO {vibe}\n\n"
-        f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"{status}\n"
-        f"💰 Vincita: +{win} chips\n"
-        f"⭐ VIP x{vip}\n"
-        f"💎 Balance: {u['chips']}\n"
-        f"⚡ XP: +{max(1, win // 20)}"
-    )
-
-    await msg.edit_caption(
-        caption=text,
-        reply_markup=menu()
-    )
 # =========================
 # CREATE TABLE
 # =========================
