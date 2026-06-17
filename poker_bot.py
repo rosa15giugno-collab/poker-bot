@@ -265,7 +265,7 @@ def weighted_symbol():
 
 
 # =========================
-# 🎰 SLOT ULTRA REAL CASINO
+# 🎰 SLOT GOD MODE (ITALIANO)
 # =========================
 async def slot(update, context):
     q = update.callback_query
@@ -279,7 +279,7 @@ async def slot(update, context):
     now = time.time()
 
     # 🛡️ anti spam
-    if uid in COOLDOWN and now - COOLDOWN[uid] < 2.8:
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 3:
         return
     COOLDOWN[uid] = now
 
@@ -287,99 +287,105 @@ async def slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 messaggio unico
+    # 🎬 messaggio iniziale
     msg = await q.message.reply_animation(
         animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 SLOT ULTRA REAL\n\n┃ 🎰 | 🎰 | 🎰 ┃"
+        caption="🎰 SLOT GOD MODE\n\n┃ 🎰 | 🎰 | 🎰 ┃"
     )
 
     # =========================
-    # 🎡 ANIMAZIONE REALISTICA (SLOW STOP)
+    # 🎡 ANIMAZIONE
     # =========================
     try:
-        speed = [0.15, 0.20, 0.28, 0.35, 0.45, 0.55, 0.65, 0.80]
+        steps = 14
 
-        for i, delay in enumerate(speed):
+        for i in range(steps):
 
-            # stop progressivo dei reel
-            if i < 3:
+            delay = 0.12 + (i * 0.05)
+
+            if i < 5:
                 reels[0] = weighted_symbol()
-            elif i < 5:
+            elif i < 9:
                 reels[1] = weighted_symbol()
             else:
                 reels[2] = weighted_symbol()
 
-            caption = (
-                "🎰 SPINNING...\n"
-                f"🎲 velocità: {round(delay, 2)}s\n\n"
+            percentuale = int((i / steps) * 100)
+
+            testo = (
+                "🎰 STO FACENDO GIRARE LE SLOT...\n"
+                f"⏳ CARICAMENTO: {percentuale}%\n\n"
                 f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
             )
 
-            await msg.edit_caption(caption=caption)
+            await msg.edit_caption(caption=testo)
             await asyncio.sleep(delay)
 
-        # 🔥 micro suspense finale
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(0.8)
 
     except Exception as e:
-        print("SLOT ULTRA REAL ERROR:", e)
+        print("SLOT GOD ERROR:", e)
 
     # =========================
     # 🎯 RISULTATO
     # =========================
     vip = random.choice(VIP_MULT)
-    jackpot_roll = random.randint(1, 220)
+    jackpot_roll = random.randint(1, 250)
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"]
+        bonus_mult = 5
 
     else:
         r = reels
 
-        # 🎲 fake casino behavior
-        if random.randint(1, 100) <= 20:
+        if random.randint(1, 100) <= 22:
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
             win = PAYOUT["triple"]
+            bonus_mult = 2
         elif r[0] == r[1] or r[1] == r[2] or r[0] == r[2]:
             win = PAYOUT["double"]
+            bonus_mult = 1
         else:
             win = 0
+            bonus_mult = 0
 
-    win = int(win * vip * u.get("multiplier", 1.0))
+    win = int(win * vip * bonus_mult * u.get("multiplier", 1.0))
 
-    # 💰 update
+    # 💰 update utente
     u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 18)
+    u["xp"] = u.get("xp", 0) + max(1, win // 15)
     save_user(u)
 
     # =========================
-    # 🎯 OUTPUT FINALE CINEMATICO
+    # 🎯 OUTPUT IN ITALIANO
     # =========================
-    if win >= PAYOUT["jackpot"]:
-        status = "🔥 JACKPOT LEGENDARIO 🔥"
+    if jackpot_roll == 1:
+        stato = "🔥 JACKPOT LEGENDARIO!"
         vibe = "💥💥💥💥"
     elif win > 0:
-        status = "🟢 WIN!"
+        stato = "🟢 HAI VINTO!"
         vibe = "✨✨"
     else:
-        status = "🔴 LOSS"
+        stato = "🔴 HAI PERSO"
         vibe = "💀"
 
-    final = (
-        f"{vibe} SLOT ULTRA REAL {vibe}\n\n"
+    finale = (
+        f"{vibe} SLOT GOD MODE {vibe}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"{status}\n"
-        f"💰 +{win} chips\n"
-        f"⭐ VIP x{vip}\n"
-        f"💎 Balance: {u['chips']}\n"
-        f"⚡ XP +{max(1, win // 18)}"
+        f"{stato}\n"
+        f"💰 Vincita: +{win} chips\n"
+        f"⭐ Moltiplicatore VIP: x{vip}\n"
+        f"⚡ Bonus GOD: x{bonus_mult}\n"
+        f"💎 Saldo totale: {u['chips']}\n"
+        f"⚡ XP guadagnata: +{max(1, win // 15)}"
     )
 
     await msg.edit_caption(
-        caption=final,
+        caption=finale,
         reply_markup=menu()
     )
 # =========================
