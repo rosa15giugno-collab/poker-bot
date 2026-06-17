@@ -495,7 +495,7 @@ async def pvp(update, context):
 
     # ❌ già dentro al tavolo
     if any(p["id"] == uid for p in t["players"]):
-        return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=menu())
+        return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=main_menu_keyboard())
 
     # 💰 scala chips
     user["chips"] -= bet
@@ -534,7 +534,7 @@ async def pvp(update, context):
         return await safe_edit(
             q.message,
             f"🃏 TABLE\n👥 {len(t['players'])}/6\n💰 Pot: {t['pot']}",
-            reply_markup=menu()
+            reply_markup=main_menu_keyboard()
         )
 
     # 🚀 avvio partita
@@ -983,7 +983,7 @@ async def roulette_spin(update, context, bet):
             f"💰 +{win}\n"
             f"🏦 SALDO: {u['chips']}"
         ),
-        reply_markup=menu()
+        reply_markup=main_menu_keyboard()
     )
 
 # =========================
@@ -1189,7 +1189,7 @@ async def roulette_spin(update, context, bet):
             f"💰 +{win}\n"
             f"🏦 SALDO: {u['chips']}"
         ),
-        reply_markup=menu()
+        reply_markup=main_menu_keyboard()
     )
 
 # =====================
@@ -1288,7 +1288,7 @@ async def profilo(update, context):
         f"👤 PROFILO\n\n"
         f"💰 Chips: {u['chips']}\n"
         f"⭐ XP: {u['xp']}",
-        reply_markup=menu()
+        reply_markup=main_menu_keyboard()
     )
 
 
@@ -1301,7 +1301,7 @@ async def classifica(update, context):
     await safe_edit(
         q.message,
         "🏆 CLASSIFICA\n\n🚧 In arrivo...",
-        reply_markup=menu()
+        reply_markup=main_menu_keyboard()
     )
 
 
@@ -1314,7 +1314,7 @@ async def shop(update, context):
     await safe_edit(
         q.message,
         "🛒 SHOP\n\n🚧 In arrivo...",
-        reply_markup=menu()
+        reply_markup=main_menu_keyboard()
     )
 
 
