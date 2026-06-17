@@ -745,10 +745,10 @@ async def stand(update, context):
 
     del bj_games[uid]
 
-        await q.message.edit_caption(
-            caption=text,
-            reply_markup=keyboard
-        )
+    await q.message.edit_caption(
+        caption=text,
+        reply_markup=keyboard
+    )
     
 # =========================
 # CREATE TABLE
