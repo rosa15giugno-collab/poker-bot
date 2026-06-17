@@ -54,6 +54,8 @@ COOLDOWN = {}
 # 🃏 BLACKJACK / PVP
 # =========================
 bj_games = {}
+bets = {}
+
 
 BLACKJACK_BETS = [100, 500, 1000]
 
@@ -884,8 +886,8 @@ async def pvp(update, context):
 
     # 🃏 carte iniziali
     t["hands"][uid] = [
-        random.randint(2, 11),
-        random.randint(2, 11)
+    random.choice(CARDS),
+    random.choice(CARDS)
     ]
 
     t["pot"] += bet
@@ -925,36 +927,35 @@ async def pvp(update, context):
 # =========================
 
 def render_table(t):
-    txt = "🃏 <b>BLACKJACK PvP LIVE</b>\n\n"
+    txt = "🃏 <txt = "<b>BLACKJACK PvP LIVE</b>\n\n"
 
-    current_uid = None
+current_uid = None
 
-    if t["order"] and t["turn_index"] < len(t["order"]):
-        current_uid = t["order"][t["turn_index"]]
+if t["order"] and t["turn_index"] < len(t["order"]):
+    current_uid = t["order"][t["turn_index"]]
 
-    for p in t["players"]:
-        uid = p["id"]
-        name = p["name"]
-        hand = t["hands"].get(uid, [])
+for p in t["players"]:
+    uid = p["id"]
+    name = p["name"]
+    hand = t["hands"].get(uid) or []
 
-        marker = "👉" if uid == current_uid else "👤"
+    marker = "👉" if uid == current_uid else "👤"
 
-        txt += f"{marker} <b>{name}</b>: {sum(hand)} {hand}\n"
+    txt += f"{marker} <b>{name}</b>: {card_value(hand)} {hand}\n"
 
-    txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
+txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
 
-    if current_uid:
-        current_name = next(
-            (p["name"] for p in t["players"] if p["id"] == current_uid),
-            "?"
-        )
+if current_uid:
+    current_name = next(
+        (p["name"] for p in t["players"] if p["id"] == current_uid),
+        "?"
+    )
 
-        txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
+    txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
 
-    txt += f"\n💰 Pot: {t['pot']}"
+txt += f"\n💰 Pot: {t['pot']}"
 
-    return txt
-
+return txt
 
 #==========================
 # UPDATE
@@ -1573,7 +1574,14 @@ async def menu(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-     # blackjack
+
+    await q.answer()
+
+    # 🎯 BLACKJACK BET (PRIMA)
+    if data.startswith("bj_bet_"):
+        return await blackjack_bet(update, context, int(data.split("_")[-1]))
+
+    # 🎯 BLACKJACK GAME
     if data == "blackjack":
         return await blackjack(update, context)
 
@@ -1583,12 +1591,13 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-    if data.startswith("bj_bet_"):
-        return await blackjack_bet(update, context, int(data.split("_")[-1]))
-    data = data.strip()
+    if data == "hit_mp":
+        return await hit_mp(update, context)
 
-    await q.answer()
+    if data == "stand_mp":
+        return await stand_mp(update, context)
 
+    # 🎯 GENERICO HANDLERS
     handlers = {
         "slot": slot,
         "roulette": roulette,
@@ -1597,27 +1606,17 @@ async def cb_router(update, context):
         "profilo": profilo,
         "classifica": classifica,
         "pvp": pvp,
-
-        "blackjack": blackjack,
-        "hit": hit,
-        "stand": stand,
-
-        "hit_mp": hit_mp,
-        "stand_mp": stand_mp,
-
         "bonus": bonus,
     }
 
     if data in handlers:
         return await handlers[data](update, context)
 
+    # 🎯 BET NUMBERS FALLBACK
     if data.startswith("bet_"):
-        if data in globals():
-            return await globals()[data](update, context)
         return await bet_number(update, context)
 
     print("❌ CALLBACK NON GESTITA:", data)
-BONUS_LOCK = {}
 
 # =========================
 # 🎁 BONUS
