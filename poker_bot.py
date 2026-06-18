@@ -1518,17 +1518,16 @@ async def menu(update, context):
         reply_markup=main_menu_keyboard()
     )
 
-#========================
-# CB
-#=======================
-
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
 
     print("RAW CALLBACK =>", repr(data))
 
-    await q.answer()
+    try:
+        await q.answer()
+    except:
+        pass
 
     if data.startswith("blackjack_bet_"):
         amount = int(data.split("_")[-1])
@@ -1536,7 +1535,6 @@ async def cb_router(update, context):
         return await blackjack_bet(update, context, amount)
 
     if data == "blackjack":
-        print("BLACKJACK MENU")
         return await blackjack(update, context)
 
     if data == "hit":
@@ -1557,6 +1555,7 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     print("❌ CALLBACK NON GESTITA:", data)
+    return
 # =========================
 # 🎁 BONUS
 # =========================
