@@ -1719,6 +1719,7 @@ async def fileid(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
+    uid = q.from_user.id
 
     print("RAW CALLBACK =>", repr(data))
 
@@ -1728,22 +1729,31 @@ async def cb_router(update, context):
         pass
 
     # =====================
-    # 🎰 SLOT
+    # 🏠 MENU
+    # =====================
+    if data in ["menu", "go_menu"]:
+        return await send_main_menu(q.message.chat_id, context)
+
+    # =====================
+    # 🎰 SLOT ENTRY
     # =====================
     if data == "slot":
         return await slot(update, context)
 
-    if data == "spin_slot":
+    # =====================
+    # 🎰 SLOT SPIN (FIX PUNTATA)
+    # spin_slot_100 / 500 / 1000
+    # =====================
+    if data.startswith("spin_slot"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        # salva puntata per utente
+        games[uid] = {"bet": bet}
+
         return await spin_slot(update, context)
-
-    # =====================
-    # 🏠 MENU
-    # =====================
-    if data == "menu":
-        return await send_main_menu(q.message.chat_id, context)
-
-    if data == "go_menu":
-        return await send_main_menu(q.message.chat_id, context)
 
     # =====================
     # 🎲 ROULETTE
@@ -1776,28 +1786,33 @@ async def cb_router(update, context):
         return await bet_number(update, context)
 
     # =====================
-    # 🎮 ALTRO
+    # 🎮 PVP
     # =====================
     if data == "pvp":
         return await pvp(update, context)
 
     # =====================
-    # 🃏 BLACKJACK
+    # 🃏 BLACKJACK START
     # =====================
     if data == "blackjack":
         return await blackjack(update, context)
 
+    # =====================
+    # 🃏 BLACKJACK ACTIONS
+    # =====================
     if data == "hit":
         return await hit(update, context)
 
     if data == "stand":
         return await stand(update, context)
 
-    # 🃏 BLACKJACK BET (FONDAMENTALE)
+    # =====================
+    # 🃏 BLACKJACK BET
+    # =====================
     if data.startswith("blackjack_bet_"):
         try:
             amount = int(data.split("_")[-1])
-            print("BET:", amount)
+            print("BLACKJACK BET:", amount)
             return await blackjack_bet(update, context, amount)
         except Exception as e:
             print("❌ BJ BET ERROR:", e)
