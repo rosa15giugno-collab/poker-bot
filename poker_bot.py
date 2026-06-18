@@ -596,7 +596,11 @@ async def blackjack_bet(update, context, amount):
         f"📊 Totale: {card_value(player)}"
     )
 
-    await safe_edit(q.message, text, reply_markup=keyboard)
+    await update.message.reply_photo(
+        photo=photo_id,
+        caption=caption,
+        reply_markup=main_menu_keyboard()
+    )
 # =========================
 # ➕ HIT
 # =========================
@@ -692,6 +696,7 @@ async def stand(update, context):
     dealer = game["dealer"]
     bet = game["bet"]
 
+    # 🎩 dealer plays
     while card_value(dealer) < 17:
         if not game["deck"]:
             game["deck"] = CARDS.copy()
@@ -702,55 +707,66 @@ async def stand(update, context):
     p = card_value(player)
     d = card_value(dealer)
 
+    # =========================
     # 🃏 BLACKJACK NATURALE
+    # =========================
     if p == 21 and len(player) == 2:
-        payout = int(bet * 2.5)
-        u["chips"] += payout
+        win = int(bet * 2.5)
+        u["chips"] = u.get("chips", 0) + win
+        profit = win - bet
 
         risultato = (
             "🃏 BLACKJACK!\n"
-            f"💰 Vincita: +{payout - bet} chips\n"
+            f"💰 Vincita: +{profit} chips\n"
             f"🏦 Saldo: {u['chips']} chips"
         )
 
+    # =========================
     # 🎉 VITTORIA
+    # =========================
     elif d > 21 or p > d:
-        payout = bet * 2
-        u["chips"] += payout
+        win = bet * 2
+        u["chips"] = u.get("chips", 0) + win
+        profit = bet
 
         risultato = (
             "🎉 HAI VINTO!\n"
-            f"💰 Vincita: +{bet} chips\n"
+            f"💰 Vincita: +{profit} chips\n"
             f"🏦 Saldo: {u['chips']} chips"
         )
 
+    # =========================
     # 😔 SCONFITTA
+    # =========================
     elif p < d:
+        u["chips"] = u.get("chips", 0)
+
         risultato = (
             "😔 HAI PERSO\n"
-            f"💸 Perdita: -{bet} chips\n"
+            f"💸 Perdita: {bet} chips\n"
             f"🏦 Saldo: {u['chips']} chips"
         )
 
+    # =========================
     # 🤝 PAREGGIO
+    # =========================
     else:
-        u["chips"] += bet
+        u["chips"] = u.get("chips", 0) + bet
 
         risultato = (
             "🤝 PAREGGIO\n"
-            f"💰 Puntata restituita: +{bet} chips\n"
+            f"💰 Rimborso: +{bet} chips\n"
             f"🏦 Saldo: {u['chips']} chips"
         )
 
     save_user(u)
+    bj_games.pop(uid, None)
 
     testo = (
         f"{risultato}\n\n"
         f"🃏 TU: {' '.join(player)} ({p})\n"
         f"🎩 BANCO: {' '.join(dealer)} ({d})"
     )
-
-    bj_games.pop(uid, None)
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🃏 RIGIOCA", callback_data="blackjack")],
@@ -762,7 +778,6 @@ async def stand(update, context):
         testo,
         reply_markup=keyboard
     )
-
 # =========================
 # CREATE TABLE
 # =========================
