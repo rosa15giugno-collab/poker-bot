@@ -338,10 +338,12 @@ VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
 
 COOLDOWN = {}
 
-# =========================
-# 🎰 SLOT SYMBOLS
-# =========================
+# memoria giochi slot
+games = {}
 
+# =========================
+# 🎰 SLOT SYMBOLS (WEIGHTED)
+# =========================
 def weighted_symbol():
     table = [
         ("🍒", 30),
@@ -364,22 +366,16 @@ def weighted_symbol():
 
     return "🍒"
 
-# =========================
-# 🎰 SLOT MENU ENTRATA
-# =========================
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-import time
 
+# =========================
+# 🎰 SLOT MENU
+# =========================
 async def slot(update, context):
 
     q = update.callback_query
 
     if q:
-        try:
-            await q.answer()
-        except:
-            pass
-
+        await q.answer()
         uid = q.from_user.id
         target = q.message
     else:
@@ -388,28 +384,30 @@ async def slot(update, context):
 
     now = time.time()
 
-    if uid in COOLDOWN and now - COOLDOWN[uid] < 3:
+    if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
+    # 💰 default bet
+    games[uid] = {"bet": 100}
+
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN", callback_data="spin_slot")]
+        [InlineKeyboardButton("🎰 SPIN 100", callback_data="spin_slot_100")],
+        [InlineKeyboardButton("🎰 SPIN 500", callback_data="spin_slot_500")],
+        [InlineKeyboardButton("🎰 SPIN 1000", callback_data="spin_slot_1000")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    # 🎬 MESSAGGIO INIZIALE (VERSIONE PRO)
     await target.reply_animation(
         animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption=(
-            "🎰 SLOT MACHINE\n\n"
-            "💰 Premi SPIN per giocare!\n"
-            "🔥 Vinci fino a JACKPOT!"
-        ),
+        caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
         reply_markup=keyboard
     )
-# =========================
-# 🎰 SLOT SPIN ANIMATION (FIXED)
-# =========================
 
+
+# =========================
+# 🎰 SPIN CALLBACK
+# =========================
 async def spin_slot(update, context):
 
     q = update.callback_query
@@ -418,16 +416,17 @@ async def spin_slot(update, context):
     msg = q.message
     uid = q.from_user.id
 
-    # 🛡️ cooldown
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
+    bet = games.get(uid, {}).get("bet", 100)
+
     reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎡 ANIMAZIONE STABILE (NO FLOOD)
+    # 🎬 ANIMAZIONE
     # =========================
     try:
         steps = 6
@@ -435,10 +434,8 @@ async def spin_slot(update, context):
 
         for i in range(steps):
 
-            # 🎯 delay sicuro (Telegram friendly)
-            await asyncio.sleep(0.55)
+            await asyncio.sleep(0.5)
 
-            # 🎰 animazione progressiva
             if i < 2:
                 reels[0] = weighted_symbol()
             elif i < 4:
@@ -446,12 +443,8 @@ async def spin_slot(update, context):
             else:
                 reels[2] = weighted_symbol()
 
-            text = (
-                "🎰 SPIN IN CORSO...\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
-            )
+            text = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
 
-            # 🔥 SOLO OGNI 2 STEP → evita flood
             if i % 2 == 0 and text != last_text:
                 try:
                     await msg.edit_caption(caption=text)
@@ -462,8 +455,7 @@ async def spin_slot(update, context):
     except Exception as e:
         print("SLOT ERROR:", e)
 
-    # pausa finale stabilità Telegram
-    await asyncio.sleep(0.7)
+    await asyncio.sleep(0.5)
 
     # =========================
     # 🎯 RISULTATO
@@ -475,7 +467,7 @@ async def spin_slot(update, context):
 
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
-        win = PAYOUT["jackpot"]
+        win = PAYOUT["jackpot"] * bet
         status = "🔥 JACKPOT!"
     else:
         r = reels
@@ -484,10 +476,10 @@ async def spin_slot(update, context):
             r[1] = r[0]
 
         if r[0] == r[1] == r[2]:
-            win = PAYOUT["triple"]
+            win = PAYOUT["triple"] * bet
             status = "🟢 HAI VINTO!"
         elif r[0] == r[1] or r[1] == r[2]:
-            win = PAYOUT["double"]
+            win = PAYOUT["double"] * bet
             status = "🟡 QUASI!"
         else:
             win = 0
@@ -500,7 +492,7 @@ async def spin_slot(update, context):
     save_user(u)
 
     # =========================
-    # 🎯 OUTPUT FINALE + MENU
+    # 🎯 OUTPUT FINALE
     # =========================
     final = (
         f"{status}\n\n"
@@ -510,7 +502,7 @@ async def spin_slot(update, context):
     )
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot")],
+        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot_100")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
@@ -521,7 +513,6 @@ async def spin_slot(update, context):
         )
     except Exception as e:
         print("FINAL EDIT ERROR:", e)
-
 
 
 
