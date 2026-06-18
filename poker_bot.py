@@ -1542,6 +1542,7 @@ async def menu(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
+    uid = q.from_user.id
 
     print("RAW CALLBACK =>", repr(data))
 
@@ -1550,26 +1551,50 @@ async def cb_router(update, context):
     except:
         pass
 
-    # 🎰 BLACKJACK BET
+    # =========================
+    # 🃏 BLACKJACK BET
+    # =========================
     if data.startswith("blackjack_bet_"):
         amount = int(data.split("_")[-1])
         return await blackjack_bet(update, context, amount)
 
-    # 🃏 BLACKJACK
+    # =========================
+    # 🃏 BLACKJACK START
+    # =========================
     if data == "blackjack":
         return await blackjack(update, context)
 
-    # 🎮 GAME ACTIONS
+    # =========================
+    # 🎰 SLOT ENTRY
+    # =========================
+    if data == "slot":
+        return await slot(update, context)
+
+    # =========================
+    # 🎰 SLOT BET HANDLER (FIX SLOT BUG)
+    # =========================
+    if data.startswith("spin_slot_"):
+        bet = int(data.split("_")[-1])
+        games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =========================
+    # 🃏 BLACKJACK ACTIONS
+    # =========================
     if data == "hit":
         return await hit(update, context)
 
     if data == "stand":
         return await stand(update, context)
 
-    # 🧭 MENU
+    # =========================
+    # 🧭 MENU / NAVIGATION
+    # =========================
     handlers = {
         "menu": menu,
-        "slot": slot,
         "roulette": roulette,
         "pvp": pvp,
         "bonus": bonus,
@@ -1578,6 +1603,9 @@ async def cb_router(update, context):
     if data in handlers:
         return await handlers[data](update, context)
 
+    # =========================
+    # ❌ UNKNOWN CALLBACK
+    # =========================
     print("❌ CALLBACK NON GESTITA:", data)
     return
 # =========================
