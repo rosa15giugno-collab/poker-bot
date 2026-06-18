@@ -562,7 +562,9 @@ async def blackjack(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await q.message.edit_caption(
+    await context.bot.send_photo(
+        chat_id=q.message.chat_id,
+        photo=PHOTO_BLACKJACK,   # 👈 QUESTO è il fileid GIUSTO
         caption="🃏 BLACKJACK\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
