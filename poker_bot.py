@@ -509,7 +509,7 @@ async def spin_slot(update, context):
         f"💎 saldo: {u['chips']}"
     )
 
-    keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup(
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
@@ -547,10 +547,10 @@ async def blackjack(update, context):
         ]
     ])
 
-        await q.message.edit_caption(
-            caption=text,
-            reply_markup=keyboard
-        )
+    await q.message.edit_caption(
+        caption=text,
+        reply_markup=keyboard
+    )
     
 
 # =========================
