@@ -547,10 +547,10 @@ async def blackjack(update, context):
         ]
     ])
 
-   await q.message.edit_caption(
-        caption=text,
-        reply_markup=keyboard
-    )
+        await q.message.edit_caption(
+            caption=text,
+            reply_markup=keyboard
+        )
     
 
 # =========================
