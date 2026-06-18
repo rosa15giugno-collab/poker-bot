@@ -559,7 +559,7 @@ async def blackjack(update, context):
 # 💰 START PARTITA
 # =========================
 
-[11:16, 18/06/2026] Rosa: async def blackjack_bet(update, context, amount):
+async def blackjack_bet(update, context, amount):
     print("🔥 blackjack_bet:", amount)
 
     q = update.callback_query
@@ -593,7 +593,7 @@ async def blackjack(update, context):
     text = (
         "🃏 BLACKJACK\n\n"
         f"💰 Puntata: {…
-[11:17, 18/06/2026] Rosa: async def blackjack_bet(update, context, amount):
+async def blackjack_bet(update, context, amount):
     print("🔥 blackjack_bet:", amount)
 
     q = update.callback_query
