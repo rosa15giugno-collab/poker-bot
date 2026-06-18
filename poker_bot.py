@@ -548,7 +548,7 @@ async def blackjack(update, context):
     ])
 
     # menu sempre text (non caption)
-    await safe_edit(
+    await edit_message_text(
     q.message,
     "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
     reply_markup=keyboard
@@ -559,13 +559,55 @@ async def blackjack(update, context):
 # 💰 START PARTITA
 # =========================
 
-async def blackjack_bet(update, context, amount):
+[11:16, 18/06/2026] Rosa: async def blackjack_bet(update, context, amount):
     print("🔥 blackjack_bet:", amount)
 
     q = update.callback_query
     await q.answer()
 
     uid = q.from_user.id
+
+    deck = CARDS.copy()
+    random.shuffle(deck)
+
+    player = [deck.pop(), deck.pop()]
+    dealer = [deck.pop(), deck.pop()]
+
+    bj_games[uid] = {
+        "deck": deck,
+        "player": player,
+        "dealer": dealer,
+        "bet": amount
+    }
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
+            InlineKeyboardButton("✋ STAI", callback_data="stand")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    text = (
+        "🃏 BLACKJACK\n\n"
+        f"💰 Puntata: {…
+[11:17, 18/06/2026] Rosa: async def blackjack_bet(update, context, amount):
+    print("🔥 blackjack_bet:", amount)
+
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+    u = get_user(uid)
+
+    # 💰 controllo saldo
+    if u["chips"] < amount:
+        return await q.message.reply_text("❌ Non hai abbastanza chips.")
+
+    u["chips"] -= amount
+    save_user(u)
 
     deck = CARDS.copy()
     random.shuffle(deck)
@@ -603,7 +645,6 @@ async def blackjack_bet(update, context, amount):
         text,
         reply_markup=keyboard
     )
-
 
 # =========================
 # ➕ HIT
