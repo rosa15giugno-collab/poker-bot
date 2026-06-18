@@ -552,10 +552,12 @@ async def blackjack(update, context):
         "💰 Scegli la puntata:"
     )
 
-    await q.message.edit_caption(
-        caption=text,
+    await safe_edit(
+        q.message,
+        text,
         reply_markup=keyboard
     )
+    
 
 # =========================
 # 💰 START PARTITA
