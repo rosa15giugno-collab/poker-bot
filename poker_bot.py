@@ -526,13 +526,6 @@ async def spin_slot(update, context):
 
 
 
-# =========================
-# 🃏 BLACKJACK
-# =========================
-
-async def blackjack(update, context):
-    q = update.callback_query
-    await q.answer()
 
     keyboard = InlineKeyboardMarkup([
         [
@@ -547,8 +540,10 @@ async def blackjack(update, context):
         ]
     ])
 
-    await q.message.edit_caption(
-        caption=text,
+    await context.bot.send_photo(
+        chat_id=q.message.chat_id,
+        photo=PHOTO_BLACKJACK,
+        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
     
