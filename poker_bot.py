@@ -548,10 +548,6 @@ async def spin_slot(update, context):
     )
     
 
-# =========================
-# 💰 START PARTITA
-# =========================
-
 async def blackjack_bet(update, context, amount):
     print("🔥 blackjack_bet:", amount)
 
@@ -561,11 +557,12 @@ async def blackjack_bet(update, context, amount):
     uid = q.from_user.id
     u = get_user(uid)
 
-    # 💰 controllo saldo
-    if u["chips"] < amount:
-        return await q.message.reply_text("❌ Non hai abbastanza chips.")
+    # 💰 controllo saldo safe
+    if u.get("chips", 0) < amount:
+        await safe_edit(q.message, "❌ Non hai abbastanza chips.")
+        return
 
-    u["chips"] -= amount
+    u["chips"] = u.get("chips", 0) - amount
     save_user(u)
 
     deck = CARDS.copy()
@@ -599,11 +596,7 @@ async def blackjack_bet(update, context, amount):
         f"📊 Totale: {card_value(player)}"
     )
 
-    await safe_edit(
-        q.message,
-        text,
-        reply_markup=keyboard
-    )
+    await safe_edit(q.message, text, reply_markup=keyboard)
 # =========================
 # ➕ HIT
 # =========================
@@ -1535,10 +1528,16 @@ async def menu(update, context):
     q = update.callback_query
     await q.answer()
 
-    await q.message.edit_caption(
-        caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
-        reply_markup=main_menu_keyboard()
-    )
+    try:
+        await q.message.edit_caption(
+            caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+            reply_markup=main_menu_keyboard()
+        )
+    except:
+        await q.message.edit_text(
+            "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+            reply_markup=main_menu_keyboard()
+        )
 
 async def cb_router(update, context):
     q = update.callback_query
@@ -1551,20 +1550,23 @@ async def cb_router(update, context):
     except:
         pass
 
+    # 🎰 BLACKJACK BET
     if data.startswith("blackjack_bet_"):
         amount = int(data.split("_")[-1])
-        print("BET:", amount)
         return await blackjack_bet(update, context, amount)
 
+    # 🃏 BLACKJACK
     if data == "blackjack":
         return await blackjack(update, context)
 
+    # 🎮 GAME ACTIONS
     if data == "hit":
         return await hit(update, context)
 
     if data == "stand":
         return await stand(update, context)
 
+    # 🧭 MENU
     handlers = {
         "menu": menu,
         "slot": slot,
