@@ -55,6 +55,7 @@ COOLDOWN = {}
 # =========================
 bj_games = {}
 bets = {}
+slot_games = {}
 
 
 BLACKJACK_BETS = [100, 500, 1000]
@@ -421,7 +422,7 @@ async def spin_slot(update, context):
         return
     COOLDOWN[uid] = now
 
-    bet = games.get(uid, {}).get("bet", 100)
+    bet = slot_games.get(uid, {}).get("bet", 100)
 
     reels = ["🎰", "🎰", "🎰"]
 
@@ -1555,7 +1556,10 @@ async def cb_router(update, context):
     # 🃏 BLACKJACK BET
     # =========================
     if data.startswith("blackjack_bet_"):
-        amount = int(data.split("_")[-1])
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
         return await blackjack_bet(update, context, amount)
 
     # =========================
@@ -1563,23 +1567,6 @@ async def cb_router(update, context):
     # =========================
     if data == "blackjack":
         return await blackjack(update, context)
-
-    # =========================
-    # 🎰 SLOT ENTRY
-    # =========================
-    if data == "slot":
-        return await slot(update, context)
-
-    # =========================
-    # 🎰 SLOT BET HANDLER (FIX SLOT BUG)
-    # =========================
-    if data.startswith("spin_slot_"):
-        bet = int(data.split("_")[-1])
-        games[uid] = {"bet": bet}
-        return await spin_slot(update, context)
-
-    if data == "spin_slot":
-        return await spin_slot(update, context)
 
     # =========================
     # 🃏 BLACKJACK ACTIONS
@@ -1591,7 +1578,28 @@ async def cb_router(update, context):
         return await stand(update, context)
 
     # =========================
-    # 🧭 MENU / NAVIGATION
+    # 🎰 SLOT ENTRY
+    # =========================
+    if data == "slot":
+        return await slot(update, context)
+
+    # =========================
+    # 🎰 SLOT BET (FIX DEFINITIVO)
+    # =========================
+    if data.startswith("spin_slot_"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =========================
+    # 🧭 NAVIGATION
     # =========================
     handlers = {
         "menu": menu,
@@ -1604,7 +1612,7 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     # =========================
-    # ❌ UNKNOWN CALLBACK
+    # ❌ FALLBACK
     # =========================
     print("❌ CALLBACK NON GESTITA:", data)
     return
