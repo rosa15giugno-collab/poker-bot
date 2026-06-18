@@ -694,7 +694,6 @@ async def hit(update, context):
 # =========================
 # ✋ STAND
 # =========================
-
 async def stand(update, context):
     q = update.callback_query
     await q.answer()
@@ -705,9 +704,11 @@ async def stand(update, context):
         return
 
     game = bj_games[uid]
+    u = get_user(uid)
 
     player = game["player"]
     dealer = game["dealer"]
+    bet = game["bet"]
 
     while card_value(dealer) < 17:
         if not game["deck"]:
@@ -719,14 +720,47 @@ async def stand(update, context):
     p = card_value(player)
     d = card_value(dealer)
 
-    if d > 21:
-        risultato = "🎉 HAI VINTO!"
-    elif p > d:
-        risultato = "🎉 HAI VINTO!"
+    # 🃏 BLACKJACK NATURALE
+    if p == 21 and len(player) == 2:
+        payout = int(bet * 2.5)
+        u["chips"] += payout
+
+        risultato = (
+            "🃏 BLACKJACK!\n"
+            f"💰 Vincita: +{payout - bet} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
+        )
+
+    # 🎉 VITTORIA
+    elif d > 21 or p > d:
+        payout = bet * 2
+        u["chips"] += payout
+
+        risultato = (
+            "🎉 HAI VINTO!\n"
+            f"💰 Vincita: +{bet} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
+        )
+
+    # 😔 SCONFITTA
     elif p < d:
-        risultato = "😔 HAI PERSO"
+        risultato = (
+            "😔 HAI PERSO\n"
+            f"💸 Perdita: -{bet} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
+        )
+
+    # 🤝 PAREGGIO
     else:
-        risultato = "🤝 PAREGGIO"
+        u["chips"] += bet
+
+        risultato = (
+            "🤝 PAREGGIO\n"
+            f"💰 Puntata restituita: +{bet} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
+        )
+
+    save_user(u)
 
     testo = (
         f"{risultato}\n\n"
@@ -746,7 +780,6 @@ async def stand(update, context):
         testo,
         reply_markup=keyboard
     )
-
 
 # =========================
 # CREATE TABLE
