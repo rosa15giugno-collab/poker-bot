@@ -547,14 +547,10 @@ async def blackjack(update, context):
         ]
     ])
 
-    text = (
-        "🃏 BLACKJACK CASINO\n\n"
-        "💰 Scegli la puntata:"
-    )
-
-    await safe_edit(
-        q.message,
-        text,
+    await context.bot.send_photo(
+        chat_id=q.message.chat_id,
+        photo=PHOTO_BLACKJACK,
+        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
     
