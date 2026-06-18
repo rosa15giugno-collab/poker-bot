@@ -522,16 +522,6 @@ async def spin_slot(update, context):
     except Exception as e:
         print("FINAL EDIT ERROR:", e)
 
-# =====================
-# 🃏 BLACKJACK BET
-# =====================
-if data.startswith("blackjack_bet_"):
-    try:
-        amount = int(data.split("_")[-1])
-        return await blackjack_bet(update, context, amount)
-    except Exception as e:
-        print("❌ BJ BET ERROR:", e)
-        return
 
 
 
@@ -1668,26 +1658,34 @@ async def cb_router(update, context):
     q = update.callback_query
     data = q.data
 
+    print("RAW CALLBACK =>", repr(data))
+
     try:
         await q.answer()
     except:
         pass
 
-    # SLOT
+    # =====================
+    # 🎰 SLOT
+    # =====================
     if data == "slot":
         return await slot(update, context)
 
     if data == "spin_slot":
         return await spin_slot(update, context)
 
-    # MENU (AGGIUNGI QUI)
+    # =====================
+    # 🏠 MENU
+    # =====================
     if data == "menu":
         return await send_main_menu(q.message.chat_id, context)
 
     if data == "go_menu":
-        return await send_main_menu(q.message.chat_id, context) 
+        return await send_main_menu(q.message.chat_id, context)
 
-    # 🎲 ROULETTE MENU
+    # =====================
+    # 🎲 ROULETTE
+    # =====================
     if data == "roulette":
         return await roulette(update, context)
 
@@ -1715,11 +1713,15 @@ async def cb_router(update, context):
     if data.startswith("bet_"):
         return await bet_number(update, context)
 
+    # =====================
     # 🎮 ALTRO
+    # =====================
     if data == "pvp":
         return await pvp(update, context)
 
-    # BLACKJACK
+    # =====================
+    # 🃏 BLACKJACK
+    # =====================
     if data == "blackjack":
         return await blackjack(update, context)
 
@@ -1727,9 +1729,22 @@ async def cb_router(update, context):
         return await hit(update, context)
 
     if data == "stand":
-       return await stand(update, context)
-    print("❌ CALLBACK NON GESTITA:", data)
+        return await stand(update, context)
 
+    # 🃏 BLACKJACK BET (FONDAMENTALE)
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+            print("BET:", amount)
+            return await blackjack_bet(update, context, amount)
+        except Exception as e:
+            print("❌ BJ BET ERROR:", e)
+            return
+
+    # =====================
+    # ❌ FALLBACK
+    # =====================
+    print("❌ CALLBACK NON GESTITA:", data)
 # =========================
 # MAIN
 # =========================
