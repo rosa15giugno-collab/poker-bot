@@ -545,9 +545,10 @@ async def blackjack(update, context):
     ])
 
     # menu sempre text (non caption)
-    await q.message.edit_text(
-        "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-        reply_markup=keyboard
+    await safe_edit(
+    q.message,
+    "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
+    reply_markup=keyboard
     )
 
 
@@ -556,6 +557,8 @@ async def blackjack(update, context):
 # =========================
 
 async def blackjack_bet(update, context, amount):
+    print("🔥 blackjack_bet:", amount)
+
     q = update.callback_query
     await q.answer()
 
@@ -592,8 +595,11 @@ async def blackjack_bet(update, context, amount):
         f"📊 Totale: {card_value(player)}"
     )
 
-    # se arriva da menu text, usa edit_text
-    await q.message.edit_text(text, reply_markup=keyboard)
+    await safe_edit(
+        q.message,
+        text,
+        reply_markup=keyboard
+    )
 
 
 # =========================
@@ -607,7 +613,10 @@ async def hit(update, context):
     uid = q.from_user.id
 
     if uid not in bj_games:
-        return await q.message.edit_text("❌ Nessuna partita attiva.\n\n🏠 Usa MENU")
+        return await safe_edit(
+            q.message,
+            "❌ Nessuna partita attiva.\n\n🏠 Usa MENU"
+        )
 
     game = bj_games[uid]
 
@@ -622,7 +631,7 @@ async def hit(update, context):
 
     p_total = card_value(player)
 
-    # 💥 BUST
+    # 💥 SBALLATO
     if p_total > 21:
 
         text = (
@@ -639,9 +648,13 @@ async def hit(update, context):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        return await q.message.edit_text(text, reply_markup=keyboard)
+        return await safe_edit(
+            q.message,
+            text,
+            reply_markup=keyboard
+        )
 
-    # 🃏 LIVE
+    # 🃏 PARTITA IN CORSO
     text = (
         "🃏 BLACKJACK\n\n"
         f"🃏 TU: {' '.join(player)} ({p_total})\n"
@@ -658,7 +671,11 @@ async def hit(update, context):
         ]
     ])
 
-    await q.message.edit_text(text, reply_markup=keyboard)
+    await safe_edit(
+        q.message,
+        text,
+        reply_markup=keyboard
+    )
 
 
 # =========================
@@ -680,6 +697,10 @@ async def stand(update, context):
     dealer = game["dealer"]
 
     while card_value(dealer) < 17:
+        if not game["deck"]:
+            game["deck"] = CARDS.copy()
+            random.shuffle(game["deck"])
+
         dealer.append(game["deck"].pop())
 
     p = card_value(player)
@@ -707,7 +728,11 @@ async def stand(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await q.message.edit_text(testo, reply_markup=keyboard)
+    await safe_edit(
+        q.message,
+        testo,
+        reply_markup=keyboard
+    )
 
 
 # =========================
@@ -1488,13 +1513,17 @@ async def cb_router(update, context):
     q = update.callback_query
     data = q.data
 
+    print("CALLBACK:", data)
+
     await q.answer()
 
     if data.startswith("bj_bet_"):
         amount = int(data.split("_")[-1])
+        print("BET:", amount)
         return await blackjack_bet(update, context, amount)
 
     if data == "blackjack":
+        print("BLACKJACK MENU")
         return await blackjack(update, context)
 
     if data == "hit":
