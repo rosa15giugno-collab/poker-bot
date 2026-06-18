@@ -522,6 +522,19 @@ async def spin_slot(update, context):
     except Exception as e:
         print("FINAL EDIT ERROR:", e)
 
+# =====================
+# 🃏 BLACKJACK BET
+# =====================
+if data.startswith("blackjack_bet_"):
+    try:
+        amount = int(data.split("_")[-1])
+        return await blackjack_bet(update, context, amount)
+    except Exception as e:
+        print("❌ BJ BET ERROR:", e)
+        return
+
+
+
 
 # =========================
 # 🃏 BLACKJACK
@@ -533,11 +546,11 @@ async def blackjack(update, context):
 
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("💰 100", callback_data="bj_bet_100"),
-            InlineKeyboardButton("💰 500", callback_data="bj_bet_500")
+            InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100"),
+            InlineKeyboardButton("💰 500", callback_data="clackjack_bet_500")
         ],
         [
-            InlineKeyboardButton("💰 1000", callback_data="bj_bet_1000")
+            InlineKeyboardButton("💰 1000", callback_data="blackjackbet_1000")
         ],
         [
             InlineKeyboardButton("🏠 MENU", callback_data="menu")
@@ -1513,11 +1526,11 @@ async def cb_router(update, context):
     q = update.callback_query
     data = q.data
 
-    print("CALLBACK:", data)
+    print("RAW CALLBACK =>", repr(data))
 
     await q.answer()
 
-    if data.startswith("bj_bet_"):
+    if data.startswith("blackjack_bet_"):
         amount = int(data.split("_")[-1])
         print("BET:", amount)
         return await blackjack_bet(update, context, amount)
