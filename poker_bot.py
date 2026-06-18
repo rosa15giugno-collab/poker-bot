@@ -566,40 +566,6 @@ async def blackjack_bet(update, context, amount):
     await q.answer()
 
     uid = q.from_user.id
-
-    deck = CARDS.copy()
-    random.shuffle(deck)
-
-    player = [deck.pop(), deck.pop()]
-    dealer = [deck.pop(), deck.pop()]
-
-    bj_games[uid] = {
-        "deck": deck,
-        "player": player,
-        "dealer": dealer,
-        "bet": amount
-    }
-
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("➕ CARTA", callback_data="hit"),
-            InlineKeyboardButton("✋ STAI", callback_data="stand")
-        ],
-        [
-            InlineKeyboardButton("🏠 MENU", callback_data="menu")
-        ]
-    ])
-
-    text = (
-        "🃏 BLACKJACK\n\n"
-        f"💰 Puntata: {…
-async def blackjack_bet(update, context, amount):
-    print("🔥 blackjack_bet:", amount)
-
-    q = update.callback_query
-    await q.answer()
-
-    uid = q.from_user.id
     u = get_user(uid)
 
     # 💰 controllo saldo
@@ -645,7 +611,6 @@ async def blackjack_bet(update, context, amount):
         text,
         reply_markup=keyboard
     )
-
 # =========================
 # ➕ HIT
 # =========================
