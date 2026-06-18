@@ -547,13 +547,15 @@ async def blackjack(update, context):
         ]
     ])
 
-    # menu sempre text (non caption)
-    await edit_message_text(
-    q.message,
-    "🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-    reply_markup=keyboard
+    text = (
+        "🃏 BLACKJACK CASINO\n\n"
+        "💰 Scegli la puntata:"
     )
 
+    await q.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
 
 # =========================
 # 💰 START PARTITA
