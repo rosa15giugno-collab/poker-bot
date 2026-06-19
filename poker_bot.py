@@ -490,6 +490,9 @@ async def spin_slot(update, context):
         reply_markup=keyboard
     ) 
 
+    print("✅ RISULTATO FINALE MOSTRATO")
+    await asyncio.sleep(3)
+    print("✅ DOPO 3 SECONDI SONO ANCORA IN spin_slot")
     return
     
 
