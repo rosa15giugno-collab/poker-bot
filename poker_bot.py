@@ -1775,18 +1775,18 @@ async def cb_router(update, context):
         return await slot(update, context)
 
     # =====================
-    # 🎰 SLOT SPIN (FIX PUNTATA)
-    # spin_slot_100 / 500 / 1000
+    # 🎰 SLOT BET (SOLO QUI)
     # =====================
-    if data.startswith("spin_slot"):
+    if data.startswith("spin_slot_"):
         try:
             bet = int(data.split("_")[-1])
         except:
             bet = 100
 
-        # salva puntata per utente
-        games[uid] = {"bet": bet}
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
 
+    if data == "spin_slot":
         return await spin_slot(update, context)
 
     # =====================
