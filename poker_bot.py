@@ -509,7 +509,7 @@ async def spin_slot(update, context):
         f"💎 Saldo: {new_balance}"
     )
 
-        keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
