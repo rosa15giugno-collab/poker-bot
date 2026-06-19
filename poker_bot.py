@@ -1562,12 +1562,6 @@ async def cb_router(update, context):
     except:
         pass
 
-    # =========================
-    # 🛑 SLOT LOCK (IMPORTANTE)
-    # =========================
-    if (data.startswith("spin_slot_") or data == "spin_slot") and uid in slot_games:
-        return await spin_slot(update, context)
-
     # =====================
     # 🏠 MENU
     # =====================
@@ -1593,7 +1587,7 @@ async def cb_router(update, context):
         return await spin_slot(update, context)
 
     # =====================
-    # 🃏 BLACKJACK
+    # 🃏 BLACKJACK MENU
     # =====================
     if data == "blackjack":
         return await blackjack(update, context)
@@ -1618,12 +1612,44 @@ async def cb_router(update, context):
     if data == "roulette":
         return await roulette(update, context)
 
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+    if data == "bet_zero":
+        return await bet_zero(update, context)
+
+    if data == "bet_number_value":
+        return await roulette_spin(update, context, "number")
+
+    if data.startswith("bet_number"):
+        return await bet_number(update, context)
+
+    # =====================
+    # 🎮 ALTRO
+    # =====================
+    if data == "pvp":
+        return await pvp(update, context)
+
+    if data == "bonus":
+        return await bonus(update, context)
+
     # =====================
     # ❌ FALLBACK
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
-
 
 # =========================
 # 📎 FILEID COMMAND (DEBUG)
