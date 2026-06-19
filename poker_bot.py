@@ -1551,231 +1551,7 @@ async def menu(update, context):
             reply_markup=main_menu_keyboard()
         )
         
-async def cb_router(update, context):
-    q = update.callback_query
-    data = q.data
-    uid = q.from_user.id
-
-    print("RAW CALLBACK =>", repr(data))
-
-    try:
-        await q.answer()
-    except:
-        pass
-
-    # =========================
-    # 🏠 MENU
-    # =========================
-    if data in ["menu", "go_menu"]:
-        return await menu(update, context)
-
-    # =========================
-    # 🎰 SLOT ENTRY
-    # =========================
-    if data == "slot":
-        return await slot(update, context)
-
-    # =========================
-    # 🎰 SLOT SPIN (PUNTATA)
-    # =========================
-    if data.startswith("spin_slot_"):
-        try:
-            bet = int(data.split("_")[-1])
-        except:
-            bet = 100
-
-        slot_games[uid] = {"bet": bet}
-        return await spin_slot(update, context)
-
-    if data == "spin_slot":
-        return await spin_slot(update, context)
-
-    # =========================
-    # 🃏 BLACKJACK ENTRY
-    # =========================
-    if data == "blackjack":
-        return await blackjack(update, context)
-
-    # =========================
-    # 🃏 BLACKJACK BET
-    # =========================
-    if data.startswith("blackjack_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-        except:
-            amount = 100
-
-        bj_games[uid] = {
-        "deck": deck,
-        "player": player,
-        "dealer": dealer,
-        "bet": amount
-    }
-
-        return await blackjack_bet(update, context, amount)
-
-    # =========================
-    # 🃏 BLACKJACK ACTIONS
-    # =========================
-    if data == "hit":
-        return await hit(update, context)
-
-    if data == "stand":
-        return await stand(update, context)
-
-    # =========================
-    # 🎲 ROULETTE
-    # =========================
-    if data == "roulette":
-        return await roulette(update, context)
-
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data == "bet_red":
-        return await bet_red(update, context)
-
-    if data == "bet_black":
-        return await bet_black(update, context)
-
-    if data == "bet_even":
-        return await bet_even(update, context)
-
-    if data == "bet_odd":
-        return await bet_odd(update, context)
-
-    if data == "bet_zero":
-        return await bet_zero(update, context)
-
-    if data == "bet_number_value":
-        return await roulette_spin(update, context, "number")
-
-    if data.startswith("bet_number_"):
-        return await bet_number(update, context)
-
-    # =========================
-    # 🎮 ALTRO
-    # =========================
-    if data == "pvp":
-        return await pvp(update, context)
-
-    if data == "bonus":
-        return await bonus(update, context)
-
-    # =========================
-    # ❌ FALLBACK
-    # =========================
-    print("❌ CALLBACK NON GESTITA:", data)
-    return
-# =========================
-# 🎁 BONUS
-# =========================
-async def bonus(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    uid = q.from_user.id
-    now = time.time()
-
-    # 🔥 anti doppio click
-    last = BONUS_LOCK.get(uid, 0)
-    if now - last < 2:
-        return
-
-    BONUS_LOCK[uid] = now
-
-    u = get_user(uid)
-
-    # 24h cooldown
-    if u["last_bonus"] and now - u["last_bonus"] < 86400:
-        return await q.message.reply_text("❌ Hai già ricevuto il bonus oggi.")
-
-    u["chips"] += 500
-    u["last_bonus"] = now
-
-    save_user(u)
-
-    await q.message.reply_text("🎁 BONUS GIORNALIERO\n\n💰 +500 chips!")
-
-# =========================
-# 👤 PROFILO
-# =========================
-async def profilo(update, context):
-    q = update.callback_query
-    u = get_user(q.from_user.id)
-
-    await safe_edit(
-        q.message,
-        f"👤 PROFILO\n\n"
-        f"💰 Chips: {u['chips']}\n"
-        f"⭐ XP: {u['xp']}",
-        reply_markup=main_menu_keyboard()
-    )
-
-
-# =========================
-# 🏆 CLASSIFICA
-# =========================
-async def classifica(update, context):
-    q = update.callback_query
-
-    await safe_edit(
-        q.message,
-        "🏆 CLASSIFICA\n\n🚧 In arrivo...",
-        reply_markup=main_menu_keyboard()
-    )
-
-
-# =========================
-# 🛒 SHOP
-# =========================
-async def shop(update, context):
-    q = update.callback_query
-
-    await safe_edit(
-        q.message,
-        "🛒 SHOP\n\n🚧 In arrivo...",
-        reply_markup=main_menu_keyboard()
-    )
-
-
-async def text_handler(update, context):
-    message = update.message.text.lower()
-
-    # esempio base (puoi espanderlo)
-    if "ciao" in message:
-        return await update.message.reply_text("👋 Ciao!")
-
-    return
-
-# =========================
-# MAIN
-# =========================
-
-async def fileid(update, context):
-    msg = update.message.reply_to_message
-
-    if not msg:
-        return await update.message.reply_text(
-            "📎 Rispondi a una foto, GIF o video con /fileid"
-        )
-
-    if msg.photo:
-        return await update.message.reply_text(msg.photo[-1].file_id)
-
-    if msg.animation:
-        return await update.message.reply_text(msg.animation.file_id)
-
-    if msg.video:
-        return await update.message.reply_text(msg.video.file_id)
-
-    if msg.document:
-        return await update.message.reply_text(msg.document.file_id)
-
-    await update.message.reply_text("❌ File non supportato")
-
-
-async def cb_router(update, context):
+[12:29, 19/06/2026] Rosa: async def cb_router(update, context):
     q = update.callback_query
     data = q.data
     uid = q.from_user.id
@@ -1799,9 +1575,7 @@ async def cb_router(update, context):
     if data == "slot":
         return await slot(update, context)
 
-    # =====================
-    # 🎰 SLOT BET (SOLO QUI)
-    # =====================
+    # SLOT SPIN
     if data.startswith("spin_slot_"):
         try:
             bet = int(data.split("_")[-1])
@@ -1813,6 +1587,30 @@ async def cb_router(update, context):
 
     if data == "spin_slot":
         return await spin_slot(update, context)
+
+    # =====================
+    # 🃏 BLACKJACK ENTRY
+    # =====================
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    # BLACKJACK BET
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
+
+        # ❌ FIX CRITICO: NON usare deck/player/dealer qui
+        # li crea blackjack_bet()
+        return await blackjack_bet(update, context, amount)
+
+    # BLACKJACK ACTIONS
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+        return await stand(update, context)
 
     # =====================
     # 🎲 ROULETTE
@@ -1841,7 +1639,8 @@ async def cb_router(update, context):
     if data == "bet_number_value":
         return await roulette_spin(update, context, "number")
 
-    if data.startswith("bet_"):
+    # ❌ FIX IMPORTANTE: non usare bet_* generico
+    if data.startswith("bet_number_"):
         return await bet_number(update, context)
 
     # =====================
@@ -1851,14 +1650,69 @@ async def cb_router(update, context):
         return await pvp(update, context)
 
     # =====================
-    # 🃏 BLACKJACK START
+    # 🎁 BONUS
+    # =====================
+    if data == "bonus":
+        return await bonus(update, context)
+
+    # =====================
+    # ❌ FALLBACK
+    # =====================
+    print("❌ CALLBACK NON GESTITA:", data)
+    return
+[12:34, 19/06/2026] Rosa: # =========================
+# 🎮 CALLBACK ROUTER UNICO
+# =========================
+async def cb_router(update, context):
+    q = update.callback_query
+    data = q.data
+    uid = q.from_user.id
+
+    print("RAW CALLBACK =>", repr(data))
+
+    try:
+        await q.answer()
+    except:
+        pass
+
+    # =====================
+    # 🏠 MENU
+    # =====================
+    if data in ["menu", "go_menu"]:
+        return await send_main_menu(q.message.chat_id, context)
+
+    # =====================
+    # 🎰 SLOT
+    # =====================
+    if data == "slot":
+        return await slot(update, context)
+
+    if data.startswith("spin_slot_"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =====================
+    # 🃏 BLACKJACK
     # =====================
     if data == "blackjack":
         return await blackjack(update, context)
 
-    # =====================
-    # 🃏 BLACKJACK ACTIONS
-    # =====================
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
+
+        return await blackjack_bet(update, context, amount)
+
     if data == "hit":
         return await hit(update, context)
 
@@ -1866,55 +1720,70 @@ async def cb_router(update, context):
         return await stand(update, context)
 
     # =====================
-    # 🃏 BLACKJACK BET
+    # 🎲 ROULETTE
     # =====================
-    if data.startswith("blackjack_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-            print("BLACKJACK BET:", amount)
-            return await blackjack_bet(update, context, amount)
-        except Exception as e:
-            print("❌ BJ BET ERROR:", e)
-            return
+    if data == "roulette":
+        return await roulette(update, context)
+
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+    if data == "bet_zero":
+        return await bet_zero(update, context)
+
+    if data == "bet_number_value":
+        return await roulette_spin(update, context, "number")
+
+    if data.startswith("bet_number"):
+        return await bet_number(update, context)
 
     # =====================
-    # ❌ FALLBACK
+    # 🎮 ALTRO
     # =====================
+    if data == "pvp":
+        return await pvp(update, context)
+
+    if data == "bonus":
+        return await bonus(update, context)
+
     print("❌ CALLBACK NON GESTITA:", data)
+    return
+
+
 # =========================
-# MAIN (PRO VERSION)
+# 🧠 MAIN PULITO
 # =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # =========================
-    # COMMANDS
-    # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("fileid", fileid))
 
-    # =========================
-    # CALLBACK ROUTER (casino engine)
-    # =========================
     app.add_handler(CallbackQueryHandler(cb_router))
 
-    # =========================
-    # TEXT HANDLER (chat / input utenti)
-    # =========================
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)
     )
 
-    print("🟢 CASINO DEFINITIVO ONLINE")
+    print("🟢 CASINO ONLINE FIXED")
 
-    # IMPORTANT: evita crash su restart
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
 
-# =========================
-# ENTRY POINT (CORRETTO)
-# =========================
+
 if __name__ == "__main__":
     main()
