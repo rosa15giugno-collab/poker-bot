@@ -1878,25 +1878,36 @@ async def cb_router(update, context):
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
 # =========================
-# MAIN
+# MAIN (PRO VERSION)
 # =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # =========================
     # COMMANDS
+    # =========================
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("fileid", fileid))
 
-    # CALLBACK ROUTER
+    # =========================
+    # CALLBACK ROUTER (casino engine)
+    # =========================
     app.add_handler(CallbackQueryHandler(cb_router))
 
-    # TEXT HANDLER
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+    # =========================
+    # TEXT HANDLER (chat / input utenti)
+    # =========================
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)
+    )
 
     print("🟢 CASINO DEFINITIVO ONLINE")
 
-    app.run_polling(drop_pending_updates=True)
-
+    # IMPORTANT: evita crash su restart
+    app.run_polling(
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES
+    )
 
 # =========================
 # ENTRY POINT (CORRETTO)
