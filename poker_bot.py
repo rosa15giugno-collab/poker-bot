@@ -412,9 +412,9 @@ async def spin_slot(update, context):
     COOLDOWN[uid] = now
 
     # =========================
-    # 💰 BET DIRETTA DAL CALLBACK (FONTE UNICA)
+    # 💰 BET
     # =========================
-    data = q.data  # spin_slot_100 / 500 / 1000
+    data = q.data
 
     try:
         bet = int(data.split("_")[-1])
@@ -422,7 +422,7 @@ async def spin_slot(update, context):
         bet = 100
 
     # =========================
-    # 🎰 REELS START
+    # 🎰 REELS
     # =========================
     reels = ["🎰", "🎰", "🎰"]
 
@@ -431,7 +431,6 @@ async def spin_slot(update, context):
     # =========================
     try:
         steps = 6
-        last_text = ""
 
         for i in range(steps):
 
@@ -469,18 +468,13 @@ async def spin_slot(update, context):
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
-    # =========================
-    # 🔥 JACKPOT
-    # =========================
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"] * bet
         status = "🔥 JACKPOT!"
-
     else:
         r = reels
 
-        # piccola chance miglioramento
         if random.randint(1, 100) <= 20:
             r[1] = r[0]
 
@@ -559,16 +553,16 @@ async def blackjack(update, context):
     await q.answer()
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100")],
-        [InlineKeyboardButton("💰 500", callback_data="blackjack_bet_500")],
+        [InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100"),
+         InlineKeyboardButton("💰 500", callback_data="blackjack_bet_500")],
         [InlineKeyboardButton("💰 1000", callback_data="blackjack_bet_1000")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
     await context.bot.send_photo(
         chat_id=q.message.chat_id,
-        photo=PHOTO_BLACKJACK,   # 👈 QUESTO è il fileid GIUSTO
-        caption="🃏 BLACKJACK\n\n💰 Scegli la puntata:",
+        photo=PHOTO_BLACKJACK,
+        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
 
@@ -1559,12 +1553,18 @@ async def cb_router(update, context):
     data = q.data
     uid = q.from_user.id
 
-    print("RAW CALLBACK =>", repr(data))
+    print(f"[CALLBACK] user={uid} data={data}")
 
     try:
         await q.answer()
     except:
         pass
+
+    # =========================
+    # 🛑 SLOT LOCK (IMPORTANTE)
+    # =========================
+    if (data.startswith("spin_slot_") or data == "spin_slot") and uid in slot_games:
+        return await spin_slot(update, context)
 
     # =====================
     # 🏠 MENU
@@ -1602,7 +1602,6 @@ async def cb_router(update, context):
         except:
             amount = 100
 
-        # ⚠️ FIX: blackjack_bet crea tutto da solo
         return await blackjack_bet(update, context, amount)
 
     if data == "hit":
@@ -1616,39 +1615,6 @@ async def cb_router(update, context):
     # =====================
     if data == "roulette":
         return await roulette(update, context)
-
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data == "bet_red":
-        return await bet_red(update, context)
-
-    if data == "bet_black":
-        return await bet_black(update, context)
-
-    if data == "bet_even":
-        return await bet_even(update, context)
-
-    if data == "bet_odd":
-        return await bet_odd(update, context)
-
-    if data == "bet_zero":
-        return await bet_zero(update, context)
-
-    if data == "bet_number_value":
-        return await roulette_spin(update, context, "number")
-
-    if data.startswith("bet_number"):
-        return await bet_number(update, context)
-
-    # =====================
-    # 🎮 ALTRO
-    # =====================
-    if data == "pvp":
-        return await pvp(update, context)
-
-    if data == "bonus":
-        return await bonus(update, context)
 
     # =====================
     # ❌ FALLBACK
