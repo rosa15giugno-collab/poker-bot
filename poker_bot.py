@@ -381,9 +381,9 @@ async def slot(update, context):
         target = update.message
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN 100", callback_data="spin_slot_100")],
-        [InlineKeyboardButton("🎰 SPIN 500", callback_data="spin_slot_500")],
-        [InlineKeyboardButton("🎰 SPIN 1000", callback_data="spin_slot_1000")],
+        [InlineKeyboardButton("🎰 SPIN 200", callback_data="spin_slot_200")],
+        [InlineKeyboardButton("🎰 SPIN 400", callback_data="spin_slot_400")],
+        [InlineKeyboardButton("🎰 SPIN 900", callback_data="spin_slot_900")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
