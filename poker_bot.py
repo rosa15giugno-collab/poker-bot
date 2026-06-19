@@ -383,14 +383,8 @@ async def slot(update, context):
         uid = update.effective_user.id
         target = update.message
 
-    now = time.time()
-
-    if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
-        return
-    COOLDOWN[uid] = now
-
-    # 💰 default bet
-    games[uid] = {"bet": 100}
+    # 💰 puntata default
+    slot_games[uid] = {"bet": 100}
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN 100", callback_data="spin_slot_100")],
@@ -404,7 +398,6 @@ async def slot(update, context):
         caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
         reply_markup=keyboard
     )
-
 
 # =========================
 # 🎰 SPIN CALLBACK
@@ -1539,6 +1532,9 @@ async def menu(update, context):
             "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
             reply_markup=main_menu_keyboard()
         )
+#=============================
+# CB
+#=============================
 
 async def cb_router(update, context):
     q = update.callback_query
@@ -1565,8 +1561,8 @@ async def cb_router(update, context):
     # =========================
     # 🃏 BLACKJACK START
     # =========================
-    if data == "blackjack":
-        return await blackjack(update, context)
+    #if data == "blackjack":
+    #    return await blackjack(update, context)
 
     # =========================
     # 🃏 BLACKJACK ACTIONS
@@ -1577,12 +1573,18 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-    # =========================
-    # 🎰 SLOT ENTRY
-    # =========================
+# =========================
+# 🎰 SLOT
+# =========================
     if data == "slot":
         return await slot(update, context)
 
+    if data.startswith("spin_slot_"):
+        bet = int(data.split("_")[-1])
+
+        slot_games[uid] = {"bet": bet}
+
+        return await spin_slot(update, context)
     # =========================
     # 🎰 SLOT BET (FIX DEFINITIVO)
     # =========================
