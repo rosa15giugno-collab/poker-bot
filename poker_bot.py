@@ -1551,116 +1551,7 @@ async def menu(update, context):
             reply_markup=main_menu_keyboard()
         )
         
-async def cb_router(update, context):
-    q = update.callback_query
-    data = q.data
-    uid = q.from_user.id
-
-    print("RAW CALLBACK =>", repr(data))
-
-    try:
-        await q.answer()
-    except:
-        pass
-
-    # =====================
-    # 🏠 MENU
-    # =====================
-    if data in ["menu", "go_menu"]:
-        return await send_main_menu(q.message.chat_id, context)
-
-    # =====================
-    # 🎰 SLOT ENTRY
-    # =====================
-    if data == "slot":
-        return await slot(update, context)
-
-    # SLOT SPIN
-    if data.startswith("spin_slot_"):
-        try:
-            bet = int(data.split("_")[-1])
-        except:
-            bet = 100
-
-        slot_games[uid] = {"bet": bet}
-        return await spin_slot(update, context)
-
-    if data == "spin_slot":
-        return await spin_slot(update, context)
-
-    # =====================
-    # 🃏 BLACKJACK ENTRY
-    # =====================
-    if data == "blackjack":
-        return await blackjack(update, context)
-
-    # BLACKJACK BET
-    if data.startswith("blackjack_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-        except:
-            amount = 100
-
-        # ❌ FIX CRITICO: NON usare deck/player/dealer qui
-        # li crea blackjack_bet()
-        return await blackjack_bet(update, context, amount)
-
-    # BLACKJACK ACTIONS
-    if data == "hit":
-        return await hit(update, context)
-
-    if data == "stand":
-        return await stand(update, context)
-
-    # =====================
-    # 🎲 ROULETTE
-    # =====================
-    if data == "roulette":
-        return await roulette(update, context)
-
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data == "bet_red":
-        return await bet_red(update, context)
-
-    if data == "bet_black":
-        return await bet_black(update, context)
-
-    if data == "bet_even":
-        return await bet_even(update, context)
-
-    if data == "bet_odd":
-        return await bet_odd(update, context)
-
-    if data == "bet_zero":
-        return await bet_zero(update, context)
-
-    if data == "bet_number_value":
-        return await roulette_spin(update, context, "number")
-
-    # ❌ FIX IMPORTANTE: non usare bet_* generico
-    if data.startswith("bet_number_"):
-        return await bet_number(update, context)
-
-    # =====================
-    # 🎮 PVP
-    # =====================
-    if data == "pvp":
-        return await pvp(update, context)
-
-    # =====================
-    # 🎁 BONUS
-    # =====================
-    if data == "bonus":
-        return await bonus(update, context)
-
-    # =====================
-    # ❌ FALLBACK
-    # =====================
-    print("❌ CALLBACK NON GESTITA:", data)
-    return
-[12:34, 19/06/2026] Rosa: # =========================
+# =========================
 # 🎮 CALLBACK ROUTER UNICO
 # =========================
 async def cb_router(update, context):
@@ -1711,6 +1602,7 @@ async def cb_router(update, context):
         except:
             amount = 100
 
+        # ⚠️ FIX: blackjack_bet crea tutto da solo
         return await blackjack_bet(update, context, amount)
 
     if data == "hit":
@@ -1758,6 +1650,9 @@ async def cb_router(update, context):
     if data == "bonus":
         return await bonus(update, context)
 
+    # =====================
+    # ❌ FALLBACK
+    # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
 
@@ -1783,7 +1678,6 @@ def main():
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
-
 
 if __name__ == "__main__":
     main()
