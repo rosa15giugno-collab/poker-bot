@@ -521,30 +521,7 @@ async def spin_slot(update, context):
         )
     except Exception as e:
         print("FINAL EDIT ERROR:", e)
-
-
-
-
-
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100"),
-            InlineKeyboardButton("💰 500", callback_data="blackjack_bet_500")
-        ],
-        [
-            InlineKeyboardButton("💰 1000", callback_data="blackjack_bet_1000")
-        ],
-        [
-            InlineKeyboardButton("🏠 MENU", callback_data="menu")
-        ]
-    ])
-
-    await context.bot.send_photo(
-        chat_id=q.message.chat_id,
-        photo=PHOTO_BLACKJACK,
-        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-        reply_markup=keyboard
-    )
+    return
     
 
 # =========================
