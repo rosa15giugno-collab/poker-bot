@@ -485,14 +485,16 @@ async def spin_slot(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await msg.edit_caption(
-        caption=final_text,
-        reply_markup=keyboard
-    ) 
+    await asyncio.sleep(0.3)
 
-    print("✅ RISULTATO FINALE MOSTRATO")
-    await asyncio.sleep(3)
-    print("✅ DOPO 3 SECONDI SONO ANCORA IN spin_slot")
+    try:
+        await msg.edit_caption(
+            caption=final_text,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("FINAL ERROR:", e)
+
     return
     
 
