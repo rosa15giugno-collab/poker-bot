@@ -1532,10 +1532,6 @@ async def menu(update, context):
             "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
             reply_markup=main_menu_keyboard()
         )
-#=============================
-# CB
-#=============================
-
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
@@ -1559,12 +1555,6 @@ async def cb_router(update, context):
         return await blackjack_bet(update, context, amount)
 
     # =========================
-    # 🃏 BLACKJACK START
-    # =========================
-    #if data == "blackjack":
-    #    return await blackjack(update, context)
-
-    # =========================
     # 🃏 BLACKJACK ACTIONS
     # =========================
     if data == "hit":
@@ -1573,20 +1563,17 @@ async def cb_router(update, context):
     if data == "stand":
         return await stand(update, context)
 
-# =========================
-# 🎰 SLOT
-# =========================
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    # =========================
+    # 🎰 SLOT ENTRY
+    # =========================
     if data == "slot":
         return await slot(update, context)
 
-    if data.startswith("spin_slot_"):
-        bet = int(data.split("_")[-1])
-
-        slot_games[uid] = {"bet": bet}
-
-        return await spin_slot(update, context)
     # =========================
-    # 🎰 SLOT BET (FIX DEFINITIVO)
+    # 🎰 SLOT SPIN (CON PUNTATA)
     # =========================
     if data.startswith("spin_slot_"):
         try:
@@ -1594,24 +1581,61 @@ async def cb_router(update, context):
         except:
             bet = 100
 
+        # assegna bet correttamente
         slot_games[uid] = {"bet": bet}
+
         return await spin_slot(update, context)
 
     if data == "spin_slot":
         return await spin_slot(update, context)
 
     # =========================
-    # 🧭 NAVIGATION
+    # 🧭 MENU / NAVIGATION
     # =========================
-    handlers = {
-        "menu": menu,
-        "roulette": roulette,
-        "pvp": pvp,
-        "bonus": bonus,
-    }
+    if data == "menu":
+        return await menu(update, context)
 
-    if data in handlers:
-        return await handlers[data](update, context)
+    if data == "go_menu":
+        return await menu(update, context)
+
+    # =========================
+    # 🎲 ROULETTE
+    # =========================
+    if data == "roulette":
+        return await roulette(update, context)
+
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+    if data == "bet_zero":
+        return await bet_zero(update, context)
+
+    if data == "bet_number_value":
+        return await roulette_spin(update, context, "number")
+
+    if data.startswith("bet_"):
+        return await bet_number(update, context)
+
+    # =========================
+    # 🎮 ALTRO
+    # =========================
+    if data == "pvp":
+        return await pvp(update, context)
+
+    if data == "bonus":
+        return await bonus(update, context)
 
     # =========================
     # ❌ FALLBACK
