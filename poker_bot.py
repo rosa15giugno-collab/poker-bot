@@ -372,19 +372,13 @@ def weighted_symbol():
 # 🎰 SLOT MENU
 # =========================
 async def slot(update, context):
-
     q = update.callback_query
 
     if q:
         await q.answer()
-        uid = q.from_user.id
         target = q.message
     else:
-        uid = update.effective_user.id
         target = update.message
-
-    # 💰 puntata default
-    slot_games[uid] = {"bet": 100}
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN 100", callback_data="spin_slot_100")],
@@ -398,9 +392,8 @@ async def slot(update, context):
         caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
         reply_markup=keyboard
     )
-
 # =========================
-# 🎰 SPIN CALLBACK
+# 🎰 SPIN SLOT (FIX DEFINITIVO)
 # =========================
 async def spin_slot(update, context):
 
@@ -410,17 +403,31 @@ async def spin_slot(update, context):
     msg = q.message
     uid = q.from_user.id
 
+    # =========================
+    # 🛡️ COOLDOWN ANTI SPAM
+    # =========================
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
-    bet = slot_games.get(uid, {}).get("bet", 100)
+    # =========================
+    # 💰 BET DIRETTA DAL CALLBACK (FONTE UNICA)
+    # =========================
+    data = q.data  # spin_slot_100 / 500 / 1000
 
+    try:
+        bet = int(data.split("_")[-1])
+    except:
+        bet = 100
+
+    # =========================
+    # 🎰 REELS START
+    # =========================
     reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎬 ANIMAZIONE
+    # 🎬 ANIMAZIONE SLOT
     # =========================
     try:
         steps = 6
@@ -437,12 +444,15 @@ async def spin_slot(update, context):
             else:
                 reels[2] = weighted_symbol()
 
-            text = f"🎰 SPINNING...\n\n┃ {reels[0]} | {reels[1]} | {reels[2]} ┃"
+            text = (
+                "🎰 SPINNING...\n\n"
+                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+                f"💰 Puntata: {bet}"
+            )
 
-            if i % 2 == 0 and text != last_text:
+            if i % 2 == 0:
                 try:
                     await msg.edit_caption(caption=text)
-                    last_text = text
                 except:
                     pass
 
@@ -459,13 +469,18 @@ async def spin_slot(update, context):
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
+    # =========================
+    # 🔥 JACKPOT
+    # =========================
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"] * bet
         status = "🔥 JACKPOT!"
+
     else:
         r = reels
 
+        # piccola chance miglioramento
         if random.randint(1, 100) <= 20:
             r[1] = r[0]
 
@@ -479,6 +494,9 @@ async def spin_slot(update, context):
             win = 0
             status = "🔴 HAI PERSO"
 
+    # =========================
+    # 💎 MULTIPLIER
+    # =========================
     win = int(win * vip * u.get("multiplier", 1.0))
 
     u["chips"] = u.get("chips", 0) + win
@@ -488,21 +506,21 @@ async def spin_slot(update, context):
     # =========================
     # 🎯 OUTPUT FINALE
     # =========================
-    final = (
+    final_text = (
         f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"💰 +{win} chips\n"
-        f"💎 saldo: {u['chips']}"
+        f"💰 Vincita: +{win} chips\n"
+        f"💎 Saldo: {u['chips']}"
     )
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="spin_slot_100")],
+        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data=f"spin_slot_{bet}")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
     try:
         await msg.edit_caption(
-            caption=final,
+            caption=final_text,
             reply_markup=keyboard
         )
     except Exception as e:
