@@ -444,16 +444,28 @@ async def spin_slot(update, context):
     # 🎯 RISULTATO
     u = get_user(uid)
 
+    # 🔒 evita reference bug (IMPORTANTISSIMO)
+    u = dict(u)
+
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
+    # 🎰 REELS base sempre definiti
+    r = reels[:]
+
+    win = 0
+    status = "🔴 HAI PERSO"
+
+    # =====================
+    # 🔥 JACKPOT
+    # =====================
     if jackpot_roll == 1:
         r = ["7️⃣", "7️⃣", "7️⃣"]
         win = PAYOUT["jackpot"] * bet
         status = "🔥 JACKPOT!"
-    else:
-        r = reels
 
+    else:
+    # 🎰 piccola “rigatura” slot (solo estetica)
         if random.randint(1, 100) <= 20:
             r[1] = r[0]
 
@@ -464,23 +476,39 @@ async def spin_slot(update, context):
             win = PAYOUT["double"] * bet
             status = "🟡 QUASI!"
         else:
-            win = 0
-            status = "🔴 HAI PERSO"
+        win = 0
 
-    win = int(win * vip * u.get("multiplier", 1.0))
+    # =====================
+    # 💎 MULTIPLIER SAFE
+    # =====================
+    mult = float(u.get("multiplier", 1.0))
+    vip = float(vip)
 
-    u["chips"] = u.get("chips", 0) + win
-    u["xp"] = u.get("xp", 0) + max(1, win // 15)
+    win = int(win * vip * mult)
+
+    # =====================
+    # 💰 BALANCE UPDATE (SAFE)
+    # =====================
+    current_chips = int(u.get("chips", 0))
+
+    new_balance = current_chips + win
+    u["chips"] = new_balance
+
+    u["xp"] = int(u.get("xp", 0) + max(1, win // 15))
+
     save_user(u)
 
+    # =====================
+    # 🧾 OUTPUT
+    # =====================
     final_text = (
         f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"💰 Vincita: +{win} chips\n"
-        f"💎 Saldo: {u['chips']}"
-    )   
+        f"💎 Saldo: {new_balance}"
+    )
 
-    keyboard = InlineKeyboardMarkup([
+        keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
@@ -498,9 +526,9 @@ async def spin_slot(update, context):
     return
     
 
-# =========================
-# 🃏 BLACKJACK MENU
-# =========================
+    # =========================
+    #    🃏 BLACKJACK MENU
+    # =========================
 async def blackjack(update, context):
     q = update.callback_query
     await q.answer()
