@@ -1658,22 +1658,44 @@ async def cb_router(update, context):
 
 
 # =========================
+# 📎 FILEID COMMAND (DEBUG)
+# =========================
+async def fileid(update, context):
+    msg = update.message
+
+    if not msg:
+        return
+
+    if msg.photo:
+        await msg.reply_text(f"📸 FILE ID FOTO:\n{msg.photo[-1].file_id}")
+
+    elif msg.document:
+        await msg.reply_text(f"📎 FILE ID DOCUMENTO:\n{msg.document.file_id}")
+
+    elif msg.video:
+        await msg.reply_text(f"🎬 FILE ID VIDEO:\n{msg.video.file_id}")
+
+    else:
+        await msg.reply_text("❌ Invia una foto, video o documento per ottenere il file_id")
+
+
+# =========================
 # 🧠 MAIN PULITO
 # =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # 🔥 COMANDI
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("fileid", fileid))
+    app.add_handler(CommandHandler("fileid", fileid))  # FIX: ora esiste davvero
 
+    # 🎰 CALLBACK + MESSAGGI
     app.add_handler(CallbackQueryHandler(cb_router))
-
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)
-    )
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     print("🟢 CASINO ONLINE FIXED")
 
+    # 🚀 AVVIO BOT
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
