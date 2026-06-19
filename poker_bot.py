@@ -403,66 +403,45 @@ async def spin_slot(update, context):
     msg = q.message
     uid = q.from_user.id
 
-    # =========================
-    # 🛡️ COOLDOWN ANTI SPAM
-    # =========================
+    # 🛡️ COOLDOWN
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
-    # =========================
     # 💰 BET
-    # =========================
     data = q.data
-
     try:
         bet = int(data.split("_")[-1])
     except:
         bet = 100
 
-    # =========================
-    # 🎰 REELS
-    # =========================
     reels = ["🎰", "🎰", "🎰"]
 
-    # =========================
     # 🎬 ANIMAZIONE
-    # =========================
-    try:
-        steps = 6
+    for i in range(6):
+        await asyncio.sleep(0.5)
 
-        for i in range(steps):
+        if i < 2:
+            reels[0] = weighted_symbol()
+        elif i < 4:
+            reels[1] = weighted_symbol()
+        else:
+            reels[2] = weighted_symbol()
 
-            await asyncio.sleep(0.5)
+        text = (
+            "🎰 SPINNING...\n\n"
+            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+            f"💰 Puntata: {bet}"
+        )
 
-            if i < 2:
-                reels[0] = weighted_symbol()
-            elif i < 4:
-                reels[1] = weighted_symbol()
-            else:
-                reels[2] = weighted_symbol()
+        if i % 2 == 0:
+            try:
+                await msg.edit_caption(caption=text)
+            except:
+                pass
 
-            text = (
-                "🎰 SPINNING...\n\n"
-                f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-                f"💰 Puntata: {bet}"
-            )
-
-            if i % 2 == 0:
-                try:
-                    await msg.edit_caption(caption=text)
-                except:
-                    pass
-
-    except Exception as e:
-        print("SLOT ERROR:", e)
-
-    await asyncio.sleep(0.5)
-
-    # =========================
     # 🎯 RISULTATO
-    # =========================
     u = get_user(uid)
 
     vip = random.choice(VIP_MULT)
@@ -488,20 +467,12 @@ async def spin_slot(update, context):
             win = 0
             status = "🔴 HAI PERSO"
 
-    # =========================
-    # 💎 MULTIPLIER
-    # =========================
     win = int(win * vip * u.get("multiplier", 1.0))
 
     u["chips"] = u.get("chips", 0) + win
     u["xp"] = u.get("xp", 0) + max(1, win // 15)
     save_user(u)
 
-   
-
-    # =========================
-    # 🎯 OUTPUT FINALE
-    # =========================
     final_text = (
         f"{status}\n\n"
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
@@ -514,13 +485,8 @@ async def spin_slot(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    try:
-        await msg.edit_caption(
-            caption=final_text,
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        print("FINAL EDIT ERROR:", e)
+    await msg.edit_caption(final_text, reply_markup=keyboard)
+
     return
     
 
