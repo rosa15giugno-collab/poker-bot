@@ -476,7 +476,8 @@ async def spin_slot(update, context):
             win = PAYOUT["double"] * bet
             status = "🟡 QUASI!"
         else:
-        win = 0
+            win = 0
+            status = "🔴 HAI PERSO"
 
     # =====================
     # 💎 MULTIPLIER SAFE
