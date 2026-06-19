@@ -1555,7 +1555,7 @@ async def cb_router(update, context):
     data = q.data
     uid = q.from_user.id
 
-    print(f"[CALLBACK] user={uid} data={data}")
+    print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
     try:
         await q.answer()
