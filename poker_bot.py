@@ -1551,7 +1551,7 @@ async def menu(update, context):
             reply_markup=main_menu_keyboard()
         )
         
-[12:29, 19/06/2026] Rosa: async def cb_router(update, context):
+async def cb_router(update, context):
     q = update.callback_query
     data = q.data
     uid = q.from_user.id
