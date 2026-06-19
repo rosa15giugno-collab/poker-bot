@@ -1550,6 +1550,7 @@ async def menu(update, context):
             "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
             reply_markup=main_menu_keyboard()
         )
+        
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
@@ -1563,6 +1564,39 @@ async def cb_router(update, context):
         pass
 
     # =========================
+    # 🏠 MENU
+    # =========================
+    if data in ["menu", "go_menu"]:
+        return await menu(update, context)
+
+    # =========================
+    # 🎰 SLOT ENTRY
+    # =========================
+    if data == "slot":
+        return await slot(update, context)
+
+    # =========================
+    # 🎰 SLOT SPIN (PUNTATA)
+    # =========================
+    if data.startswith("spin_slot_"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =========================
+    # 🃏 BLACKJACK ENTRY
+    # =========================
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    # =========================
     # 🃏 BLACKJACK BET
     # =========================
     if data.startswith("blackjack_bet_"):
@@ -1570,6 +1604,10 @@ async def cb_router(update, context):
             amount = int(data.split("_")[-1])
         except:
             amount = 100
+
+        bj_games[uid] = bj_games.get(uid, {})
+        bj_games[uid]["bet"] = amount
+
         return await blackjack_bet(update, context, amount)
 
     # =========================
@@ -1580,41 +1618,6 @@ async def cb_router(update, context):
 
     if data == "stand":
         return await stand(update, context)
-
-    if data == "blackjack":
-        return await blackjack(update, context)
-
-    # =========================
-    # 🎰 SLOT ENTRY
-    # =========================
-    if data == "slot":
-        return await slot(update, context)
-
-    # =========================
-    # 🎰 SLOT SPIN (CON PUNTATA)
-    # =========================
-    if data.startswith("spin_slot_"):
-        try:
-            bet = int(data.split("_")[-1])
-        except:
-            bet = 100
-
-        # assegna bet correttamente
-        slot_games[uid] = {"bet": bet}
-
-        return await spin_slot(update, context)
-
-    if data == "spin_slot":
-        return await spin_slot(update, context)
-
-    # =========================
-    # 🧭 MENU / NAVIGATION
-    # =========================
-    if data == "menu":
-        return await menu(update, context)
-
-    if data == "go_menu":
-        return await menu(update, context)
 
     # =========================
     # 🎲 ROULETTE
