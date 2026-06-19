@@ -1678,7 +1678,21 @@ async def fileid(update, context):
     else:
         await msg.reply_text("❌ Invia una foto, video o documento per ottenere il file_id")
 
+async def text_handler(update, context):
+    msg = update.message
 
+    if not msg:
+        return
+
+    text = msg.text.lower()
+
+    # 🔥 esempio base (puoi espanderlo per il tuo casino bot)
+    if "bonus" in text:
+        await msg.reply_text("🎁 Usa /bonus per ricevere le chips!")
+    elif "slot" in text:
+        await msg.reply_text("🎰 Vai nella slot dal menu!")
+    else:
+        await msg.reply_text("❓ Comando non riconosciuto. Usa il menu.")
 # =========================
 # 🧠 MAIN PULITO
 # =========================
