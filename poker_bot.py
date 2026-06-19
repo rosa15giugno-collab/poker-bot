@@ -478,14 +478,17 @@ async def spin_slot(update, context):
         f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
         f"💰 Vincita: +{win} chips\n"
         f"💎 Saldo: {u['chips']}"
-    )
+    )   
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data=f"spin_slot_{bet}")],
+        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await msg.edit_caption(final_text, reply_markup=keyboard)
+    await msg.edit_caption(
+        caption=final_text,
+        reply_markup=keyboard
+    ) 
 
     return
     
