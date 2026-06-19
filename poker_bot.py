@@ -427,7 +427,7 @@ async def spin_slot(update, context):
     reels = ["🎰", "🎰", "🎰"]
 
     # =========================
-    # 🎬 ANIMAZIONE SLOT
+    # 🎬 ANIMAZIONE
     # =========================
     try:
         steps = 6
@@ -496,6 +496,8 @@ async def spin_slot(update, context):
     u["chips"] = u.get("chips", 0) + win
     u["xp"] = u.get("xp", 0) + max(1, win // 15)
     save_user(u)
+
+   
 
     # =========================
     # 🎯 OUTPUT FINALE
