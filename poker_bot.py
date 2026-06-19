@@ -1605,8 +1605,12 @@ async def cb_router(update, context):
         except:
             amount = 100
 
-        bj_games[uid] = bj_games.get(uid, {})
-        bj_games[uid]["bet"] = amount
+        bj_games[uid] = {
+        "deck": deck,
+        "player": player,
+        "dealer": dealer,
+        "bet": amount
+    }
 
         return await blackjack_bet(update, context, amount)
 
@@ -1646,7 +1650,7 @@ async def cb_router(update, context):
     if data == "bet_number_value":
         return await roulette_spin(update, context, "number")
 
-    if data.startswith("bet_"):
+    if data.startswith("bet_number_"):
         return await bet_number(update, context)
 
     # =========================
