@@ -62,6 +62,7 @@ slot_games = {}
 PVP_MIN = 2
 PVP_MAX = 6
 PVP_TIME = 10
+CURRENT_PVP_TABLE = "pvp_main"
 BLACKJACK_BETS = [100, 500, 1000]
 
 CARDS = [
@@ -753,34 +754,29 @@ async def stand(update, context):
 
 async def pvp(update, context):
     q = update.callback_query
-    table_id = f"pvp_{int(time.time())}"
 
-    pvp_tables[table_id] = {
-        "players": [],
-        "hands": {},
-        "bets": {},
-        "dealer": [],
-        "state": "waiting",
-        "deck": [],
-        "turn_index": 0,
-        "deadline": 0,
-        "chat_id": q.message.chat_id,
-        "message_id": None,
-        "bot": context.bot
-    }
+    table_id = CURRENT_PVP_TABLE
+
+    if table_id not in pvp_tables:
+        pvp_tables[table_id] = {
+            "players": [],
+            "hands": {},
+            "bets": {},
+            "dealer": [],
+            "state": "waiting"
+        }
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎯 ENTRA", callback_data=f"pvp_join_{table_id}")],
-        [InlineKeyboardButton("🚀 START", callback_data=f"pvp_start_{table_id}")],
+        [InlineKeyboardButton("🎯 ENTRA TAVOLO", callback_data=f"pvp_join_{table_id}")],
+        [InlineKeyboardButton("🚀 AVVIA PARTITA", callback_data=f"pvp_start_{table_id}")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    msg = await context.bot.send_message(
-    chat_id=q.message.chat_id,
-    text="🎬 PVP BLACKJACK\n\n👥 Tavolo aperto\n🎯 Entra ora!"
+    await context.bot.send_message(
+        chat_id=q.message.chat_id,
+        text="🎬 PVP BLACKJACK\n👥 Tavolo unico attivo",
+        reply_markup=keyboard
     )
-
-    pvp_tables[table_id]["message_id"] = msg.message_id
 
 # =========================
 # ENTRATA TAVOLO pvp **
