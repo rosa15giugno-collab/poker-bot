@@ -819,14 +819,16 @@ async def pvp_join(update, context, table_id):
 
 
 # =========================
-# START PARTITA PVP **
+# START PARTITA PVP
 # =========================
-
 async def pvp_start(update, context, table_id):
     q = update.callback_query
     table = pvp_tables.get(table_id)
 
-    if len(table["players"]) < 2:
+    if not table:
+        return await q.answer("Tavolo non trovato")
+
+    if len(table["players"]) < PVP_MIN:
         return await q.answer("Servono almeno 2 giocatori")
 
     deck = CARDS.copy()
@@ -837,11 +839,24 @@ async def pvp_start(update, context, table_id):
     table["turn_index"] = 0
 
     for uid in table["players"]:
-        table["hands"][uid] = [deck.pop(), deck.pop()]
+        table["hands"][uid] = [
+            deck.pop(),
+            deck.pop()
+        ]
 
-    table["dealer"] = [deck.pop(), deck.pop()]
+    table["dealer"] = [
+        deck.pop(),
+        deck.pop()
+    ]
 
-    await q.message.edit_caption("🎬 DISTRIBUZIONE CARTE...")
+    try:
+        await q.message.edit_caption(
+            caption="🎬 DISTRIBUZIONE CARTE..."
+        )
+    except:
+        await q.message.edit_text(
+            "🎬 DISTRIBUZIONE CARTE..."
+        )
 
     await asyncio.sleep(1)
 
@@ -908,36 +923,75 @@ async def timer_auto(context, table_id):
 # =========================
 # HIT PVP
 # =========================
-
 async def pvp_hit(update, context, table_id):
     q = update.callback_query
     table = pvp_tables.get(table_id)
 
+    if not table:
+        return await q.answer("Tavolo non trovato")
+
     idx = table["turn_index"]
+
+    if idx >= len(table["players"]):
+        return
+
     uid = table["players"][idx]
+
+    # Solo il giocatore di turno può giocare
+    if q.from_user.id != uid:
+        return await q.answer(
+            "⛔ Non è il tuo turno",
+            show_alert=True
+        )
 
     if not table["deck"]:
         return await q.answer("Deck finito")
 
     table["hands"][uid].append(table["deck"].pop())
 
-    if card_value(table["hands"][uid]) > 21:
+    hand = table["hands"][uid]
+    score = card_value(hand)
+
+    await q.answer(f"HIT → {score}")
+
+    # Bust
+    if score > 21:
         table["turn_index"] += 1
 
-    await q.answer("HIT")
     return await next_turn(context, table_id)
 
 # =========================
 # STAND PVP
 # =========================
 
+# =========================
+# STAND PVP
+# =========================
 async def pvp_stand(update, context, table_id):
     q = update.callback_query
     table = pvp_tables.get(table_id)
 
+    if not table:
+        return await q.answer("Tavolo non trovato")
+
+    idx = table["turn_index"]
+
+    if idx >= len(table["players"]):
+        return
+
+    uid = table["players"][idx]
+
+    # Solo il giocatore di turno
+    if q.from_user.id != uid:
+        return await q.answer(
+            "⛔ Non è il tuo turno",
+            show_alert=True
+        )
+
     table["turn_index"] += 1
 
     await q.answer("STAND")
+
     return await next_turn(context, table_id)
 
 # =========================
