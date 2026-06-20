@@ -775,11 +775,9 @@ async def pvp(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    msg = await context.bot.send_animation(
-        chat_id=q.message.chat_id,
-        animation="FILE_ID_ANIMATO_PVP",
-        caption="🎬 PVP BLACKJACK PRO\n👥 Tavolo aperto",
-        reply_markup=keyboard
+    msg = await context.bot.send_message(
+    chat_id=q.message.chat_id,
+    text="🎬 PVP BLACKJACK\n\n👥 Tavolo aperto\n🎯 Entra ora!"
     )
 
     pvp_tables[table_id]["message_id"] = msg.message_id
