@@ -1471,8 +1471,9 @@ async def menu(update, context):
 #==========================
 # FILEID PVP
 #=========================
-print("🔥 FILEID FUNCTION TRIGGERED")
 async def fileid(update, context):
+    print("🔥 FILEID FUNCTION TRIGGERED")
+
     msg = update.effective_message
 
     if not msg:
@@ -1485,34 +1486,37 @@ async def fileid(update, context):
             "❌ Invia una foto, video o documento per ottenere il file_id"
         )
 
-    if msg.photo:
-        return await update.message.reply_text(
-            f"📸 FOTO\n\n{msg.photo[-1].file_id}"
+    # 📸 FOTO
+    if reply.photo:
+        return await msg.reply_text(
+            f"📸 FOTO\n\n{reply.photo[-1].file_id}"
         )
 
-    if msg.video:
-        return await update.message.reply_text(
-            f"🎥 VIDEO\n\n{msg.video.file_id}"
+    # 🎥 VIDEO
+    if reply.video:
+        return await msg.reply_text(
+            f"🎥 VIDEO\n\n{reply.video.file_id}"
         )
 
-    if msg.animation:
-        return await update.message.reply_text(
-            f"🎞️ ANIMAZIONE\n\n{msg.animation.file_id}"
+    # 🎞️ ANIMAZIONE
+    if reply.animation:
+        return await msg.reply_text(
+            f"🎞️ ANIMAZIONE\n\n{reply.animation.file_id}"
         )
 
-    if msg.document:
-        return await update.message.reply_text(
-            f"📄 DOCUMENTO\n\n{msg.document.file_id}"
+    # 📄 DOCUMENTO
+    if reply.document:
+        return await msg.reply_text(
+            f"📄 DOCUMENTO\n\n{reply.document.file_id}"
         )
 
-    if msg.video_note:
-        return await update.message.reply_text(
-            f"🔵 VIDEO TONDO\n\n{msg.video_note.file_id}"
+    # 🔵 VIDEO NOTE
+    if reply.video_note:
+        return await msg.reply_text(
+            f"🔵 VIDEO TONDO\n\n{reply.video_note.file_id}"
         )
 
-    await update.message.reply_text(
-        "❌ File non supportato."
-    )
+    await msg.reply_text("❌ File non supportato.")
 
         
 # =========================
