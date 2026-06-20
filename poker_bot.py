@@ -1472,51 +1472,32 @@ async def menu(update, context):
 # FILEID PVP
 #=========================
 async def fileid(update, context):
-    print("🔥 FILEID FUNCTION TRIGGERED")
-
     msg = update.effective_message
 
-    if not msg:
-        return
+    print("🔥 MESSAGE TYPE:", type(msg))
+    print("🔥 PHOTO:", bool(msg.photo))
+    print("🔥 VIDEO:", bool(msg.video))
+    print("🔥 DOC:", bool(msg.document))
+    print("🔥 REPLY:", msg.reply_to_message)
 
-    reply = msg.reply_to_message
+    # 🔥 NUOVO: fallback intelligente
+    target = msg.reply_to_message or msg
 
-    if not reply:
-        return await msg.reply_text(
-            "❌ Invia una foto, video o documento per ottenere il file_id"
-        )
+    if target.photo:
+        return await msg.reply_text(target.photo[-1].file_id)
 
-    # 📸 FOTO
-    if reply.photo:
-        return await msg.reply_text(
-            f"📸 FOTO\n\n{reply.photo[-1].file_id}"
-        )
+    if target.video:
+        return await msg.reply_text(target.video.file_id)
 
-    # 🎥 VIDEO
-    if reply.video:
-        return await msg.reply_text(
-            f"🎥 VIDEO\n\n{reply.video.file_id}"
-        )
+    if target.animation:
+        return await msg.reply_text(target.animation.file_id)
 
-    # 🎞️ ANIMAZIONE
-    if reply.animation:
-        return await msg.reply_text(
-            f"🎞️ ANIMAZIONE\n\n{reply.animation.file_id}"
-        )
+    if target.document:
+        return await msg.reply_text(target.document.file_id)
 
-    # 📄 DOCUMENTO
-    if reply.document:
-        return await msg.reply_text(
-            f"📄 DOCUMENTO\n\n{reply.document.file_id}"
-        )
-
-    # 🔵 VIDEO NOTE
-    if reply.video_note:
-        return await msg.reply_text(
-            f"🔵 VIDEO TONDO\n\n{reply.video_note.file_id}"
-        )
-
-    await msg.reply_text("❌ File non supportato.")
+    return await msg.reply_text(
+        "❌ Nessun file trovato (manda o rispondi a un media)"
+    )
 
         
 # =========================
