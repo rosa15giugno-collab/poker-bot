@@ -1621,58 +1621,181 @@ async def cb_router(update, context):
     print("❌ CALLBACK NON GESTITA:", data)
     return
 # =========================
-# 📎 FILEID COMMAND (DEBUG)
+# 📎 FILEID COMMAND (UNICO E CORRETTO)
 # =========================
 async def fileid(update, context):
-    msg = update.message
+    msg = update.effective_message
 
     if not msg:
         return
 
-    if msg.photo:
-        await msg.reply_text(f"📸 FILE ID FOTO:\n{msg.photo[-1].file_id}")
+    target = msg.reply_to_message or msg
 
-    elif msg.document:
-        await msg.reply_text(f"📎 FILE ID DOCUMENTO:\n{msg.document.file_id}")
+    if target.photo:
+        return await msg.reply_text(f"📸 FOTO:\n{target.photo[-1].file_id}")
 
-    elif msg.video:
-        await msg.reply_text(f"🎬 FILE ID VIDEO:\n{msg.video.file_id}")
+    if target.video:
+        return await msg.reply_text(f"🎬 VIDEO:\n{target.video.file_id}")
 
-    else:
-        await msg.reply_text("❌ Invia una foto, video o documento per ottenere il file_id")
+    if target.animation:
+        return await msg.reply_text(f"🎞️ ANIMATION:\n{target.animation.file_id}")
 
+    if target.document:
+        return await msg.reply_text(f"📎 DOCUMENTO:\n{target.document.file_id}")
+
+    if target.video_note:
+        return await msg.reply_text(f"🔵 VIDEO NOTE:\n{target.video_note.file_id}")
+
+    await msg.reply_text("❌ Nessun file trovato.\nRispondi a un media.")
+
+
+# =========================
+# 🎮 CALLBACK ROUTER UNICO (PULITO)
+# =========================
+async def cb_router(update, context):
+    q = update.callback_query
+    data = q.data
+    uid = q.from_user.id
+
+    print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
+
+    try:
+        await q.answer()
+    except:
+        pass
+
+    # =====================
+    # 🏠 MENU
+    # =====================
+    if data in ["menu", "go_menu"]:
+        return await send_main_menu(q.message.chat_id, context)
+
+    # =====================
+    # 🎰 SLOT
+    # =====================
+    if data == "slot":
+        return await slot(update, context)
+
+    if data.startswith("spin_slot_"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =====================
+    # 🃏 BLACKJACK
+    # =====================
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
+
+        return await blackjack_bet(update, context, amount)
+
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+        return await stand(update, context)
+
+    # =====================
+    # 🎲 ROULETTE
+    # =====================
+    if data == "roulette":
+        return await roulette(update, context)
+
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+    if data == "bet_zero":
+        return await bet_zero(update, context)
+
+    if data == "bet_number_value":
+        return await roulette_spin(update, context, "number")
+
+    if data.startswith("bet_number"):
+        return await bet_number(update, context)
+
+    # =====================
+    # 🎮 PVP
+    # =====================
+    if data == "pvp":
+        return await pvp(update, context)
+
+    if data.startswith("pvp_join_"):
+        return await pvp_join(update, context, data.replace("pvp_join_", ""))
+
+    if data.startswith("pvp_start_"):
+        return await pvp_start(update, context, data.replace("pvp_start_", ""))
+
+    if data.startswith("pvp_hit_"):
+        return await pvp_hit(update, context, data.replace("pvp_hit_", ""))
+
+    if data.startswith("pvp_stand_"):
+        return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
+
+    # =====================
+    # ❌ FALLBACK UNICO
+    # =====================
+    print("❌ CALLBACK NON GESTITA:", data)
+    return
+
+
+# =========================
+# 🧠 TEXT HANDLER
+# =========================
 async def text_handler(update, context):
-    msg = update.message
+    msg = update.effective_message
 
     if not msg:
         return
 
     text = msg.text.lower()
 
-    # 🔥 esempio base (puoi espanderlo per il tuo casino bot)
     if "bonus" in text:
         await msg.reply_text("🎁 Usa /bonus per ricevere le chips!")
     elif "slot" in text:
         await msg.reply_text("🎰 Vai nella slot dal menu!")
     else:
         await msg.reply_text("❓ Comando non riconosciuto. Usa il menu.")
+
+
 # =========================
-# 🧠 MAIN PULITO
+# 🧠 MAIN
 # =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 🔥 COMANDI
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("fileid", fileid))  # FIX: ora esiste davvero
+    app.add_handler(CommandHandler("fileid", fileid))
 
-    # 🎰 CALLBACK + MESSAGGI
     app.add_handler(CallbackQueryHandler(cb_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     print("🟢 CASINO ONLINE FIXED")
 
-    # 🚀 AVVIO BOT
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
