@@ -814,9 +814,8 @@ async def pvp(update, context):
         "message_id": msg.message_id
     }
 # =========================
-# ENTRATA TAVOLO pvp **
+# ENTRATA TAVOLO PVP
 # =========================
-
 async def pvp_join(update, context, table_id):
     q = update.callback_query
     uid = q.from_user.id
@@ -825,27 +824,49 @@ async def pvp_join(update, context, table_id):
     if not table:
         return await q.answer("Tavolo non esiste")
 
+    if table["state"] != "waiting":
+        return await q.answer("La partita è già iniziata")
+
     if uid in table["players"]:
         return await q.answer("Sei già dentro")
 
     if len(table["players"]) >= PVP_MAX:
         return await q.answer("Tavolo pieno")
 
+    # 👤 Salva giocatore
     table["players"].append(uid)
     table["hands"][uid] = []
     table["bets"][uid] = 200
 
+    # 👤 Salva nome Telegram
+    if "names" not in table:
+        table["names"] = {}
+
+    name = (
+        q.from_user.first_name
+        or q.from_user.username
+        or f"User {uid}"
+    )
+
+    table["names"][uid] = name
+
     await q.answer("Entrato 🎯")
+
+    # 👥 Lista giocatori nel tavolo
+    players_text = "\n".join(
+        f"• {table['names'][pid]}"
+        for pid in table["players"]
+    )
 
     await q.message.edit_caption(
         caption=(
-            f"🎬 PVP LIVE\n\n"
-            f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n"
-            f"⏳ In attesa avvio..."
+            "🎬 PVP BLACKJACK LIVE\n\n"
+            f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n\n"
+            f"{players_text}\n\n"
+            "⏳ In attesa avvio..."
         ),
-    reply_markup=q.message.reply_markup
+        reply_markup=q.message.reply_markup
     )
-
 
 # =========================
 # START PARTITA PVP
@@ -893,7 +914,6 @@ async def pvp_start(update, context, table_id):
 # =========================
 # TURNO CON TIMER PVP
 # =========================
-
 async def next_turn(context, table_id):
     table = pvp_tables.get(table_id)
 
@@ -907,6 +927,12 @@ async def next_turn(context, table_id):
 
     uid = players[table["turn_index"]]
     hand = table["hands"][uid]
+
+    # 👤 Nome giocatore
+    name = table.get("names", {}).get(
+        uid,
+        f"User {uid}"
+    )
 
     table["deadline"] = time.time() + PVP_TIME
 
@@ -934,11 +960,10 @@ async def next_turn(context, table_id):
     await context.bot.send_message(
         chat_id=chat_id,
         text=(
-            f"🎮 TURNO PLAYER "
-            f"{table['turn_index'] + 1}\n\n"
-            f"🃏 Mano: {hand}\n"
+            f"🎮 TURNO DI {name}\n\n"
+            f"🃏 Mano: {' '.join(hand)}\n"
             f"💯 Totale: {card_value(hand)}\n\n"
-            f"⏱️ Hai {PVP_TIME} secondi"
+            f"⏱️ Hai {PVP_TIME} secondi!"
         ),
         reply_markup=keyboard
     )
@@ -1058,26 +1083,52 @@ async def pvp_stand(update, context, table_id):
 async def dealer_phase(context, table_id):
     table = pvp_tables.get(table_id)
 
+    if not table:
+        return
+
+    chat_id = table.get("chat_id")
+    if not chat_id:
+        print("❌ chat_id mancante nel tavolo")
+        return
+
+    # 🛑 STOP TIMER
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
     await context.bot.send_message(
-        chat_id=table["chat_id"],
+        chat_id=chat_id,
         text="🤵 Dealer sta giocando..."
     )
 
     await asyncio.sleep(2)
 
+    # 🎬 DEALER PLAY (più cinematico)
     while card_value(table["dealer"]) < 17:
         if not table["deck"]:
             break
+
         table["dealer"].append(table["deck"].pop())
-        await asyncio.sleep(1)
+
+        # ⏱️ più realistico (non 10s fissi)
+        await asyncio.sleep(2)
 
     dealer_score = card_value(table["dealer"])
 
-    result = "🏆 RISULTATI\n\n"
-    result += f"🤵 Dealer: {dealer_score}\n\n"
+    # =========================
+    # RESULT BUILD
+    # =========================
+    result = (
+        "🏆 RISULTATI PVP\n\n"
+        f"🤵 Dealer: {' '.join(table['dealer'])}\n"
+        f"💯 Totale Dealer: {dealer_score}\n\n"
+    )
 
-    for i, uid in enumerate(table["players"], 1):
-        score = card_value(table["hands"][uid])
+    for uid in table["players"]:
+        name = table.get("names", {}).get(uid, f"User {uid}")
+
+        hand = table["hands"].get(uid, [])
+        score = card_value(hand)
 
         if score > 21:
             res = "💥 PERSO"
@@ -1088,10 +1139,40 @@ async def dealer_phase(context, table_id):
         else:
             res = "💥 PERSO"
 
-        result += f"👤 Player {i}: {score} → {res}\n"
+        result += (
+            f"👤 {name}\n"
+            f"🃏 {' '.join(hand)}\n"
+            f"💯 {score} → {res}\n\n"
+        )
 
-    await context.bot.send_message(table["chat_id"], result)
+    # =========================
+    # FINAL BUTTONS
+    # =========================
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
 
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=result,
+        reply_markup=keyboard
+    )
+
+    # =========================
+    # CLEAN RESET TABLE
+    # =========================
+    table["state"] = "finished"
+
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    pvp_tables.pop(table_id, None)
 
 #==========================
 # UPDATE
@@ -1878,7 +1959,7 @@ async def cb_router(update, context):
 # 🧠 TEXT HANDLER
 # =========================
 async def text_handler(update, context):
-    msg = update.effective_message
+    msg = update.message
 
     if not msg:
         return
@@ -1886,13 +1967,16 @@ async def text_handler(update, context):
     text = msg.text.lower()
 
     if "bonus" in text:
-        await msg.reply_text("🎁 Usa /bonus per ricevere le chips!")
+        await msg.reply_text(
+            "🎁 Usa /bonus per ricevere le chips!"
+        )
+
     elif "slot" in text:
-        await msg.reply_text("🎰 Vai nella slot dal menu!")
-    else:
-        await msg.reply_text("❓ Comando non riconosciuto. Usa il menu.")
+        await msg.reply_text(
+            "🎰 Vai nella slot dal menu!"
+        )
 
-
+    # nessun else
 # =========================
 # 🧠 MAIN
 # =========================
