@@ -1,4 +1,4 @@
-import os   f
+import os   
 import random
 import sqlite3
 import time
