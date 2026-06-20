@@ -1836,7 +1836,7 @@ async def fileid(update, context):
     )
         
 # =========================
-# 🎮 CALLBACK ROUTER UNICO
+# 🎮 CALLBACK ROUTER
 # =========================
 async def cb_router(update, context):
     q = update.callback_query
@@ -1855,6 +1855,21 @@ async def cb_router(update, context):
     # =====================
     if data in ["menu", "go_menu"]:
         return await send_main_menu(q.message.chat_id, context)
+
+    # =====================
+    # 👤 PROFILO / BONUS / SHOP / CLASSIFICA
+    # =====================
+    if data == "profile":
+        return await profile(update, context)
+
+    if data == "bonus":
+        return await daily_bonus(update, context)
+
+    if data == "shop":
+        return await shop(update, context)
+
+    if data == "leaderboard":
+        return await leaderboard(update, context)
 
     # =====================
     # 🎰 SLOT
@@ -1941,27 +1956,6 @@ async def cb_router(update, context):
 
     if data.startswith("pvp_stand_"):
         return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
-
-    # =====================
-# 🏠 MENU
-# =====================
-if data in ["menu", "go_menu"]:
-    return await send_main_menu(q.message.chat_id, context)
-
-# =====================
-# 👤 PROFILO / BONUS / SHOP / CLASSIFICA
-# =====================
-if data == "profile":
-    return await profile(update, context)
-
-if data == "bonus":
-    return await daily_bonus(update, context)
-
-if data == "shop":
-    return await shop(update, context)
-
-if data == "leaderboard":
-    return await leaderboard(update, context)
 
     # =====================
     # ❌ FALLBACK
