@@ -749,41 +749,70 @@ async def stand(update, context):
 
     await safe_edit(q.message, testo, reply_markup=keyboard)
 # =========================
-# ENTRATA ANIMATA TABLE pvp **
+# ENTRATA ANIMATA TABLE PVP
 # =========================
-
 async def pvp(update, context):
     q = update.callback_query
+    await q.answer()
 
     table_id = CURRENT_PVP_TABLE
 
-    if table_id not in pvp_tables:
-        pvp_tables[table_id] = {
-            "players": [],
-            "hands": {},
-            "bets": {},
-            "dealer": [],
-            "state": "waiting"
-        }
+    # Tavolo già aperto
+    if table_id in pvp_tables:
+        table = pvp_tables[table_id]
+
+        if table.get("state") != "finished":
+            return await q.answer(
+                "🎮 Tavolo già aperto!",
+                show_alert=True
+            )
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎯 ENTRA TAVOLO", callback_data=f"pvp_join_{table_id}")],
-        [InlineKeyboardButton("🚀 AVVIA PARTITA", callback_data=f"pvp_start_{table_id}")],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        [
+            InlineKeyboardButton(
+                "🎯 ENTRA TAVOLO",
+                callback_data=f"pvp_join_{table_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🚀 AVVIA PARTITA",
+                callback_data=f"pvp_start_{table_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🏠 MENU",
+                callback_data="menu"
+            )
+        ]
     ])
 
-    await context.bot.send_animation(
+    msg = await context.bot.send_animation(
         chat_id=q.message.chat_id,
         animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
         caption=(
             "🎬 PVP BLACKJACK\n\n"
-            "👥 Tavolo aperto (2–6 giocatori)\n"
+            "👥 Tavolo aperto (2-6 giocatori)\n"
             "💰 Puntata: 200 chips\n\n"
             "⏳ Entra ora!"
         ),
         reply_markup=keyboard
     )
 
+    pvp_tables[table_id] = {
+        "players": [],
+        "hands": {},
+        "bets": {},
+        "dealer": [],
+        "deck": [],
+        "state": "waiting",
+        "turn_index": 0,
+
+        # IMPORTANTISSIMO
+        "chat_id": msg.chat_id,
+        "message_id": msg.message_id
+    }
 # =========================
 # ENTRATA TAVOLO pvp **
 # =========================
@@ -867,6 +896,7 @@ async def pvp_start(update, context, table_id):
 
 async def next_turn(context, table_id):
     table = pvp_tables.get(table_id)
+
     if not table:
         return
 
@@ -881,43 +911,71 @@ async def next_turn(context, table_id):
     table["deadline"] = time.time() + PVP_TIME
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎯 HIT", callback_data=f"pvp_hit_{table_id}")],
-        [InlineKeyboardButton("🛑 STAND", callback_data=f"pvp_stand_{table_id}")]
+        [
+            InlineKeyboardButton(
+                "🎯 HIT",
+                callback_data=f"pvp_hit_{table_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🛑 STAND",
+                callback_data=f"pvp_stand_{table_id}"
+            )
+        ]
     ])
 
-    try:
-        await context.bot.send_message(
-            chat_id=table["chat_id"],
-            text=f"🎮 TURNO PLAYER\n🃏 {hand} = {card_value(hand)}",
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        print("NEXT TURN ERROR:", e)
+    chat_id = table.get("chat_id")
 
-    asyncio.create_task(timer_auto(context, table_id))
+    if not chat_id:
+        print("❌ chat_id mancante:", table)
+        return
 
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=(
+            f"🎮 TURNO PLAYER "
+            f"{table['turn_index'] + 1}\n\n"
+            f"🃏 Mano: {hand}\n"
+            f"💯 Totale: {card_value(hand)}\n\n"
+            f"⏱️ Hai {PVP_TIME} secondi"
+        ),
+        reply_markup=keyboard
+    )
+
+    # Cancella eventuale timer precedente
+    old_timer = table.get("timer_task")
+
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    table["timer_task"] = asyncio.create_task(
+        timer_auto(context, table_id)
+    )
 # =========================
 # TIMER AUTO AFK PVP
 # =========================
 async def timer_auto(context, table_id):
+    aasync def timer_auto(context, table_id):
     await asyncio.sleep(PVP_TIME)
 
     table = pvp_tables.get(table_id)
+
     if not table:
         return
 
-    if time.time() < table["deadline"]:
+    if time.time() < table.get("deadline", 0):
         return
 
     table["turn_index"] += 1
 
-    try:
+    chat_id = table.get("chat_id")
+
+    if chat_id:
         await context.bot.send_message(
-            chat_id=table["chat_id"],
-            text="⏱️ Timeout → STAND automatico"
+            chat_id=chat_id,
+            text="⏱️ Tempo scaduto → STAND automatico"
         )
-    except:
-        pass
 
     await next_turn(context, table_id)
 # =========================
