@@ -49,7 +49,9 @@ active_matches = {}
 tables = {}
 user_tables = {}
 COOLDOWN = {}
-
+pvp_tables = {}
+pvp_turn_index = {}
+pvp_deadlines = {}
 # =========================
 # 🃏 BLACKJACK / PVP
 # =========================
@@ -57,7 +59,9 @@ bj_games = {}
 bets = {}
 slot_games = {}
 
-
+PVP_MIN = 2
+PVP_MAX = 6
+PVP TIME = 10
 BLACKJACK_BETS = [100, 500, 1000]
 
 CARDS = [
@@ -84,22 +88,16 @@ def card_value(hand):
     aces = 0
 
     for card in hand:
-        # 🔥 pulizia totale simboli Telegram
         value = (
-            card
-            .replace("♠️", "")
-            .replace("♥️", "")
-            .replace("♦️", "")
-            .replace("♣️", "")
-            .replace("♠️", "")
-            .replace("♥️", "")
-            .replace("♦️", "")
-            .replace("♣️", "")
-            .replace("️", "")
-            .strip()
+            card.replace("♠️", "")
+                .replace("♥️", "")
+                .replace("♦️", "")
+                .replace("♣️", "")
+                .replace("️", "")
+                .strip()
         )
 
-        if value in ["J", "Q", "K"]:
+        if value in ("J", "Q", "K"):
             total += 10
         elif value == "A":
             total += 11
@@ -112,7 +110,6 @@ def card_value(hand):
         aces -= 1
 
     return total
-
 
 # =========================
 # SAFE EDIT (STABILE TELEGRAM)
@@ -752,164 +749,218 @@ async def stand(update, context):
 
     await safe_edit(q.message, testo, reply_markup=keyboard)
 # =========================
-# CREATE TABLE
-# =========================
-
-def create_table():
-    return {
-        "players": [],
-        "hands": {},
-        "started": False,
-        "message": None,
-        "chat_id": None,
-
-        "dealer": [],
-
-        "pot": 0,
-        "finished": False,
-
-        "order": [],
-        "turn_index": 0,
-
-        "last_action": time.time(),
-
-        "stood": set()
-    }
-
-
-# =========================
-# PVP JOIN
+# ENTRATA ANIMATA TABLE pvp **
 # =========================
 
 async def pvp(update, context):
     q = update.callback_query
-    await q.answer()
+    uid = q.from_user.id
 
-    uid = str(q.from_user.id)
-    name = q.from_user.first_name
+    table_id = f"pvp_{int(time.time())}"
 
-    bet = 100  # puoi renderla dinamica
+    pvp_tables[table_id] = {
+        "players": [],
+        "hands": {},
+        "bets": {},
+        "dealer": [],
+        "state": "waiting"
+    }
 
-    user = get_user(uid)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎯 ENTRA TAVOLO", callback_data=f"pvp_join_{table_id}")],
+        [InlineKeyboardButton("🚀 AVVIA PARTITA", callback_data=f"pvp_start_{table_id}")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
 
-    # ❌ controllo chips
-    if user["chips"] < bet:
-        return await q.answer("❌ Non hai abbastanza chips", show_alert=True)
-
-    # 🎯 cerca tavolo disponibile
-    table_id = None
-
-    for tid, t in tables.items():
-        if not t["started"] and len(t["players"]) < 6:
-            table_id = tid
-            break
-
-    # 🆕 crea tavolo se non esiste
-    if not table_id:
-        table_id = str(int(time.time()))
-        tables[table_id] = create_table()
-
-    t = tables[table_id]
-
-    # ❌ già dentro al tavolo
-    if any(p["id"] == uid for p in t["players"]):
-        return await safe_edit(q.message, "⏳ Sei già al tavolo", reply_markup=main_menu_keyboard())
-
-    # 💰 scala chips
-    user["chips"] -= bet
-    save_user(user)
-
-    # 🪑 aggiungi player
-    t["players"].append({
-        "id": uid,
-        "name": name,
-        "bet": bet
-    })
-
-    # 🖼️ IMMAGINE ENTRATA (effetto casino PvP)
-    await context.bot.send_photo(
+    # 🎬 FILEID ANIMATO (tuo già pronto)
+    await context.bot.send_animation(
         chat_id=q.message.chat_id,
-        photo="AgACAgQAAxkBAAMkai8flTPIwC3PRtw-ITOGKdLzjBsAAokPaxsMTHhRw0yUgC0hQVYBAAMCAAN5AAM8BA",
-        caption=(
-            f"🎰 CASINO ROYALE\n"
-            f"🃏 PvP Blackjack\n\n"
-            f"👤 {name} è entrato nel tavolo\n"
-            f"💰 Puntata: {bet} chips"
-        )
+        animation="FILE_ID_ANIMATO_PVP",  # 🔥 SOSTITUISCI CON IL TUO FILEID
+        caption=
+        "🎬 PVP BLACKJACK ULTRA LEGGENDA\n\n"
+        "👥 Tavolo aperto (2–6 giocatori)\n"
+        "💰 Puntata: 200 chips\n\n"
+        "⏳ Entra ora nel tavolo!",
+        reply_markup=keyboard
     )
 
-    # 🃏 carte iniziali
-    t["hands"][uid] = [
-    random.choice(CARDS),
-    random.choice(CARDS)
-    ]
-
-    t["pot"] += bet
-    user_tables[uid] = table_id
-
-    # 👥 se non ci sono abbastanza player
-    if len(t["players"]) < 2:
-        return await safe_edit(
-            q.message,
-            f"🃏 TABLE\n👥 {len(t['players'])}/6\n💰 Pot: {t['pot']}",
-            reply_markup=main_menu_keyboard()
-        )
-
-    # 🚀 avvio partita
-    if not t["started"]:
-        t["started"] = True
-
-        t["dealer"] = [
-            random.randint(2, 11),
-            random.randint(2, 11)
-        ]
-
-        t["order"] = [p["id"] for p in t["players"]]
-
-        await safe_edit(
-            q.message,
-            render_table(t),
-            reply_markup=table_buttons(t)
-        )
-
-        asyncio.create_task(
-            game_loop(context.bot, table_id, q.message.chat_id)
-        )
-
 # =========================
-# RENDER TABLE UI
+# ENTRATA TAVOLO pvp **
 # =========================
 
-def render_table(t):
-    txt = "🃏 <b>BLACKJACK PvP LIVE</b>\n\n"
+async def pvp_join(update, context, table_id):
+    q = update.callback_query
+    uid = q.from_user.id
 
-    current_uid = None
+    table = pvp_tables.get(table_id)
+    if not table:
+        return
 
-    if t["order"] and t["turn_index"] < len(t["order"]):
-        current_uid = t["order"][t["turn_index"]]
+    if uid in table["players"]:
+        return await q.answer("Sei già dentro")
 
-    for p in t["players"]:
-        uid = p["id"]
-        name = p["name"]
-        hand = t["hands"].get(uid) or []
+    if len(table["players"]) >= PVP_MAX:
+        return await q.answer("Tavolo pieno")
 
-        marker = "👉" if uid == current_uid else "👤"
+    table["players"].append(uid)
+    table["hands"][uid] = []
+    table["bets"][uid] = 200
 
-        txt += f"{marker} <b>{name}</b>: {card_value(hand)} {hand}\n"
+    await q.answer("Entrato al tavolo 🎯")
 
-    txt += "\n🏦 <b>BANCO</b>: ? [?, ?]"
+    await q.message.edit_text(
+        f"🎬 PVP LIVE\n\n"
+        f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n"
+        f"⏳ In attesa avvio..."
+    
 
-    if current_uid:
-        current_name = next(
-            (p["name"] for p in t["players"] if p["id"] == current_uid),
-            "?"
-        )
 
-        txt += f"\n\n⏱️ Turno di: <b>{current_name}</b>"
+# =========================
+# START PARTITA PVP **
+# =========================
 
-    txt += f"\n💰 Pot: {t['pot']}"
+async def pvp_start(update, context, table_id):
+    q = update.callback_query
+    table = pvp_tables[table_id]
 
-    return txt
+    if len(table["players"]) < PVP_MIN:
+        return await q.answer("Servono almeno 2 giocatori")
+
+    deck = CARDS.copy()
+    random.shuffle(deck)
+
+    for uid in table["players"]:
+        table["hands"][uid] = [deck.pop(), deck.pop()]
+
+    table["dealer"] = [deck.pop(), deck.pop()]
+    table["deck"] = deck
+    table["state"] = "playing"
+
+    pvp_turn_index[table_id] = 0
+
+    await q.message.edit_text("🎬 DISTRIBUZIONE CARTE...")
+
+    await asyncio.sleep(1)
+
+    return await next_turn(update, context, table_id)
+# =========================
+# TURNO CON TIMER PVP
+# =========================
+
+async def next_turn(update, context, table_id):
+    table = pvp_tables[table_id]
+    idx = pvp_turn_index[table_id]
+
+    if idx >= len(table["players"]):
+        return await dealer_phase(update, context, table_id)
+
+    uid = table["players"][idx]
+    hand = table["hands"][uid]
+
+    # ⏱️ TIMER
+    pvp_deadlines[table_id] = time.time() + PVP_TIME
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎯 HIT", callback_data=f"pvp_hit_{table_id}")],
+        [InlineKeyboardButton("🛑 STAND", callback_data=f"pvp_stand_{table_id}")]
+    ])
+
+    await update.callback_query.message.edit_text(
+        f"🎮 TURNO PLAYER {idx+1}\n\n"
+        f"🃏 Mano: {hand} = {card_value(hand)}\n\n"
+        f"⏱️ Hai {PVP_TIME} secondi!",
+        reply_markup=keyboard
+    )
+
+    asyncio.create_task(timer_auto(table_id, update, context))
+
+# =========================
+# TIMER AUTO AFK PVP
+# =========================
+async def timer_auto(table_id, update, context):
+    await asyncio.sleep(PVP_TIME)
+
+    table = pvp_tables.get(table_id)
+    if not table:
+        return
+
+    idx = pvp_turn_index[table_id]
+
+    if time.time() >= pvp_deadlines.get(table_id, 0):
+        pvp_turn_index[table_id] += 1
+
+        try:
+            await update.callback_query.message.reply_text(
+                "⏱️ Tempo scaduto → STAND automatico"
+            )
+        except:
+            pass
+
+        return await next_turn(update, context, table_id)
+# =========================
+# HIT PVP
+# =========================
+
+async def pvp_hit(update, context, table_id):
+    q = update.callback_query
+    table = pvp_tables[table_id]
+
+    idx = pvp_turn_index[table_id]
+    uid = table["players"][idx]
+
+    table["hands"][uid].append(table["deck"].pop())
+
+    if card_value(table["hands"][uid]) > 21:
+        pvp_turn_index[table_id] += 1
+
+    return await next_turn(update, context, table_id)
+
+# =========================
+# STAND PVP
+# =========================
+
+async def pvp_stand(update, context, table_id):
+    pvp_turn_index[table_id] += 1
+    return await next_turn(update, context, table_id)
+
+# =========================
+# DEALER CINEMATOGRAFICO PVP
+# =========================
+
+async def dealer_phase(update, context, table_id):
+    table = pvp_tables[table_id]
+
+    await update.callback_query.message.edit_text(
+        "🤵 Dealer sta giocando...\n🎬 Pensando..."
+    )
+
+    await asyncio.sleep(2)
+
+    while card_value(table["dealer"]) < 17:
+        table["dealer"].append(table["deck"].pop())
+        await asyncio.sleep(1)
+
+    dealer_score = card_value(table["dealer"])
+
+    result = "🏆 RISULTATI PVP LIVE\n\n"
+    result += f"🤵 Dealer: {dealer_score}\n\n"
+
+    for i, uid in enumerate(table["players"], 1):
+        score = card_value(table["hands"][uid])
+
+        if score > 21:
+            res = "💥 PERSO"
+        elif dealer_score > 21 or score > dealer_score:
+            res = "🏆 VINTO"
+        elif score == dealer_score:
+            res = "🤝 PAREGGIO"
+        else:
+            res = "💥 PERSO"
+
+        result += f"👤 Player {i}: {score} → {res}\n"
+
+    await update.callback_query.message.edit_text(result)
+
 
 #==========================
 # UPDATE
@@ -950,73 +1001,7 @@ def table_buttons(t):
     ])
 
 
-# =========================
-# HIT MP
-# =========================
 
-async def hit_mp(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    uid = str(q.from_user.id)
-
-    table_id = user_tables.get(uid)
-    t = tables.get(table_id)
-
-    if not t:
-        return await q.answer(
-            "⚠️ Tavolo non trovato",
-            show_alert=True
-        )
-
-    if t.get("finished"):
-        return await q.answer(
-            "⚠️ Partita terminata",
-            show_alert=True
-        )
-
-    if "order" not in t or "turn_index" not in t:
-        return await q.answer(
-            "⚠️ Tavolo non inizializzato",
-            show_alert=True
-        )
-
-    if t["turn_index"] >= len(t["order"]):
-        return await q.answer(
-            "⏳ Turno non valido",
-            show_alert=True
-        )
-
-    if t["order"][t["turn_index"]] != uid:
-        return await q.answer(
-            "⛔ Non è il tuo turno",
-            show_alert=True
-        )
-
-    # pesca carta
-    card = random.randint(2, 11)
-
-    t["hands"].setdefault(uid, []).append(card)
-
-    print(f"HIT_MP -> {uid} pesca {card}")
-
-    score = sum(t["hands"][uid])
-
-    # sballato
-    if score > 21:
-        print(f"BUST -> {uid}")
-
-        t["turn_index"] += 1
-
-    # aggiorna timer turno
-    t["last_action"] = time.time()
-
-    try:
-        await update_table(context.bot, t)
-    except Exception as e:
-        print("❌ UPDATE ERROR HIT_MP:", e)
-
-    return
 
 
 # =========================
@@ -1041,67 +1026,7 @@ async def stand_mp(update, context):
 
     await update_table(context.bot, t)
 
-# =========================
-# RUN TABLE GAME LOOP
-# =========================
 
-async def game_loop(bot, table_id):
-    t = tables[table_id]
-
-    while not t["finished"]:
-        await asyncio.sleep(2)
-
-        # timeout turno (20 sec)
-        if time.time() - t["last_action"] > 20:
-            t["turn_index"] += 1
-            t["last_action"] = time.time()
-
-        if t["turn_index"] >= len(t["order"]):
-            break
-
-    await finish_table(bot, table_id)
-
-# =========================
-# FINISH TABLE
-# =========================
-
-async def finish_table(bot, table_id):
-    t = tables[table_id]
-
-    dealer = t["dealer"]
-    while sum(dealer) < 17:
-        dealer.append(random.randint(2,11))
-
-    d = sum(dealer)
-
-    txt = "🏁 <b>RISULTATO FINALE</b>\n\n"
-    txt += f"🎰 Dealer: {d}\n\n"
-
-    for p in t["players"]:
-        uid = p["id"]
-        user = get_user(uid)
-
-        score = sum(t["hands"][uid])
-        bet = t["bets"][uid]
-
-        if score > 21:
-            win = 0
-        elif d > 21 or score > d:
-            win = bet * 2
-        elif score == d:
-            win = bet
-        else:
-            win = 0
-
-        user["chips"] += win
-        save_user(user)
-
-        txt += f"👤 {p['name']}: {score} → +{win}\n"
-
-    await bot.send_message(t["chat_id"], txt)
-
-    del tables[table_id]
-    
 # =========================
 # 🎰 ROULETTE PRO DEFINITIVA
 # =========================
@@ -1526,6 +1451,20 @@ async def menu(update, context):
             "🏠 MENU PRINCIPALE\n\nScegli un gioco:",
             reply_markup=main_menu_keyboard()
         )
+
+#==========================
+# FILEID PVP
+#=========================
+async def fileid(update, context):
+    msg = update.message.reply_to_message
+
+    if not msg:
+        return await update.message.reply_text(
+            "📎 Rispondi a un messaggio con /fileid per aprire il tavolo PVP"
+        )
+
+    return await pvp_create(update, context)
+
         
 # =========================
 # 🎮 CALLBACK ROUTER UNICO
@@ -1617,20 +1556,36 @@ async def cb_router(update, context):
         return await bet_number(update, context)
 
     # =====================
-    # 🎮 ALTRO
+    # 🎮 PVP
     # =====================
     if data == "pvp":
         return await pvp(update, context)
 
-    if data == "bonus":
-        return await bonus(update, context)
+    if data.startswith("pvp_join_"):
+        return await pvp_join(update, context, data.replace("pvp_join_",""))
 
+    if data.startswith("pvp_start_"):
+        return await pvp_start(update, context, data.replace("pvp_start_",""))
+
+    if data.startswith("pvp_hit_"):
+        return await pvp_hit(update, context, data.replace("pvp_hit_",""))
+
+    if data.startswith("pvp_stand_"):
+        return await pvp_stand(update, context, data.replace("pvp_stand_",""))
+    # =====================
+    # ❌ FALLBACK
+    # =====================
+    if data.startswith("pvp_join_"):
+        return await pvp_join(update, context)
+
+    if data.startswith("pvp_start_"):
+        return await pvp_start(update, context)
+    
     # =====================
     # ❌ FALLBACK
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
-
 # =========================
 # 📎 FILEID COMMAND (DEBUG)
 # =========================
