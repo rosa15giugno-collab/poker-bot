@@ -774,7 +774,7 @@ async def pvp(update, context):
 
     await context.bot.send_animation(
         chat_id=q.message.chat_id,
-        animation="TUO_FILE_ID_VALIDO",
+        animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
         caption=(
             "🎬 PVP BLACKJACK\n\n"
             "👥 Tavolo aperto (2–6 giocatori)\n"
