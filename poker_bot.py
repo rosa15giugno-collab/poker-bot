@@ -772,9 +772,15 @@ async def pvp(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await context.bot.send_message(
+    await context.bot.send_animation(
         chat_id=q.message.chat_id,
-        text="🎬 PVP BLACKJACK\n👥 Tavolo unico attivo",
+        animation="TUO_FILE_ID_VALIDO",
+        caption=(
+            "🎬 PVP BLACKJACK\n\n"
+            "👥 Tavolo aperto (2–6 giocatori)\n"
+            "💰 Puntata: 200 chips\n\n"
+            "⏳ Entra ora!"
+        ),
         reply_markup=keyboard
     )
 
@@ -803,8 +809,12 @@ async def pvp_join(update, context, table_id):
     await q.answer("Entrato 🎯")
 
     await q.message.edit_caption(
-        caption=f"🎬 PVP LIVE\n👥 {len(table['players'])}/{PVP_MAX}\n⏳ In attesa...",
-        reply_markup=q.message.reply_markup
+        caption=(
+            f"🎬 PVP LIVE\n\n"
+            f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n"
+            f"⏳ In attesa avvio..."
+        ),
+    reply_markup=q.message.reply_markup
     )
 
 
@@ -831,7 +841,7 @@ async def pvp_start(update, context, table_id):
 
     table["dealer"] = [deck.pop(), deck.pop()]
 
-    await q.message.edit_text("🎬 DISTRIBUZIONE CARTE...")
+    await q.message.edit_caption("🎬 DISTRIBUZIONE CARTE...")
 
     await asyncio.sleep(1)
 
