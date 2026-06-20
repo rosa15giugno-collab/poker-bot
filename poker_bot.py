@@ -1459,10 +1459,37 @@ async def fileid(update, context):
 
     if not msg:
         return await update.message.reply_text(
-            "📎 Rispondi a un messaggio con /fileid per aprire il tavolo PVP"
+            "📎 Rispondi al file con /fileid"
         )
 
-    return await pvp_create(update, context)
+    if msg.photo:
+        return await update.message.reply_text(
+            f"📸 FOTO\n\n{msg.photo[-1].file_id}"
+        )
+
+    if msg.video:
+        return await update.message.reply_text(
+            f"🎥 VIDEO\n\n{msg.video.file_id}"
+        )
+
+    if msg.animation:
+        return await update.message.reply_text(
+            f"🎞️ ANIMAZIONE\n\n{msg.animation.file_id}"
+        )
+
+    if msg.document:
+        return await update.message.reply_text(
+            f"📄 DOCUMENTO\n\n{msg.document.file_id}"
+        )
+
+    if msg.video_note:
+        return await update.message.reply_text(
+            f"🔵 VIDEO TONDO\n\n{msg.video_note.file_id}"
+        )
+
+    await update.message.reply_text(
+        "❌ File non supportato."
+    )
 
         
 # =========================
