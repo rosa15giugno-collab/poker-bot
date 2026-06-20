@@ -298,7 +298,7 @@ def main_menu_keyboard():
             InlineKeyboardButton("🆚 PVP", callback_data="pvp")
         ],
         [
-            InlineKeyboardButton("🎁 BONUS GIORNALIERO", callback_data="bonus"),
+            InlineKeyboardButton("🎁 BONUS", callback_data="bonus"),
             InlineKeyboardButton("🛒 SHOP", callback_data="shop")
         ],
         [
@@ -326,7 +326,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "     …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
         "🎰 Slot | 🎲 Roulette | 🃏 Blackjack"
         "🆚 PvP\n |🏆 Classifiche live"
-        "🎁 Bonus giornaliero\n\n"
+        "🎁 Bonus\n\n"
         "👇 Scegli una modalità"
     )
 
@@ -395,7 +395,7 @@ async def daily_bonus(update, context):
     u["last_bonus"] = now
     save_user(u)
 
-    text = f"🎁 BONUS GIORNALIERO\n\n💰 +{reward} chips ricevuti!"
+    text = f"🎁 BONUS\n\n💰 +{reward} chips ricevuti!"
 
     try:
         await q.message.edit_media(
