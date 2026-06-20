@@ -323,10 +323,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = (
         "👑 Benvenuto in CASINO by Rosa\n\n"
         " 𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
-        "     …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
+        "        …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
         "🎰 Slot | 🎲 Roulette | 🃏 Blackjack"
-        "🆚 PvP\n |🏆 Classifiche live"
-        "🎁 Bonus\n\n"
+        "🆚 PvP |🏆 Classifiche | 🎁 Bonus\n\n""
+
         "👇 Scegli una modalità"
     )
 
@@ -1942,24 +1942,26 @@ async def cb_router(update, context):
     if data.startswith("pvp_stand_"):
         return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
 
-
-
-
-    
     # =====================
-    # 👤 PROFILO / BONUS / SHOP / CLASSIFICA
-    # =====================
-    if data == "profile":
-        return await profile(update, context)
+# 🏠 MENU
+# =====================
+if data in ["menu", "go_menu"]:
+    return await send_main_menu(q.message.chat_id, context)
 
-    if data == "bonus":
-        return await daily_bonus(update, context)
+# =====================
+# 👤 PROFILO / BONUS / SHOP / CLASSIFICA
+# =====================
+if data == "profile":
+    return await profile(update, context)
 
-    if data == "shop":
-        return await shop(update, context)
+if data == "bonus":
+    return await daily_bonus(update, context)
 
-    if data == "leaderboard":
-        return await leaderboard(update, context)
+if data == "shop":
+    return await shop(update, context)
+
+if data == "leaderboard":
+    return await leaderboard(update, context)
 
     # =====================
     # ❌ FALLBACK
@@ -2020,6 +2022,22 @@ async def cb_router(update, context):
     if data in ["menu", "go_menu"]:
         return await send_main_menu(q.message.chat_id, context)
 
+    # =====================
+    # 👤 HANDLERS SEMPLICI (QUI VA IL DIZIONARIO)
+    # =====================
+    handlers = {
+        "profile": profile,
+        "bonus": daily_bonus,
+        "shop": shop,
+        "leaderboard": leaderboard,
+        "slot": slot,
+        "blackjack": blackjack,
+        "roulette": roulette,
+        "pvp": pvp,
+    }
+
+    if data in handlers:
+        return await handlers[data](update, context)
     # =====================
     # 🎰 SLOT
     # =====================
