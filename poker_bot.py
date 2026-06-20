@@ -1474,31 +1474,29 @@ async def menu(update, context):
 async def fileid(update, context):
     msg = update.effective_message
 
-    print("🔥 MESSAGE TYPE:", type(msg))
-    print("🔥 PHOTO:", bool(msg.photo))
-    print("🔥 VIDEO:", bool(msg.video))
-    print("🔥 DOC:", bool(msg.document))
-    print("🔥 REPLY:", msg.reply_to_message)
+    # 📸 FOTO
+    if msg.photo:
+        return await msg.reply_text(msg.photo[-1].file_id)
 
-    # 🔥 NUOVO: fallback intelligente
-    target = msg.reply_to_message or msg
+    # 🎥 VIDEO
+    if msg.video:
+        return await msg.reply_text(msg.video.file_id)
 
-    if target.photo:
-        return await msg.reply_text(target.photo[-1].file_id)
+    # 🎞️ ANIMAZIONE
+    if msg.animation:
+        return await msg.reply_text(msg.animation.file_id)
 
-    if target.video:
-        return await msg.reply_text(target.video.file_id)
+    # 📄 DOCUMENTO
+    if msg.document:
+        return await msg.reply_text(msg.document.file_id)
 
-    if target.animation:
-        return await msg.reply_text(target.animation.file_id)
-
-    if target.document:
-        return await msg.reply_text(target.document.file_id)
+    # 🔵 VIDEO NOTE
+    if msg.video_note:
+        return await msg.reply_text(msg.video_note.file_id)
 
     return await msg.reply_text(
-        "❌ Nessun file trovato (manda o rispondi a un media)"
+        "❌ Invia direttamente un file (foto/video/documento)."
     )
-
         
 # =========================
 # 🎮 CALLBACK ROUTER UNICO
