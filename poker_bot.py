@@ -811,7 +811,7 @@ async def pvp_join(update, context, table_id):
         f"🎬 PVP LIVE\n\n"
         f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n"
         f"⏳ In attesa avvio..."
-    
+    )
 
 
 # =========================
