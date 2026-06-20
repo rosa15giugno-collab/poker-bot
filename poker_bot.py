@@ -61,7 +61,7 @@ slot_games = {}
 
 PVP_MIN = 2
 PVP_MAX = 6
-PVP TIME = 10
+PVP_TIME = 10
 BLACKJACK_BETS = [100, 500, 1000]
 
 CARDS = [
