@@ -956,7 +956,6 @@ async def next_turn(context, table_id):
 # TIMER AUTO AFK PVP
 # =========================
 async def timer_auto(context, table_id):
-    aasync def timer_auto(context, table_id):
     await asyncio.sleep(PVP_TIME)
 
     table = pvp_tables.get(table_id)
