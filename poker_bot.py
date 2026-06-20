@@ -170,6 +170,15 @@ if not TOKEN:
 MENU_PHOTO = "AgACAgQAAxkBAANFajK3EgT-sXBmbmi9vwS-ia3oNPYAAp4SaxuGHZhRRK7nT0alIxkBAAMCAAN5AAM8BA"
 PHOTO_BLACKJACK = "AgACAgQAAxkBAANIajL7PfXN3cYXM6NliybRfiPCbP0AAk4PaxvsDJlRLQrkmC2DxfsBAAMCAAN5AAM8BA"
 
+# =========================
+# 🖼️ MEDIA FILE ID CASINO
+# =========================
+
+PROFILE_PHOTO = "AgACAgQAAxkBAANOajYuITssc-pAU6q03jTKI_7zp_oAAi4SaxubbrFRiaOrOLzu75oBAAMCAAN5AAM8BA"
+SHOP_PHOTO = "AgACAgQAAxkBAAODajb6Dab8GhkTHecN2tMqSIrH3AYAApoPaxuTR7hRczsjOGoTyzcBAAMCAAN5AAM8BA"
+BONUS_PHOTO = "AgACAgQAAxkBAANPajYuK06wNQGQdauEwDzc0O6j09cAAi8SaxubbrFR68wY43pHxZMBAAMCAAN5AAM8BA"
+LEADERBOARD_PHOTO = "AgACAgQAAxkBAAOAajb5SIMtlH3auG-qn2qcYUTCccsAApcPaxuTR7hRnzIcNeUkxhABAAMCAAN5AAM8BA"
+
 #=======================
 # SAVE USER
 #======================
@@ -278,20 +287,24 @@ def get_user(user_id, name="Player"):
             "multiplier": 1.0
         }
 
-# =========================
-# MENU               ******
-# =========================
-
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SLOT", callback_data="slot"),
-         InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")],
-        [InlineKeyboardButton("🃏 BLACKJACK", callback_data="blackjack"),
-         InlineKeyboardButton("🆚 PVP", callback_data="pvp")],
-        [InlineKeyboardButton("🎁 BONUS", callback_data="bonus"),
-         InlineKeyboardButton("💰 SHOP", callback_data="shop")],
-        [InlineKeyboardButton("👤 PROFILO", callback_data="profilo"),
-         InlineKeyboardButton("🏆 CLASSIFICA", callback_data="classifica")]
+        [
+            InlineKeyboardButton("🎰 SLOT", callback_data="slot"),
+            InlineKeyboardButton("🎲 ROULETTE", callback_data="roulette")
+        ],
+        [
+            InlineKeyboardButton("🃏 BLACKJACK", callback_data="blackjack"),
+            InlineKeyboardButton("🆚 PVP", callback_data="pvp")
+        ],
+        [
+            InlineKeyboardButton("🎁 BONUS GIORNALIERO", callback_data="bonus"),
+            InlineKeyboardButton("🛒 SHOP", callback_data="shop")
+        ],
+        [
+            InlineKeyboardButton("👤 PROFILO", callback_data="profile"),
+            InlineKeyboardButton("🏆 CLASSIFICA", callback_data="leaderboard")
+        ]
     ])
 
 
@@ -308,11 +321,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_id = "AgACAgQAAxkBAANFajK3EgT-sXBmbmi9vwS-ia3oNPYAAp4SaxuGHZhRRK7nT0alIxkBAAMCAAN5AAM8BA"
 
     caption = (
-        "👑 Benvenuto in CASINO PRO\n\n"
-        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
-        "   …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
-        "🎰 Slot | 🎲 Roulette | 🃏 Blackjack | 🆚 PvP\n"
-        "🏆 Classifiche live | 🎁 Bonus giornaliero\n\n"
+        "👑 Benvenuto in CASINO by Rosa\n\n"
+        " 𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
+        "     …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
+        "🎰 Slot | 🎲 Roulette | 🃏 Blackjack"
+        "🆚 PvP\n |🏆 Classifiche live"
+        "🎁 Bonus giornaliero\n\n"
         "👇 Scegli una modalità"
     )
 
@@ -321,6 +335,140 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=main_menu_keyboard()
     )
+
+#=======================
+# PROFIL0
+#=======================
+from telegram import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
+
+async def profile(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    text = (
+        f"👤 PROFILO\n\n"
+        f"💰 Chips: {u['chips']}\n"
+        f"🏆 Win: {u['wins']}\n"
+        f"💥 Loss: {u['losses']}\n"
+        f"⭐ XP: {u['xp']}\n"
+    )
+
+    try:
+        await q.message.edit_media(
+            media=InputMediaPhoto(
+                media=PROFILE_PHOTO,
+                caption=text
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
+    except:
+        await q.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
+
+#=====================
+#  BONUS GIORNALIERO
+#=====================
+async def daily_bonus(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    now = time.time()
+    cooldown = 86400
+
+    if now - u["last_bonus"] < cooldown:
+        return await q.answer("⏳ Bonus già riscattato")
+
+    reward = 500
+    u["chips"] += reward
+    u["last_bonus"] = now
+    save_user(u)
+
+    text = f"🎁 BONUS GIORNALIERO\n\n💰 +{reward} chips ricevuti!"
+
+    try:
+        await q.message.edit_media(
+            media=InputMediaPhoto(
+                media=BONUS_PHOTO,
+                caption=text
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
+    except:
+        await q.message.edit_text(text)
+
+#======================
+# SHOP
+#======================
+
+async def shop(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    text = (
+        "🛒 SHOP CASINO\n\n"
+        "💎 VIP Pack - presto\n"
+        "🎰 Skin Slot - presto\n"
+        "🃏 Carte speciali - presto\n"
+    )
+
+    try:
+        await q.message.edit_media(
+            media=InputMediaPhoto(
+                media=SHOP_PHOTO,
+                caption=text
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
+    except:
+        await q.message.edit_text(text)
+
+#==========================
+# CLASSIFICA
+#==========================
+async def leaderboard(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    cursor.execute(
+        "SELECT name, chips FROM users ORDER BY chips DESC LIMIT 10"
+    )
+    rows = cursor.fetchall()
+
+    text = "🏆 CLASSIFICA TOP 10\n\n"
+
+    for i, r in enumerate(rows, 1):
+        text += f"{i}. {r[0]} - 💰 {r[1]}\n"
+
+    try:
+        await q.message.edit_media(
+            media=InputMediaPhoto(
+                media=LEADERBOARD_PHOTO,
+                caption=text
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
+    except:
+        await q.message.edit_text(text)
+
+
 # =========================
 # 🎰 SLOT CONFIG
 # =========================
@@ -939,13 +1087,13 @@ async def next_turn(context, table_id):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "🎯 HIT",
+                "➕ CARTA",
                 callback_data=f"pvp_hit_{table_id}"
             )
         ],
         [
             InlineKeyboardButton(
-                "🛑 STAND",
+                "🖐️ STAI",
                 callback_data=f"pvp_stand_{table_id}"
             )
         ]
@@ -1042,9 +1190,6 @@ async def pvp_hit(update, context, table_id):
 
     return await next_turn(context, table_id)
 
-# =========================
-# STAND PVP
-# =========================
 
 # =========================
 # STAND PVP
@@ -1098,36 +1243,35 @@ async def dealer_phase(context, table_id):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="🤵 Dealer sta giocando..."
+        text="🏦 Il Banco sta giocando..."
     )
 
     await asyncio.sleep(2)
 
-    # 🎬 DEALER PLAY (più cinematico)
-    while card_value(table["dealer"]) < 17:
-        if not table["deck"]:
+    # 🎬 DEALER PLAY
+    while card_value(table.get("dealer", [])) < 17:
+        if not table.get("deck"):
             break
 
         table["dealer"].append(table["deck"].pop())
-
-        # ⏱️ più realistico (non 10s fissi)
         await asyncio.sleep(2)
 
-    dealer_score = card_value(table["dealer"])
+    dealer_hand = table.get("dealer", [])
+    dealer_score = card_value(dealer_hand)
 
     # =========================
     # RESULT BUILD
     # =========================
     result = (
         "🏆 RISULTATI PVP\n\n"
-        f"🤵 Dealer: {' '.join(table['dealer'])}\n"
-        f"💯 Totale Dealer: {dealer_score}\n\n"
+        f"🏦 Banco: {' '.join(dealer_hand)}\n"
+        f"💯 Totale Banco: {dealer_score}\n\n"
     )
 
-    for uid in table["players"]:
+    for uid in table.get("players", []):
         name = table.get("names", {}).get(uid, f"User {uid}")
 
-        hand = table["hands"].get(uid, [])
+        hand = table.get("hands", {}).get(uid, [])
         score = card_value(hand)
 
         if score > 21:
@@ -1173,7 +1317,6 @@ async def dealer_phase(context, table_id):
         old_timer.cancel()
 
     pvp_tables.pop(table_id, None)
-
 #==========================
 # UPDATE
 #==========================
@@ -1207,8 +1350,8 @@ async def update_table(bot, t):
 def table_buttons(t):
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("➕ HIT", callback_data="hit_mp"),
-            InlineKeyboardButton("🛑 STAND", callback_data="stand_mp")
+            InlineKeyboardButton("➕ CARTA", callback_data="hit_mp"),
+            InlineKeyboardButton("🖐️ STAI", callback_data="stand_mp")
         ]
     ])
 
@@ -1732,7 +1875,7 @@ async def cb_router(update, context):
         return await spin_slot(update, context)
 
     # =====================
-    # 🃏 BLACKJACK MENU
+    # 🃏 BLACKJACK
     # =====================
     if data == "blackjack":
         return await blackjack(update, context)
@@ -1788,25 +1931,36 @@ async def cb_router(update, context):
         return await pvp(update, context)
 
     if data.startswith("pvp_join_"):
-        return await pvp_join(update, context, data.replace("pvp_join_",""))
+        return await pvp_join(update, context, data.replace("pvp_join_", ""))
 
     if data.startswith("pvp_start_"):
-        return await pvp_start(update, context, data.replace("pvp_start_",""))
+        return await pvp_start(update, context, data.replace("pvp_start_", ""))
 
     if data.startswith("pvp_hit_"):
-        return await pvp_hit(update, context, data.replace("pvp_hit_",""))
+        return await pvp_hit(update, context, data.replace("pvp_hit_", ""))
 
     if data.startswith("pvp_stand_"):
-        return await pvp_stand(update, context, data.replace("pvp_stand_",""))
-    # =====================
-    # ❌ FALLBACK
-    # =====================
-    if data.startswith("pvp_join_"):
-        return await pvp_join(update, context)
+        return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
 
-    if data.startswith("pvp_start_"):
-        return await pvp_start(update, context)
+
+
+
     
+    # =====================
+    # 👤 PROFILO / BONUS / SHOP / CLASSIFICA
+    # =====================
+    if data == "profile":
+        return await profile(update, context)
+
+    if data == "bonus":
+        return await daily_bonus(update, context)
+
+    if data == "shop":
+        return await shop(update, context)
+
+    if data == "leaderboard":
+        return await leaderboard(update, context)
+
     # =====================
     # ❌ FALLBACK
     # =====================
@@ -1816,29 +1970,33 @@ async def cb_router(update, context):
 # 📎 FILEID COMMAND (UNICO E CORRETTO)
 # =========================
 async def fileid(update, context):
-    msg = update.effective_message
-
+    msg = update.message
     if not msg:
         return
 
     target = msg.reply_to_message or msg
 
     if target.photo:
-        return await msg.reply_text(f"📸 FOTO:\n{target.photo[-1].file_id}")
+        await msg.reply_text(f"📸 FOTO:\n{target.photo[-1].file_id}")
+        return
 
     if target.video:
-        return await msg.reply_text(f"🎬 VIDEO:\n{target.video.file_id}")
+        await msg.reply_text(f"🎬 VIDEO:\n{target.video.file_id}")
+        return
 
     if target.animation:
-        return await msg.reply_text(f"🎞️ ANIMATION:\n{target.animation.file_id}")
+        await msg.reply_text(f"🎞️ GIF:\n{target.animation.file_id}")
+        return
 
     if target.document:
-        return await msg.reply_text(f"📎 DOCUMENTO:\n{target.document.file_id}")
+        await msg.reply_text(f"📎 FILE:\n{target.document.file_id}")
+        return
 
     if target.video_note:
-        return await msg.reply_text(f"🔵 VIDEO NOTE:\n{target.video_note.file_id}")
+        await msg.reply_text(f"🔵 VIDEO NOTE:\n{target.video_note.file_id}")
+        return
 
-    await msg.reply_text("❌ Nessun file trovato.\nRispondi a un media.")
+    await msg.reply_text("❌ Rispondi a un media per ottenere il file_id")
 
 
 # =========================
