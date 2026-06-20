@@ -1471,6 +1471,7 @@ async def menu(update, context):
 #==========================
 # FILEID PVP
 #=========================
+print("🔥 FILEID FUNCTION TRIGGERED")
 async def fileid(update, context):
     msg = update.effective_message
 
