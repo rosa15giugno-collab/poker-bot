@@ -1300,48 +1300,85 @@ async def pvp_stand(update, context, table_id):
     finally:
         table["action_lock"] = False
 
-    # =========================
-# RESULT BUILD (FIXED)
 # =========================
-result = (
-    "🏆 RISULTATI PVP\n\n"
-    f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-    f"💯 Totale Banco: {dealer_score}\n\n"
-)
-
-for uid in table.get("players", []):
-
-    name = (table.get("names") or {}).get(uid, f"User {uid}")
-
-    hand = table.get("hands", {}).get(uid) or []
-    score = card_value(hand)
-
-    hand_text = ' '.join(hand) if hand else '—'
-
-    if score > 21:
-        res = "💥 PERSO"
-    elif dealer_score > 21 or score > dealer_score:
-        res = "🏆 VINTO"
-    elif score == dealer_score:
-        res = "🤝 PAREGGIO"
-    else:
-        res = "💥 PERSO"
-
-    result += (
-        f"👤 {name}\n"
-        f"🃏 {hand_text}\n"
-        f"💯 {score} → {res}\n\n"
-    )
-
+# DEALER PHASE PVP
+# =========================
 async def dealer_phase(context, table_id):
     table = pvp_tables.get(table_id)
+
     if not table:
         return
 
     chat_id = table.get("chat_id")
 
+    if not chat_id:
+        print("❌ chat_id mancante nel finale PVP")
+        return
+
+    # 🛑 stop timer
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="🏦 Il Banco sta giocando..."
+    )
+
+    await asyncio.sleep(2)
+
+    # 🎬 dealer pesca
+    while card_value(table.get("dealer", [])) < 17:
+        if not table.get("deck"):
+            break
+
+        table["dealer"].append(
+            table["deck"].pop()
+        )
+
+        await asyncio.sleep(2)
+
+    dealer_hand = table.get("dealer", [])
+    dealer_score = card_value(dealer_hand)
+
     # =========================
-    # FINAL BUTTONS (FIXED SAFE)
+    # RESULT BUILD
+    # =========================
+    result = (
+        "🏆 RISULTATI PVP\n\n"
+        f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+        f"💯 Totale Banco: {dealer_score}\n\n"
+    )
+
+    for uid in table.get("players", []):
+
+        name = (table.get("names") or {}).get(
+            uid,
+            f"User {uid}"
+        )
+
+        hand = table.get("hands", {}).get(uid) or []
+        score = card_value(hand)
+
+        hand_text = " ".join(hand) if hand else "—"
+
+        if score > 21:
+            res = "💥 PERSO"
+        elif dealer_score > 21 or score > dealer_score:
+            res = "🏆 VINTO"
+        elif score == dealer_score:
+            res = "🤝 PAREGGIO"
+        else:
+            res = "💥 PERSO"
+
+        result += (
+            f"👤 {name}\n"
+            f"🃏 {hand_text}\n"
+            f"💯 {score} → {res}\n\n"
+        )
+
+    # =========================
+    # FINAL BUTTONS
     # =========================
     keyboard = InlineKeyboardMarkup([
         [
@@ -1358,16 +1395,10 @@ async def dealer_phase(context, table_id):
         ]
     ])
 
-    # 🛑 safety check chat_id
-    if not chat_id:
-        print("❌ chat_id mancante nel finale PVP")
-        return
-
-    # ✂️ safety truncate Telegram limit
+    # ✂️ limite Telegram
     if len(result) > 3900:
         result = result[:3900] + "\n\n... (troncato)"
 
-    # 📌 mark finished BEFORE sending
     table["state"] = "finished"
 
     try:
@@ -1378,11 +1409,6 @@ async def dealer_phase(context, table_id):
         )
     except Exception as e:
         print("❌ ERROR FINAL SEND:", e)
-
-    # 🧹 cleanup
-    old_timer = table.get("timer_task")
-    if old_timer and not old_timer.done():
-        old_timer.cancel()
 
     pvp_tables.pop(table_id, None)
     # =========================
