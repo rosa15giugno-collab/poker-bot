@@ -10,7 +10,7 @@ from collections import deque
 from telegram import (
     Update,
     InlineKeyboardButton,
-    InlineKeyboardMarkup
+    InlineKeyboardMarkup, InputMediaPhoto
 )
 
 from telegram.ext import (
@@ -476,17 +476,19 @@ async def profile(update, context):
 #  BONUS GIORNALIERO
 #=====================
 async def daily_bonus(update, context):
+
     q = update.callback_query
     await q.answer()
 
-    uid = str(update.effective_user.id)
+    uid = str(q.from_user.id)
     u = get_user(uid)
 
     now = time.time()
-    cooldown = 86400
+    cooldown = 86400  # 24h
 
     last = u.get("last_bonus", 0)
 
+    # ⛔ cooldown check
     if now - last < cooldown:
         remaining = int(cooldown - (now - last))
 
@@ -500,8 +502,9 @@ async def daily_bonus(update, context):
             show_alert=True
         )
 
+    # 🎁 reward
     reward = 500
-    u["chips"] += reward
+    u["chips"] = int(u.get("chips", 0)) + reward
     u["last_bonus"] = now
 
     save_user(u)
@@ -512,23 +515,27 @@ async def daily_bonus(update, context):
         f"💎 Saldo attuale: {u['chips']}"
     )
 
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
+
+    # 📸 prova edit media → fallback safe
     try:
         await q.message.edit_media(
             media=InputMediaPhoto(
                 media=BONUS_PHOTO,
                 caption=text
             ),
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-            ])
+            reply_markup=keyboard
         )
     except Exception:
-        await q.message.edit_text(
-            text,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-            ])
-        )
+        try:
+            await q.message.edit_text(
+                text,
+                reply_markup=keyboard
+            )
+        except Exception:
+            await q.message.reply_text(text, reply_markup=keyboard)
 #======================
 # SHOP
 #======================
