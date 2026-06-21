@@ -52,16 +52,29 @@ COOLDOWN = {}
 pvp_tables = {}
 pvp_turn_index = {}
 pvp_deadlines = {}
+
+# =========================
+# RENDER PVP TABLE
+# =========================
+def render_table(t):
+    players = t.get("players", [])
+
+    return (
+        "🎮 PVP TABLE\n\n"
+        f"👥 Giocatori: {len(players)}\n"
+        f"💰 Puntata: {t.get('bet', 0)}\n"
+        f"📊 Stato: {t.get('state', 'waiting')}\n"
+    )
+
 # =========================
 # 🃏 BLACKJACK / PVP
 # =========================
 bj_games = {}
 bets = {}
 slot_games = {}
-
 PVP_MIN = 2
 PVP_MAX = 6
-PVP_TIME = 10
+PVP_TIME = 30
 CURRENT_PVP_TABLE = "pvp_main"
 BLACKJACK_BETS = [100, 500, 1000]
 
