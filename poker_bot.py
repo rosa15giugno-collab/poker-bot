@@ -262,10 +262,11 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
         logger.error(f"safe_edit fatal: {e}")
         return False
 # =========================
-# USER SYSTEM **
+# USER SYSTEM (FIXED STABLE)
 # =========================
+
 def get_user(user_id, name="Player"):
-    uid = str(user_id)
+    uid = str(update.effective_user.id)
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
@@ -284,9 +285,10 @@ def get_user(user_id, name="Player"):
                 "multiplier": row[7]
             }
 
-        # 👤 NUOVO UTENTE
+        # 👤 NUOVO UTENTE (SAFE INSERT)
         cursor.execute("""
-            INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (user_id, name, chips, xp, wins, losses, last_bonus, multiplier)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (uid, name, 5000, 0, 0, 0, 0, 1.0))
 
         conn.commit()
@@ -301,6 +303,31 @@ def get_user(user_id, name="Player"):
             "last_bonus": 0,
             "multiplier": 1.0
         }
+
+
+def save_user(u):
+    with lock:
+        cursor.execute("""
+        UPDATE users
+        SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
+        WHERE user_id=?
+        """, (
+            u["name"],
+            u["chips"],
+            u["xp"],
+            u["wins"],
+            u["losses"],
+            u["last_bonus"],
+            u["multiplier"],
+            u["user_id"]
+        ))
+        conn.commit()
+
+
+# =========================
+# MAIN MENU
+# =========================
+
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -323,14 +350,22 @@ def main_menu_keyboard():
 
 
 # =========================
-# START               *************
+# START (FIXED STABLE)
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    get_user(user.id, user.first_name)
 
-    print("START ARRIVATO:", user.id)
+    uid = str(update.effective_user.id)
+
+    # 👤 crea / carica utente
+    u = get_user(uid, user.first_name)
+
+    # 🔥 aggiorna nome sempre (opzionale ma consigliato)
+    u["name"] = user.first_name
+    save_user(u)
+
+    print("START ARRIVATO:", uid)
 
     photo_id = "AgACAgQAAxkBAANFajK3EgT-sXBmbmi9vwS-ia3oNPYAAp4SaxuGHZhRRK7nT0alIxkBAAMCAAN5AAM8BA"
 
@@ -338,9 +373,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👑 Benvenuto in CASINO by Rosa\n\n"
         " 𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
         "        …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
-        "🎰 Slot | 🎲 Roulette | 🃏 Blackjack"
-        "🆚 PvP |🏆 Classifiche | 🎁 Bonus\n\n"
-
+        "🎰 Slot | 🎲 Roulette | 🃏 Blackjack 🆚 PvP\n"
+        "🏆 Classifiche | 🎁 Bonus\n\n"
         "👇 Scegli una modalità"
     )
 
@@ -349,7 +383,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=main_menu_keyboard()
     )
-
 # =======================
 # PROFILO
 # =======================
@@ -360,7 +393,7 @@ async def profile(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
     user = q.from_user
     u = get_user(uid)
 
@@ -423,7 +456,7 @@ async def daily_bonus(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
     u = get_user(uid)
 
     now = time.time()
@@ -609,7 +642,7 @@ async def spin_slot(update, context):
 
     msg = q.message
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
     u = get_user(uid)
 
     # 🛡️ COOLDOWN
@@ -848,7 +881,7 @@ async def blackjack_bet(update, context, amount):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
     u = get_user(uid)
 
     if u.get("chips", 0) < amount:
@@ -897,7 +930,7 @@ async def hit(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
 
     if uid not in bj_games:
         return await safe_edit(q.message, "❌ Nessuna partita attiva.")
@@ -962,7 +995,7 @@ async def stand(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
 
     if uid not in bj_games:
         return
@@ -1112,7 +1145,7 @@ async def pvp(update, context):
 # =========================
 async def pvp_join(update, context, table_id):
     q = update.callback_query
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
 
     table = pvp_tables.get(table_id)
     if not table:
@@ -1587,7 +1620,7 @@ async def stand_mp(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = str(q.from_user.id)  # 👈 FIX: NO STRING
+    uid = str(update.effective_user.id)  # 👈 FIX: NO STRING
 
     table_id = user_tables.get(uid)
     t = tables.get(table_id)
@@ -2077,9 +2110,7 @@ async def fileid(update, context):
         "❌ Nessun file trovato.\nInvia o rispondi a un media."
     )
         
-# =========================
-# 🎮 CALLBACK ROUTER
-# =========================
+
 # =========================
 # 🎮 CALLBACK ROUTER UNICO
 # =========================
@@ -2098,7 +2129,7 @@ handlers = {
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
@@ -2216,7 +2247,7 @@ async def fileid(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    uid = str(q.from_user.id)
+    uid = str(update.effective_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
