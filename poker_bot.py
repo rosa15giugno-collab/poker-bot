@@ -336,9 +336,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_menu_keyboard()
     )
 
-#=======================
-# PROFIL0
-#=======================
+# =======================
+# PROFILO
+# =======================
+
 from telegram import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 
 async def profile(update, context):
@@ -346,14 +347,40 @@ async def profile(update, context):
     await q.answer()
 
     uid = str(q.from_user.id)
+    user = q.from_user
     u = get_user(uid)
+
+    # ⭐ nome bello (username > nome > ID)
+    if user.username:
+        name_base = f"@{user.username}"
+    elif user.first_name:
+        name_base = user.first_name
+    else:
+        name_base = f"ID {user.id}"
+
+    # ⭐ stelline decorative (puoi cambiarle dopo)
+    chips = u.get("chips", 0)
+
+    if chips >= 10_000_000:
+        stars = "⭐⭐⭐⭐⭐"
+    elif chips >= 1_000_000:
+        stars = "⭐⭐⭐⭐"
+    elif chips >= 100_000:
+        stars = "⭐⭐⭐"
+    elif chips >= 10_000:
+        stars = "⭐⭐"
+    else:
+        stars = "⭐"
+
+    name = f"{stars} {name_base}"
 
     text = (
         f"👤 PROFILO\n\n"
-        f"💰 Chips: {u['chips']}\n"
-        f"🏆 Win: {u['wins']}\n"
-        f"💥 Loss: {u['losses']}\n"
-        f"⭐ XP: {u['xp']}\n"
+        f"🧑 Nome: {name}\n\n"
+        f"💰 Chips: {u.get('chips', 0)}\n"
+        f"🏆 Win: {u.get('wins', 0)}\n"
+        f"💥 Loss: {u.get('losses', 0)}\n"
+        f"⭐ XP: {u.get('xp', 0)}\n"
     )
 
     try:
@@ -366,14 +393,14 @@ async def profile(update, context):
                 [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
             ])
         )
-    except:
+
+    except Exception:
         await q.message.edit_text(
             text,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
             ])
         )
-
 #=====================
 #  BONUS GIORNALIERO
 #=====================
