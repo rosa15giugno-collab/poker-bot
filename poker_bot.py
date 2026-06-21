@@ -1541,7 +1541,17 @@ async def update_table(bot, t):
                 parse_mode="HTML"
             )
 
-        excep…
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+
+            try:
+                await bot.send_message(
+                    chat_id=t["chat_id"],
+                    text=f"⚠️ Errore update tavolo:\n{e}"
+                )
+            except:
+                pass
 
 
 # =========================
