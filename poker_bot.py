@@ -788,34 +788,34 @@ keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
 ])
 
-await asyncio.sleep(0.3)
+    await asyncio.sleep(0.3)
 
-try:
-    await msg.edit_caption(
-        caption=final_text,
-        reply_markup=keyboard
-    )
-
-except Exception:
     try:
-        await msg.edit_text(
-            text=final_text,
+        await msg.edit_caption(
+            caption=final_text,
             reply_markup=keyboard
         )
 
-    except Exception as e:
-        print("FINAL ERROR:", e)
-
+    except Exception:
         try:
-            await context.bot.send_message(
-                chat_id=msg.chat_id,
+            await msg.edit_text(
                 text=final_text,
                 reply_markup=keyboard
             )
-        except:
-            pass
 
-return
+        except Exception as e:
+            print("FINAL ERROR:", e)
+
+            try:
+                await context.bot.send_message(
+                    chat_id=msg.chat_id,
+                    text=final_text,
+                    reply_markup=keyboard
+                )
+            except:
+                pass
+
+    return
     
 
     # =========================
