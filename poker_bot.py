@@ -202,8 +202,14 @@ def save_user(u):
         SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
         WHERE user_id=?
         """, (
-            u["name"], u["chips"], u["xp"], u["wins"], u["losses"],
-            u["last_bonus"], u["multiplier"], u["user_id"]
+            u.get("name", "Player"),
+            int(u.get("chips", 0)),
+            int(u.get("xp", 0)),
+            int(u.get("wins", 0)),
+            int(u.get("losses", 0)),
+            int(u.get("last_bonus", 0)),
+            float(u.get("multiplier", 1.0)),
+            str(u.get("user_id"))
         ))
         conn.commit()
 
@@ -261,10 +267,6 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     except Exception as e:
         logger.error(f"safe_edit fatal: {e}")
         return False
-# =========================
-# USER SYSTEM (FIXED STABLE)
-# =========================
-
 def get_user(user_id, name="Player"):
     uid = str(user_id)
 
@@ -272,7 +274,6 @@ def get_user(user_id, name="Player"):
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
         row = cursor.fetchone()
 
-        # 👤 UTENTE ESISTE
         if row:
             return {
                 "user_id": row[0],
@@ -285,7 +286,6 @@ def get_user(user_id, name="Player"):
                 "multiplier": row[7]
             }
 
-        # 👤 NUOVO UTENTE (SAFE INSERT)
         cursor.execute("""
             INSERT INTO users (user_id, name, chips, xp, wins, losses, last_bonus, multiplier)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -322,7 +322,6 @@ def save_user(u):
             u["user_id"]
         ))
         conn.commit()
-
 
 # =========================
 # MAIN MENU
@@ -576,8 +575,6 @@ PAYOUT = {
 VIP_MULT = [1, 1, 1, 1.2, 1.5, 2]
 
 COOLDOWN = {}
-
-# memoria giochi slot
 games = {}
 
 # =========================
@@ -633,7 +630,7 @@ async def slot(update, context):
 
 
 # =========================
-# 🎰 SPIN SLOT (FIX COMPLETO + PUNTATE OK)
+# 🎰 SPIN SLOT (FIX DEFINITIVO)
 # =========================
 async def spin_slot(update, context):
 
@@ -644,16 +641,19 @@ async def spin_slot(update, context):
     uid = str(q.from_user.id)
     u = get_user(uid)
 
+    # 🛡️ COOLDOWN
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
+    # 💰 PUNTATA
     try:
         bet = int(q.data.split("_")[-1])
     except:
         bet = 200
 
+    # 🔒 saldo check
     if u["chips"] < bet:
         return await q.answer("❌ Chips insufficienti", show_alert=True)
 
@@ -661,7 +661,7 @@ async def spin_slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 animazione
+    # 🎬 ANIMAZIONE
     for i in range(6):
         await asyncio.sleep(0.5)
 
@@ -687,27 +687,28 @@ async def spin_slot(update, context):
                 pass
 
     # =========================
-    # 🎯 RISULTATO
+    # 🎯 RISULTATO FINALE (UNICO BLOCCO)
     # =========================
 
     vip = random.choice(VIP_MULT)
-
     win = 0
 
     if reels[0] == reels[1] == reels[2]:
-        win = bet * 10 * vip
-        status = "🏆 HAI VINTO!"
+        win = int(bet * 10 * vip)
+        status = "🏆 JACKPOT!"
 
     elif reels[0] == reels[1] or reels[1] == reels[2]:
-        win = bet * 3 * vip
-        status = f"✨ QUASI VITTORIA! (+{bet * 3} chips)"
+        win = int(bet * 3 * vip)
+        status = f"✨ QUASI VITTORIA! +{int(bet * 3)} CHIPS"
 
     else:
         win = 0
         status = "💥 HAI PERSO!"
 
+    # 💰 UPDATE SALDO (UNA SOLA VOLTA)
     u["chips"] += win
 
+    # 📊 STATS
     if win > 0:
         u["wins"] = u.get("wins", 0) + 1
     else:
@@ -715,6 +716,7 @@ async def spin_slot(update, context):
 
     save_user(u)
 
+    # 🎬 OUTPUT FINALE
     final_text = (
         "🎰 SLOT RESULT\n\n"
         f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
@@ -722,10 +724,7 @@ async def spin_slot(update, context):
         f"💰 SALDO: {u['chips']} CHIPS"
     )
 
-    # =========================
-    # 🎮 BOTTONI IN COLONNA
-    # =========================
-
+    # 🎮 BOTTONI (COLONNA)
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
@@ -735,67 +734,6 @@ async def spin_slot(update, context):
         await msg.edit_caption(final_text, reply_markup=keyboard)
     except:
         await msg.edit_text(final_text, reply_markup=keyboard)
-    # 🎬 mostra risultato finale
-    try:
-        await msg.edit_caption(final_text, reply_markup=keyboard)
-    except:
-        await msg.edit_text(final_text, reply_markup=keyboard)
-    # =========================
-    # 🎰 LOGICA VINCITA
-    # =========================
-    if r[0] == r[1] == r[2]:
-        win = bet * 10
-        status = "🟢 JACKPOT!"
-    elif r[0] == r[1] or r[1] == r[2]:
-        win = bet * 3
-        status = "🟡 VITTORIA!"
-    else:
-        status = "🔴 HAI PERSO"
-
-    # 💰 aggiorna chips
-    u["chips"] += win
-
-    save_user(u)
-
-    # 🎬 risultato finale
-    result_text = (
-        "🎰 RISULTATO SLOT\n\n"
-        f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"{status}\n"
-        f"💰 Variazione: +{win - bet if win else -bet}\n"
-        f"💳 Saldo: {u['chips']}"
-    )
-
-    try:
-        if msg.photo:
-            await msg.edit_caption(result_text)
-        else:
-            await msg.edit_text(result_text)
-    except:
-        pass
-
-    # =====================
-    # 🔥 JACKPOT
-    # =====================
-    if jackpot_roll == 1:
-        r = ["7️⃣", "7️⃣", "7️⃣"]
-        win = PAYOUT["jackpot"] * bet
-        status = "🔥 JACKPOT!"
-
-    else:
-    # 🎰 piccola “rigatura” slot (solo estetica)
-        if random.randint(1, 100) <= 20:
-            r[1] = r[0]
-
-        if r[0] == r[1] == r[2]:
-            win = PAYOUT["triple"] * bet
-            status = "🟢 HAI VINTO!"
-        elif r[0] == r[1] or r[1] == r[2]:
-            win = PAYOUT["double"] * bet
-            status = "🟡 QUASI!"
-        else:
-            win = 0
-            status = "🔴 HAI PERSO"
 
     # =====================
     # 💎 MULTIPLIER SAFE
