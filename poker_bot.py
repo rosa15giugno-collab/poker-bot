@@ -1511,36 +1511,37 @@ async def dealer_phase(context, table_id):
 #==========================
 
 async def update_table(bot, t):
-    # 🛑 safety checks
     if not t:
         return
 
     if t.get("state") == "finished" or t.get("deleted"):
         return
 
+    text = render_table(t)
+    keyboard = table_buttons(t)
+
     try:
-        await bot.edit_message_text(
+        # prova prima caption
+        await bot.edit_message_caption(
             chat_id=t["chat_id"],
             message_id=t["message_id"],
-            text=render_table(t),
-            reply_markup=table_buttons(t),
+            caption=text,
+            reply_markup=keyboard,
             parse_mode="HTML"
         )
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-        # ❌ safe fallback (NO q HERE)
+    except Exception:
         try:
-            chat_id = t.get("chat_id")
-            if chat_id:
-                await bot.send_message(
-                    chat_id=chat_id,
-                    text=f"⚠️ Errore update tavolo:\n{e}"
-                )
-        except:
-            pass
+            # se invece è testo
+            await bot.edit_message_text(
+                chat_id=t["chat_id"],
+                message_id=t["message_id"],
+                text=text,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+
+        excep…
 
 
 # =========================
