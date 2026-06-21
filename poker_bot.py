@@ -1333,7 +1333,7 @@ for uid in table.get("players", []):
         f"💯 {score} → {res}\n\n"
     )
 
-   # =========================
+# =========================
 # FINAL BUTTONS (FIXED SAFE)
 # =========================
 keyboard = InlineKeyboardMarkup([
@@ -1365,7 +1365,6 @@ try:
     )
 except Exception as e:
     print("❌ ERROR FINAL SEND:", e)
-
     # =========================
     # CLEAN RESET TABLE (FIXED)
     # =========================
