@@ -1333,38 +1333,58 @@ for uid in table.get("players", []):
         f"💯 {score} → {res}\n\n"
     )
 
-# =========================
-# FINAL BUTTONS (FIXED SAFE)
-# =========================
-keyboard = InlineKeyboardMarkup([
-    [
-        InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
-    ],
-    [
-        InlineKeyboardButton("🏠 MENU", callback_data="menu")
-    ]
-])
+async def dealer_phase(context, table_id):
+    table = pvp_tables.get(table_id)
+    if not table:
+        return
 
-# 🛑 safety check chat_id
-if not chat_id:
-    print("❌ chat_id mancante nel finale PVP")
-    return
+    chat_id = table.get("chat_id")
 
-# ✂️ safety truncate Telegram limit
-if len(result) > 3900:
-    result = result[:3900] + "\n\n... (troncato)"
+    # =========================
+    # FINAL BUTTONS (FIXED SAFE)
+    # =========================
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🎮 GIOCA DI NUOVO",
+                callback_data="pvp"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🏠 MENU",
+                callback_data="menu"
+            )
+        ]
+    ])
 
-# 📌 mark finished BEFORE sending
-table["state"] = "finished"
+    # 🛑 safety check chat_id
+    if not chat_id:
+        print("❌ chat_id mancante nel finale PVP")
+        return
 
-try:
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=result,
-        reply_markup=keyboard
-    )
-except Exception as e:
-    print("❌ ERROR FINAL SEND:", e)
+    # ✂️ safety truncate Telegram limit
+    if len(result) > 3900:
+        result = result[:3900] + "\n\n... (troncato)"
+
+    # 📌 mark finished BEFORE sending
+    table["state"] = "finished"
+
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=result,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("❌ ERROR FINAL SEND:", e)
+
+    # 🧹 cleanup
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    pvp_tables.pop(table_id, None)
     # =========================
     # CLEAN RESET TABLE (FIXED)
     # =========================
