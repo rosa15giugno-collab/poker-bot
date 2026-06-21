@@ -266,7 +266,7 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
 # =========================
 
 def get_user(user_id, name="Player"):
-    uid = str(update.effective_user.id)
+    uid = str(user.id)
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
