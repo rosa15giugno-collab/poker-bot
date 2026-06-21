@@ -773,32 +773,41 @@ async def spin_slot(update, context):
 
     save_user(u)
 
-    # =====================
-    # 🧾 OUTPUT
-    # =====================
-    final_text = (
-        f"{status}\n\n"
-        f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
-        f"💰 Vincita: +{win} chips\n"
-        f"💎 Saldo: {new_balance}"
+# =====================
+# 🧾 OUTPUT
+# =====================
+final_text = (
+    f"{status}\n\n"
+    f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+    f"💰 Vincita: +{win} chips\n"
+    f"💎 Saldo: {new_balance}"
+)
+
+keyboard = InlineKeyboardMarkup([
+    [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
+    [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+])
+
+await asyncio.sleep(0.3)
+
+try:
+    await msg.edit_caption(
+        caption=final_text,
+        reply_markup=keyboard
     )
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-    ])
-
-    await asyncio.sleep(0.3)
-
+except Exception:
     try:
-        await msg.edit_caption(
-            caption=final_text,
+        await msg.edit_text(
+            text=final_text,
             reply_markup=keyboard
         )
     except Exception as e:
         print("FINAL ERROR:", e)
-
-    return
+        await context.bot.send_message(
+            chat_id=msg.chat_id,
+            text=final_text,
+            reply_markup=keyboard
+        )
     
 
     # =========================
