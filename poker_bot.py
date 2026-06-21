@@ -24,6 +24,15 @@ from telegram.ext import (
 
 from telegram.error import BadRequest
 
+
+# =====================
+# 🔐 ACCESS CONTROL
+# =====================
+ALLOWED_USERS = 977247490
+
+def guard(update, context=None):
+    return update.effective_user.id in ALLOWED_USERS
+
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SLOT", callback_data="slot")],
