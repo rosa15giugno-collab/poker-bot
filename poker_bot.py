@@ -129,15 +129,15 @@ def card_value(hand):
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        # 📸 se il messaggio è una foto → edit caption
-        if getattr(msg, "photo", None):
+        # 📸 messaggio media (foto o animazione)
+        if getattr(msg, "photo", None) or getattr(msg, "animation", None):
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
 
-        # 💬 altrimenti testo normale
+        # 💬 messaggio testuale
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
@@ -146,6 +146,18 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
 
     except Exception as e:
         logger.error(f"safe_edit failed: {e}")
+
+        # 🔥 fallback definitivo (evita crash slot)
+        try:
+            await msg.get_bot().send_message(
+                chat_id=msg.chat_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+        except:
+            pass
+
         return False
 # =========================
 # DATABASE (OBBLIGATORIO PRIMO)
@@ -688,35 +700,30 @@ async def spin_slot(update, context):
 
     # 🎬 ANIMAZIONE
     for i in range(6):
-        await asyncio.sleep(0.5)
+    await asyncio.sleep(0.6)
 
-        if i < 2:
-            reels[0] = weighted_symbol()
-        elif i < 4:
-            reels[1] = weighted_symbol()
-        else:
-            reels[2] = weighted_symbol()
+    if i < 2:
+        reels[0] = weighted_symbol()
+    elif i < 4:
+        reels[1] = weighted_symbol()
+    else:
+        reels[2] = weighted_symbol()
 
-        text = (
-            "🎬 SPIN IN CORSO...\n\n"
-            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-            f"💰 Puntata: {bet} chips"
-        )
+    text = (
+        "🎬 SPIN IN CORSO...\n\n"
+        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+        f"💰 Puntata: {bet} chips"
+    )
 
-        try:
-            await msg.edit_caption(caption=text, reply_markup=None)
-        except:
-            try:
-                await msg.edit_text(text, reply_markup=None)
-            except:
-                pass
+    # 🔥 aggiorna il messaggio solo una volta ogni 2 giri
+    if i % 2 == 0:
+        await safe_edit(msg, text)
 
     # =========================
     # 🎯 RISULTATO
     # =========================
 
     vip = random.choice(VIP_MULT)
-
     if reels[0] == reels[1] == reels[2]:
         win = int(bet * 10 * vip)
         status = "🏆 JACKPOT!"
@@ -748,8 +755,9 @@ async def spin_slot(update, context):
 
     save_user(u)
 
+    
+    
     new_balance = u["chips"]
-
     # =========================
     # 🧾 OUTPUT FINALE
     # =========================
