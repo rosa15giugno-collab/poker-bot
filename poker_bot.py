@@ -617,31 +617,43 @@ def weighted_symbol():
 
 
 # =========================
-# 🎰 SLOT MENU
+# 🎰 SLOT MENU (SAFE FIX)
 # =========================
 async def slot(update, context):
     q = update.callback_query
 
-    if q:
-        await q.answer()
-        target = q.message
-    else:
-        target = update.message
+    try:
+        if q:
+            await q.answer()
+            target = q.message
+        else:
+            target = update.message
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎰 SPIN 200", callback_data="spin_slot_200")],
-        [InlineKeyboardButton("🎰 SPIN 400", callback_data="spin_slot_400")],
-        [InlineKeyboardButton("🎰 SPIN 900", callback_data="spin_slot_900")],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-    ])
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🎰 SPIN 200", callback_data="spin_slot_200")],
+            [InlineKeyboardButton("🎰 SPIN 400", callback_data="spin_slot_400")],
+            [InlineKeyboardButton("🎰 SPIN 900", callback_data="spin_slot_900")],
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
 
-    await target.reply_animation(
-        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-        caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
-        reply_markup=keyboard
-    )
+        # 🎯 SAFE SEND (anti timeout + fallback)
+        try:
+            await target.reply_animation(
+                animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+                caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
+                reply_markup=keyboard
+            )
 
+        except Exception:
+            # fallback 1: send_message
+            await context.bot.send_message(
+                chat_id=target.chat_id,
+                text="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
+                reply_markup=keyboard
+            )
 
+    except Exception as e:
+        print("SLOT MENU ERROR:", e)
 # =========================
 # 🎰 SPIN SLOT (FIX DEFINITIVO)
 # =========================
