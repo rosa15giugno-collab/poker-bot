@@ -496,10 +496,13 @@ async def daily_bonus(update, context):
         m = (remaining % 3600) // 60
         s = remaining % 60
 
-        return await q.answer(
-            f"🎁 Bonus già ricevuto!\n"
+        # 🔥 MIGLIORE UX: message invece di alert
+        return await q.message.edit_text(
+            f"🎁 Bonus già riscattato!\n\n"
             f"⏳ Riprova tra {h}h {m}m {s}s",
-            show_alert=True
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
         )
 
     # 🎁 reward
@@ -519,7 +522,7 @@ async def daily_bonus(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    # 📸 prova edit media → fallback safe
+    # 📸 edit media fallback sicuro
     try:
         await q.message.edit_media(
             media=InputMediaPhoto(
@@ -528,14 +531,24 @@ async def daily_bonus(update, context):
             ),
             reply_markup=keyboard
         )
+
     except Exception:
         try:
-            await q.message.edit_text(
-                text,
+            await q.message.edit_caption(
+                caption=text,
                 reply_markup=keyboard
             )
         except Exception:
-            await q.message.reply_text(text, reply_markup=keyboard)
+            try:
+                await q.message.edit_text(
+                    text,
+                    reply_markup=keyboard
+                )
+            except Exception:
+                await q.message.reply_text(
+                    text,
+                    reply_markup=keyboard
+                )
 #======================
 # SHOP
 #======================
