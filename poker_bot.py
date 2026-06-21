@@ -692,13 +692,18 @@ async def spin_slot(update, context):
         )
 
         try:
-            await msg.edit_caption(caption=text)
-        except:
+            await msg.edit_caption(
+                caption=text,
+                reply_markup=None
+            )
+        except Exception:
             try:
-                await msg.edit_text(text)
+                await msg.edit_text(
+                    text,
+                    reply_markup=None
+                )
             except:
                 pass
-
     # =========================
     # 🎯 RISULTATO FINALE (UNICO BLOCCO)
     # =========================
