@@ -565,7 +565,7 @@ async def slot(update, context):
         reply_markup=keyboard
     )
 # =========================
-# 🎰 SPIN SLOT (FIX DEFINITIVO)
+# 🎰 SPIN SLOT (VERSIONE PRO ITA)
 # =========================
 async def spin_slot(update, context):
 
@@ -581,16 +581,25 @@ async def spin_slot(update, context):
         return
     COOLDOWN[uid] = now
 
-    # 💰 BET
+    # 💰 PUNTATA
     data = q.data
     try:
         bet = int(data.split("_")[-1])
     except:
         bet = 100
 
+    u = get_user(str(uid))
+
+    # 🔒 controllo saldo
+    if u["chips"] < bet:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    # 💸 scala sempre la puntata
+    u["chips"] -= bet
+
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 ANIMAZIONE
+    # 🎬 ANIMAZIONE CINEMATICA
     for i in range(6):
         await asyncio.sleep(0.5)
 
@@ -602,31 +611,62 @@ async def spin_slot(update, context):
             reels[2] = weighted_symbol()
 
         text = (
-            "🎰 SPINNING...\n\n"
+            "🎬 SPIN IN CORSO...\n\n"
             f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-            f"💰 Puntata: {bet}"
+            f"💰 Puntata: {bet} chips"
         )
 
-        if i % 2 == 0:
-            try:
+        try:
+            if msg.photo:
                 await msg.edit_caption(caption=text)
-            except:
-                pass
+            else:
+                await msg.edit_text(text)
+        except:
+            pass
 
-    # 🎯 RISULTATO
-    u = get_user(uid)
-
-    # 🔒 evita reference bug (IMPORTANTISSIMO)
+    # 🎯 RISULTATO FINALE
     u = dict(u)
 
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
-    # 🎰 REELS base sempre definiti
     r = reels[:]
 
     win = 0
-    status = "🔴 HAI PERSO"
+
+    # =========================
+    # 🎰 LOGICA VINCITA
+    # =========================
+    if r[0] == r[1] == r[2]:
+        win = bet * 10
+        status = "🟢 JACKPOT!"
+    elif r[0] == r[1] or r[1] == r[2]:
+        win = bet * 3
+        status = "🟡 VITTORIA!"
+    else:
+        status = "🔴 HAI PERSO"
+
+    # 💰 aggiorna chips
+    u["chips"] += win
+
+    save_user(u)
+
+    # 🎬 risultato finale
+    result_text = (
+        "🎰 RISULTATO SLOT\n\n"
+        f"┃ {r[0]} | {r[1]} | {r[2]} ┃\n\n"
+        f"{status}\n"
+        f"💰 Variazione: +{win - bet if win else -bet}\n"
+        f"💳 Saldo: {u['chips']}"
+    )
+
+    try:
+        if msg.photo:
+            await msg.edit_caption(result_text)
+        else:
+            await msg.edit_text(result_text)
+    except:
+        pass
 
     # =====================
     # 🔥 JACKPOT
