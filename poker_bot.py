@@ -700,24 +700,24 @@ async def spin_slot(update, context):
 
     # 🎬 ANIMAZIONE
     for i in range(6):
-    await asyncio.sleep(0.6)
+        await asyncio.sleep(0.6)
 
-    if i < 2:
-        reels[0] = weighted_symbol()
-    elif i < 4:
-        reels[1] = weighted_symbol()
-    else:
-        reels[2] = weighted_symbol()
+        if i < 2:
+            reels[0] = weighted_symbol()
+        elif i < 4:
+            reels[1] = weighted_symbol()
+        else:
+            reels[2] = weighted_symbol()
 
-    text = (
-        "🎬 SPIN IN CORSO...\n\n"
-        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-        f"💰 Puntata: {bet} chips"
-    )
+        text = (
+            "🎬 SPIN IN CORSO...\n\n"
+            f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+            f"💰 Puntata: {bet} chips"
+        )
 
-    # 🔥 aggiorna il messaggio solo una volta ogni 2 giri
-    if i % 2 == 0:
-        await safe_edit(msg, text)
+        # 🔥 aggiorna il messaggio solo una volta ogni 2 giri
+        if i % 2 == 0:
+            await safe_edit(msg, text)
 
     # =========================
     # 🎯 RISULTATO
