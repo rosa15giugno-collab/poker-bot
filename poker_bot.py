@@ -476,7 +476,6 @@ async def profile(update, context):
 #  BONUS GIORNALIERO
 #=====================
 async def daily_bonus(update, context):
-
     q = update.callback_query
     await q.answer()
 
@@ -484,19 +483,23 @@ async def daily_bonus(update, context):
     u = get_user(uid)
 
     now = time.time()
-    cooldown = 86400  # 24 ore
+    cooldown = 86400
 
-    # 🔒 sicurezza campo (evita crash utenti vecchi)
     last = u.get("last_bonus", 0)
 
-    # ⛔ già riscattato
     if now - last < cooldown:
+        remaining = int(cooldown - (now - last))
+
+        h = remaining // 3600
+        m = (remaining % 3600) // 60
+        s = remaining % 60
+
         return await q.answer(
-            "⏳ Hai già riscattato il tuo bonus giornaliero!",
+            f"🎁 Bonus già ricevuto!\n"
+            f"⏳ Riprova tra {h}h {m}m {s}s",
             show_alert=True
         )
 
-    # 🎁 reward
     reward = 500
     u["chips"] += reward
     u["last_bonus"] = now
@@ -526,7 +529,6 @@ async def daily_bonus(update, context):
                 [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
             ])
         )
-
 #======================
 # SHOP
 #======================
