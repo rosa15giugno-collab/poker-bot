@@ -1781,9 +1781,9 @@ async def roulette_spin(update, context, bet):
     await context.bot.send_message(
         chat_id=q.message.chat_id,
         text=(
-            "╔════════════════════════╗\n"
-            f"{'  🎉 VITTORIA' if victory else '    💀 PERSO'}\n"
-            "╚════════════════════════╝\n\n"
+            "╔══════════════════════════════╗\n"
+            f"{'  🎉 VITTORIA  🎉' if victory else '    💀  PERSO  💀'}\n"
+            "╚══════════════════════════════╝\n\n"
             f"🎯 Numero: {n} - {color}\n"
             f"💰 +{win}\n"
             f"🏦 SALDO: {u['chips']}"
