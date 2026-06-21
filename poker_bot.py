@@ -135,12 +135,24 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
         logger.error(f"safe_edit failed: {e}")
         return False
 # =========================
-# DATABASE (OBBLIGATORIO PRIMO)   ****
+# DATABASE (OBBLIGATORIO PRIMO)
 # =========================
 
-conn = sqlite3.connect("casino_pro.db", check_same_thread=False)
+import sqlite3
+import threading
+import os
+
+# 💾 PATH STABILE (EVITA RESET DOPO DEPLOY)
+DB_PATH = os.path.join(os.path.dirname(_file_), "casino_pro.db")
+
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 
+# 🔥 MIGLIORIA STABILITÀ SQLITE (IMPORTANTISSIMO)
+cursor.execute("PRAGMA journal_mode=WAL")
+cursor.execute("PRAGMA synchronous=NORMAL")
+
+# 📦 CREAZIONE TABELLA
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id TEXT PRIMARY KEY,
@@ -153,9 +165,10 @@ CREATE TABLE IF NOT EXISTS users (
     multiplier REAL
 )
 """)
+
 conn.commit()
 
-# LOCK (FIXATO)
+# 🔒 LOCK THREAD SAFE
 lock = threading.Lock()
 
 
@@ -252,12 +265,13 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
 # USER SYSTEM ******
 # =========================
 def get_user(user_id, name="Player"):
-    uid = str(user_id)
+    uid = str(q.from_user.id)
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
         row = cursor.fetchone()
 
+        # 👤 UTENTE ESISTE
         if row:
             return {
                 "user_id": row[0],
@@ -270,6 +284,7 @@ def get_user(user_id, name="Player"):
                 "multiplier": row[7]
             }
 
+        # 👤 NUOVO UTENTE
         cursor.execute("""
             INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (uid, name, 5000, 0, 0, 0, 0, 1.0))
@@ -376,10 +391,10 @@ async def profile(update, context):
 
     text = (
         f"👤 PROFILO\n\n"
-        f"🧑 Nome: {name}\n\n"
+        f"👑 Nome: {name}\n\n"
         f"💰 Chips: {u.get('chips', 0)}\n"
-        f"🏆 Win: {u.get('wins', 0)}\n"
-        f"💥 Loss: {u.get('losses', 0)}\n"
+        f"🏆 Vittorie: {u.get('wins', 0)}\n"
+        f"💥 Sconfitte: {u.get('losses', 0)}\n"
         f"⭐ XP: {u.get('xp', 0)}\n"
     )
 
@@ -405,6 +420,7 @@ async def profile(update, context):
 #  BONUS GIORNALIERO
 #=====================
 async def daily_bonus(update, context):
+
     q = update.callback_query
     await q.answer()
 
@@ -412,17 +428,30 @@ async def daily_bonus(update, context):
     u = get_user(uid)
 
     now = time.time()
-    cooldown = 86400
+    cooldown = 86400  # 24 ore
 
-    if now - u["last_bonus"] < cooldown:
-        return await q.answer("⏳ Bonus già riscattato")
+    # 🔒 sicurezza campo (evita crash utenti vecchi)
+    last = u.get("last_bonus", 0)
 
+    # ⛔ già riscattato
+    if now - last < cooldown:
+        return await q.answer(
+            "⏳ Hai già riscattato il tuo bonus giornaliero!",
+            show_alert=True
+        )
+
+    # 🎁 reward
     reward = 500
     u["chips"] += reward
     u["last_bonus"] = now
+
     save_user(u)
 
-    text = f"🎁 BONUS\n\n💰 +{reward} chips ricevuti!"
+    text = (
+        "🎁 BONUS GIORNALIERO\n\n"
+        f"💰 +{reward} chips ricevuti!\n"
+        f"💎 Saldo attuale: {u['chips']}"
+    )
 
     try:
         await q.message.edit_media(
@@ -434,8 +463,13 @@ async def daily_bonus(update, context):
                 [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
             ])
         )
-    except:
-        await q.message.edit_text(text)
+    except Exception:
+        await q.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            ])
+        )
 
 #======================
 # SHOP
@@ -564,8 +598,10 @@ async def slot(update, context):
         caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
         reply_markup=keyboard
     )
+
+
 # =========================
-# 🎰 SPIN SLOT (VERSIONE PRO ITA)
+# 🎰 SPIN SLOT (FIX COMPLETO + PUNTATE OK)
 # =========================
 async def spin_slot(update, context):
 
@@ -573,7 +609,9 @@ async def spin_slot(update, context):
     await q.answer()
 
     msg = q.message
-    uid = q.from_user.id
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
 
     # 🛡️ COOLDOWN
     now = time.time()
@@ -581,20 +619,19 @@ async def spin_slot(update, context):
         return
     COOLDOWN[uid] = now
 
-    # 💰 PUNTATA
+    # 💰 PUNTATA (200 / 400 / 900)
     data = q.data
+
     try:
         bet = int(data.split("_")[-1])
     except:
-        bet = 100
-
-    u = get_user(str(uid))
+        bet = 200  # default SLOT 200
 
     # 🔒 controllo saldo
     if u["chips"] < bet:
         return await q.answer("❌ Chips insufficienti", show_alert=True)
 
-    # 💸 scala sempre la puntata
+    # 💸 scala puntata SEMPRE
     u["chips"] -= bet
 
     reels = ["🎰", "🎰", "🎰"]
@@ -617,23 +654,59 @@ async def spin_slot(update, context):
         )
 
         try:
-            if msg.photo:
-                await msg.edit_caption(caption=text)
-            else:
+            await msg.edit_caption(caption=text)
+        except Exception:
+            try:
                 await msg.edit_text(text)
-        except:
-            pass
+            except:
+                pass
 
+    # =========================
     # 🎯 RISULTATO FINALE
-    u = dict(u)
+    # =========================
 
     vip = random.choice(VIP_MULT)
     jackpot_roll = random.randint(1, 200)
 
-    r = reels[:]
-
     win = 0
 
+    # 💥 LOGICA VINCITA
+    if reels[0] == reels[1] == reels[2]:
+        win = bet * 10 * vip
+        status = "win"
+
+    elif reels[0] == reels[1] or reels[1] == reels[2]:
+        win = bet * 3 * vip
+        status = "win"
+
+    else:
+        win = 0
+        status = "lose"
+
+    # 💰 aggiorna saldo
+    u["chips"] += win
+
+    # 📊 stats
+    if status == "win":
+        u["wins"] = u.get("wins", 0) + 1
+    else:
+        u["losses"] = u.get("losses", 0) + 1
+
+    # 💾 salva DB
+    save_user(u)
+
+    # 🎬 output finale
+    final_text = (
+        "🎰 SLOT RESULT\n\n"
+        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+        f"{'🏆 HAI VINTO ' + str(win) + ' CHIPS!' if win > 0 else '💥 HAI PERSO'}\n\n"
+        f"💰 Saldo: {u['chips']}"
+    )
+
+    try:
+        await msg.edit_caption(final_text)
+    except Exception:
+        await msg.edit_text(final_text)
     # =========================
     # 🎰 LOGICA VINCITA
     # =========================
@@ -770,7 +843,7 @@ async def blackjack_bet(update, context, amount):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
     u = get_user(uid)
 
     if u.get("chips", 0) < amount:
@@ -819,7 +892,7 @@ async def hit(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
 
     if uid not in bj_games:
         return await safe_edit(q.message, "❌ Nessuna partita attiva.")
@@ -884,7 +957,7 @@ async def stand(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
 
     if uid not in bj_games:
         return
@@ -963,9 +1036,7 @@ async def stand(update, context):
     ])
 
     await safe_edit(q.message, testo, reply_markup=keyboard)
-# =========================
-# ENTRATA ANIMATA TABLE PVP
-# =========================
+
 # =========================
 # ENTRATA ANIMATA TABLE PVP
 # =========================
@@ -1036,7 +1107,7 @@ async def pvp(update, context):
 # =========================
 async def pvp_join(update, context, table_id):
     q = update.callback_query
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
 
     table = pvp_tables.get(table_id)
     if not table:
@@ -1293,42 +1364,7 @@ async def pvp_hit(update, context, table_id):
         table["action_lock"] = False
 
 
-# =========================
-# STAND PVP (FIXED STABLE)
-# =========================
-async def pvp_stand(update, context, table_id):
-    q = update.callback_query
-    table = pvp_tables.get(table_id)
 
-    if not table or table.get("state") != "playing":
-        return await q.answer("Tavolo non valido", show_alert=True)
-
-    # 🔒 anti race condition
-    if table.get("action_lock"):
-        return await q.answer("⏳ Attendi...", show_alert=True)
-
-    table["action_lock"] = True
-
-    try:
-        idx = table["turn_index"]
-
-        if idx >= len(table["players"]):
-            return await q.answer("Turno finito", show_alert=True)
-
-        uid = table["players"][idx]
-
-        if q.from_user.id != uid:
-            return await q.answer("⛔ Non è il tuo turno", show_alert=True)
-
-        await q.answer("STAND")
-
-        # 🔥 avanza turno in modo sicuro
-        table["turn_index"] += 1
-
-        return await next_turn(context, table_id)
-
-    finally:
-        table["action_lock"] = False
 
 # =========================
 # STAND PVP (FIXED STABLE)
@@ -1408,76 +1444,83 @@ async def dealer_phase(context, table_id):
     dealer_hand = table.get("dealer", [])
     dealer_score = card_value(dealer_hand)
 
+# =========================
+# RESULT BUILD
+# =========================
+result = (
+    "🏆 RISULTATI PVP\n\n"
+    f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+    f"💯 Totale Banco: {dealer_score}\n\n"
+)
+
+for uid in table.get("players", []):
+
+    name = (table.get("names") or {}).get(uid, f"User {uid}")
+
+    hand = table.get("hands", {}).get(uid) or []
+    score = card_value(hand)
+
+    hand_text = " ".join(hand) if hand else "—"
+
+    # 🔥 UTENTE DB
+    u = get_user(str(uid))
+
     # =========================
-    # RESULT BUILD
+    # 📊 STATS
     # =========================
-    result = (
-        "🏆 RISULTATI PVP\n\n"
-        f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-        f"💯 Totale Banco: {dealer_score}\n\n"
+    if score > 21:
+        res = "💥 PERSO"
+        u["losses"] = u.get("losses", 0) + 1
+
+    elif dealer_score > 21 or score > dealer_score:
+        res = "🏆 VINTO"
+        u["wins"] = u.get("wins", 0) + 1
+
+    elif score == dealer_score:
+        res = "🤝 PAREGGIO"
+
+    else:
+        res = "💥 PERSO"
+        u["losses"] = u.get("losses", 0) + 1
+
+    save_user(u)
+
+    result += (
+        f"👤 {name}\n"
+        f"🃏 {hand_text}\n"
+        f"💯 {score} → {res}\n\n"
     )
 
-    for uid in table.get("players", []):
+# =========================
+# FINAL BUTTONS (FUORI FOR)
+# =========================
+keyboard = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
+    ],
+    [
+        InlineKeyboardButton("🏠 MENU", callback_data="menu")
+    ]
+])
 
-        name = (table.get("names") or {}).get(
-            uid,
-            f"User {uid}"
-        )
+# ✂️ limite Telegram
+if len(result) > 3900:
+    result = result[:3900] + "\n\n... (troncato)"
 
-        hand = table.get("hands", {}).get(uid) or []
-        score = card_value(hand)
+# 📌 chiudi partita
+table["state"] = "finished"
 
-        hand_text = " ".join(hand) if hand else "—"
+try:
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=result,
+        reply_markup=keyboard
+    )
+except Exception as e:
+    print("❌ ERROR FINAL SEND:", e)
 
-        if score > 21:
-            res = "💥 PERSO"
-        elif dealer_score > 21 or score > dealer_score:
-            res = "🏆 VINTO"
-        elif score == dealer_score:
-            res = "🤝 PAREGGIO"
-        else:
-            res = "💥 PERSO"
-
-        result += (
-            f"👤 {name}\n"
-            f"🃏 {hand_text}\n"
-            f"💯 {score} → {res}\n\n"
-        )
-
-    # =========================
-    # FINAL BUTTONS
-    # =========================
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🎮 GIOCA DI NUOVO",
-                callback_data="pvp"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏠 MENU",
-                callback_data="menu"
-            )
-        ]
-    ])
-
-    # ✂️ limite Telegram
-    if len(result) > 3900:
-        result = result[:3900] + "\n\n... (troncato)"
-
-    table["state"] = "finished"
-
-    try:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=result,
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        print("❌ ERROR FINAL SEND:", e)
-
-    pvp_tables.pop(table_id, None)
+# 🧹 cleanup
+pvp_tables.pop(table_id, None)
     # =========================
     # CLEAN RESET TABLE (FIXED)
     # =========================
@@ -1553,7 +1596,7 @@ async def stand_mp(update, context):
     q = update.callback_query
     await q.answer()
 
-    uid = q.from_user.id  # 👈 FIX: NO STRING
+    uid = str(q.from_user.id)  # 👈 FIX: NO STRING
 
     table_id = user_tables.get(uid)
     t = tables.get(table_id)
@@ -2064,7 +2107,7 @@ handlers = {
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
@@ -2182,7 +2225,7 @@ async def fileid(update, context):
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
-    uid = q.from_user.id
+    uid = str(q.from_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
