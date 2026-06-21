@@ -262,10 +262,10 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
         logger.error(f"safe_edit fatal: {e}")
         return False
 # =========================
-# USER SYSTEM ******
+# USER SYSTEM **
 # =========================
 def get_user(user_id, name="Player"):
-    uid = str(q.from_user.id)
+    uid = str(user_id)
 
     with lock:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (uid,))
@@ -301,7 +301,6 @@ def get_user(user_id, name="Player"):
             "last_bonus": 0,
             "multiplier": 1.0
         }
-
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [
