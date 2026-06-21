@@ -1435,97 +1435,90 @@ async def dealer_phase(context, table_id):
         if not table.get("deck"):
             break
 
-        table["dealer"].append(
-            table["deck"].pop()
-        )
-
+        table["dealer"].append(table["deck"].pop())
         await asyncio.sleep(2)
 
     dealer_hand = table.get("dealer", [])
     dealer_score = card_value(dealer_hand)
 
-# =========================
-# RESULT BUILD
-# =========================
-result = (
-    "🏆 RISULTATI PVP\n\n"
-    f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-    f"💯 Totale Banco: {dealer_score}\n\n"
-)
-
-for uid in table.get("players", []):
-
-    name = (table.get("names") or {}).get(uid, f"User {uid}")
-
-    hand = table.get("hands", {}).get(uid) or []
-    score = card_value(hand)
-
-    hand_text = " ".join(hand) if hand else "—"
-
-    # 🔥 UTENTE DB
-    u = get_user(str(uid))
-
     # =========================
-    # 📊 STATS
+    # RESULT BUILD (DENTRO FUNZIONE!!)
     # =========================
-    if score > 21:
-        res = "💥 PERSO"
-        u["losses"] = u.get("losses", 0) + 1
-
-    elif dealer_score > 21 or score > dealer_score:
-        res = "🏆 VINTO"
-        u["wins"] = u.get("wins", 0) + 1
-
-    elif score == dealer_score:
-        res = "🤝 PAREGGIO"
-
-    else:
-        res = "💥 PERSO"
-        u["losses"] = u.get("losses", 0) + 1
-
-    save_user(u)
-
-    result += (
-        f"👤 {name}\n"
-        f"🃏 {hand_text}\n"
-        f"💯 {score} → {res}\n\n"
+    result = (
+        "🏆 RISULTATI PVP\n\n"
+        f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+        f"💯 Totale Banco: {dealer_score}\n\n"
     )
 
-# =========================
-# FINAL BUTTONS (FUORI FOR)
-# =========================
-keyboard = InlineKeyboardMarkup([
-    [
-        InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
-    ],
-    [
-        InlineKeyboardButton("🏠 MENU", callback_data="menu")
-    ]
-])
+    for uid in table.get("players", []):
 
-# ✂️ limite Telegram
-if len(result) > 3900:
-    result = result[:3900] + "\n\n... (troncato)"
+        name = (table.get("names") or {}).get(uid, f"User {uid}")
 
-# 📌 chiudi partita
-table["state"] = "finished"
+        hand = table.get("hands", {}).get(uid) or []
+        score = card_value(hand)
 
-try:
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=result,
-        reply_markup=keyboard
-    )
-except Exception as e:
-    print("❌ ERROR FINAL SEND:", e)
+        hand_text = " ".join(hand) if hand else "—"
 
-# 🧹 CLEANUP UNICO (QUESTO È L'UNICO VALIDO)
-old_timer = table.get("timer_task")
-if old_timer and not old_timer.done():
-    old_timer.cancel()
+        u = get_user(str(uid))
 
-table["deleted"] = True
-pvp_tables.pop(table_id, None)
+        if score > 21:
+            res = "💥 PERSO"
+            u["losses"] = u.get("losses", 0) + 1
+
+        elif dealer_score > 21 or score > dealer_score:
+            res = "🏆 VINTO"
+            u["wins"] = u.get("wins", 0) + 1
+
+        elif score == dealer_score:
+            res = "🤝 PAREGGIO"
+
+        else:
+            res = "💥 PERSO"
+            u["losses"] = u.get("losses", 0) + 1
+
+        save_user(u)
+
+        result += (
+            f"👤 {name}\n"
+            f"🃏 {hand_text}\n"
+            f"💯 {score} → {res}\n\n"
+        )
+
+    # =========================
+    # FINAL BUTTONS
+    # =========================
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    if len(result) > 3900:
+        result = result[:3900] + "\n\n... (troncato)"
+
+    table["state"] = "finished"
+
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=result,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("❌ ERROR FINAL SEND:", e)
+
+    # =========================
+    # CLEANUP
+    # =========================
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    table["deleted"] = True
+    pvp_tables.pop(table_id, None)
    
     
     
