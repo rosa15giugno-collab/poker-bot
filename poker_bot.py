@@ -618,24 +618,22 @@ async def spin_slot(update, context):
         return
     COOLDOWN[uid] = now
 
-    # 💰 PUNTATA (200 / 400 / 900)
-    data = q.data
-
+    # 💰 PUNTATA
     try:
-        bet = int(data.split("_")[-1])
+        bet = int(q.data.split("_")[-1])
     except:
-        bet = 200  # default SLOT 200
+        bet = 200
 
-    # 🔒 controllo saldo
+    # 🔒 SALDO CHECK
     if u["chips"] < bet:
         return await q.answer("❌ Chips insufficienti", show_alert=True)
 
-    # 💸 scala puntata SEMPRE
+    # 💸 scala subito puntata
     u["chips"] -= bet
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 ANIMAZIONE CINEMATICA
+    # 🎬 ANIMAZIONE (LA TUA)
     for i in range(6):
         await asyncio.sleep(0.5)
 
@@ -654,58 +652,66 @@ async def spin_slot(update, context):
 
         try:
             await msg.edit_caption(caption=text)
-        except Exception:
+        except:
             try:
                 await msg.edit_text(text)
             except:
                 pass
 
     # =========================
-    # 🎯 RISULTATO FINALE
+    # 🎯 RISULTATO (UNICO SISTEMA)
     # =========================
 
     vip = random.choice(VIP_MULT)
-    jackpot_roll = random.randint(1, 200)
 
-    win = 0
-
-    # 💥 LOGICA VINCITA
     if reels[0] == reels[1] == reels[2]:
         win = bet * 10 * vip
-        status = "win"
-
+        status = "🟢 JACKPOT!"
     elif reels[0] == reels[1] or reels[1] == reels[2]:
         win = bet * 3 * vip
-        status = "win"
-
+        status = "🟡 VITTORIA!"
     else:
         win = 0
-        status = "lose"
+        status = "🔴 HAI PERSO"
 
-    # 💰 aggiorna saldo
+    # 💰 update saldo
     u["chips"] += win
 
     # 📊 stats
-    if status == "win":
+    if win > 0:
         u["wins"] = u.get("wins", 0) + 1
     else:
         u["losses"] = u.get("losses", 0) + 1
 
-    # 💾 salva DB
+    # 💾 salva DB (UNA VOLTA)
     save_user(u)
 
-    # 🎬 output finale
+    # 🎮 BOTTONI
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data=f"spin_slot_{bet}"),
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    # 🎬 OUTPUT FINALE
     final_text = (
-        "🎰 SLOT RESULT\n\n"
+        f"{status}\n\n"
         f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-        f"{'🏆 HAI VINTO ' + str(win) + ' CHIPS!' if win > 0 else '💥 HAI PERSO'}\n\n"
-        f"💰 Saldo: {u['chips']}"
+        f"💰 Variazione: +{win - bet if win else -bet}\n"
+        f"💳 Saldo: {u['chips']}"
     )
 
     try:
-        await msg.edit_caption(final_text)
-    except Exception:
-        await msg.edit_text(final_text)
+        await msg.edit_caption(
+            caption=final_text,
+            reply_markup=keyboard
+        )
+    except:
+        await msg.edit_text(
+            final_text,
+            reply_markup=keyboard
+        )
     # =========================
     # 🎰 LOGICA VINCITA
     # =========================
