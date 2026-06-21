@@ -29,29 +29,9 @@ from telegram.error import BadRequest
 # 🔐 AUTH SYSTEM
 # =====================
 
-ALLOWED_USERS = {977247490}
-
-def is_allowed(update):
-    user = update.effective_user
-    if not user:
-        return False
-    return user.id in ALLOWED_USERS
 
 
-def restricted(func):
-    async def wrapper(update, context, *args, **kwargs):
-
-        if not is_allowed(update):
-            if update.callback_query:
-                return await update.callback_query.answer(
-                    "⛔ Non autorizzato",
-                    show_alert=True
-                )
-            return
-
-        return await func(update, context, *args, **kwargs)
-
-    return wrapper
+ 
 
 
 def main_menu_keyboard():
@@ -272,7 +252,7 @@ def save_user(u):
 # =========================
 # 🧠 UTILITY / MENU SYSTEM
 # =========================
-@restricted
+
 async def send_main_menu(chat_id, context):
     caption = (
         "🏠 MENU PRINCIPALE\n\n"
@@ -293,7 +273,7 @@ async def send_main_menu(chat_id, context):
 # SAFE EDIT
 # =========================
 from telegram.error import BadRequest
-@restricted
+
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
         # se è una foto → caption
@@ -505,7 +485,7 @@ async def profile(update, context):
 #=====================
 #  BONUS GIORNALIERO
 #=====================
-@restricted
+
 async def daily_bonus(update, context):
 
     q = update.callback_query
@@ -583,7 +563,7 @@ async def daily_bonus(update, context):
 #======================
 # SHOP
 #======================
-@restricted
+
 async def shop(update, context):
     q = update.callback_query
     await q.answer()
@@ -611,7 +591,7 @@ async def shop(update, context):
 #==========================
 # CLASSIFICA
 #==========================
-@restricted
+
 async def leaderboard(update, context):
     q = update.callback_query
     await q.answer()
@@ -685,7 +665,7 @@ def weighted_symbol():
 # =========================
 # 🎰 SLOT MENU (SAFE FIX)
 # =========================
-@restricted
+
 async def slot(update, context):
     q = update.callback_query
 
@@ -724,7 +704,7 @@ async def slot(update, context):
 # =========================
 # 🎰 SPIN SLOT (FIX DEFINITIVO)
 # =========================
-@restricted
+
 async def spin_slot(update, context):
 
     q = update.callback_query
@@ -854,7 +834,7 @@ async def spin_slot(update, context):
     #    🃏 BLACKJACK MENU
     # =========================
 
-@restricted
+
 async def blackjack(update, context):
     q = update.callback_query
     await q.answer()
@@ -1080,7 +1060,7 @@ async def stand(update, context):
 # =========================
 # ENTRATA ANIMATA TABLE PVP
 # =========================
-@restricted
+
 async def pvp(update, context):
     q = update.callback_query
     await q.answer()
@@ -1146,7 +1126,7 @@ async def pvp(update, context):
 # =========================
 # ENTRATA TAVOLO PVP
 # =========================
-@restricted
+
 async def pvp_join(update, context, table_id):
     q = update.callback_query
     uid = str(update.effective_user.id)
@@ -1214,7 +1194,7 @@ async def pvp_join(update, context, table_id):
 # =========================
 # START PARTITA PVP
 # =========================
-@restricted
+
 async def pvp_start(update, context, table_id):
     q = update.callback_query
     await q.answer()
@@ -1692,7 +1672,7 @@ red_numbers = {
 # =========================
 # 🎰 MENU ROULETTE
 # =========================
-@restricted
+
 async def roulette(update, context):
     q = update.callback_query
     await q.answer()
@@ -1805,7 +1785,7 @@ async def select_number(update, context):
 # =========================
 # 🎡 SPIN ROULETTE
 # =========================
-@restricted
+
 async def roulette_spin(update, context, bet):
     q = update.callback_query
     await q.answer()
@@ -2143,7 +2123,7 @@ handlers = {
     "roulette": roulette,
     "pvp": pvp,
 }
-@restricted
+
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
@@ -2262,7 +2242,7 @@ async def fileid(update, context):
 # =========================
 # 🎮 CALLBACK ROUTER UNICO (PULITO)
 # =========================
-@restricted
+
 async def cb_router(update, context):
     q = update.callback_query
     data = q.data
