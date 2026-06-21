@@ -692,41 +692,43 @@ async def spin_slot(update, context):
         )
 
         try:
-            await msg.edit_caption(
-                caption=text,
-                reply_markup=None
-            )
-        except Exception:
+            await msg.edit_caption(caption=text, reply_markup=None)
+        except:
             try:
-                await msg.edit_text(
-                    text,
-                    reply_markup=None
-                )
+                await msg.edit_text(text, reply_markup=None)
             except:
                 pass
+
     # =========================
-    # 🎯 RISULTATO FINALE (UNICO BLOCCO)
+    # 🎯 RISULTATO
     # =========================
 
     vip = random.choice(VIP_MULT)
-    win = 0
 
     if reels[0] == reels[1] == reels[2]:
         win = int(bet * 10 * vip)
         status = "🏆 JACKPOT!"
-
     elif reels[0] == reels[1] or reels[1] == reels[2]:
         win = int(bet * 3 * vip)
         status = f"✨ QUASI VITTORIA! +{int(bet * 3)} CHIPS"
-
     else:
         win = 0
         status = "💥 HAI PERSO!"
 
-    # 💰 UPDATE SALDO (UNA SOLA VOLTA)
-    u["chips"] += win
+    # =========================
+    # 💎 MULTIPLIER SAFE
+    # =========================
+    mult = float(u.get("multiplier", 1.0))
+    vip = float(vip)
 
-    # 📊 STATS
+    win = int(win * mult)
+
+    # =========================
+    # 💰 UPDATE SALDO
+    # =========================
+    u["chips"] += win
+    u["xp"] = int(u.get("xp", 0) + max(1, win // 15))
+
     if win > 0:
         u["wins"] = u.get("wins", 0) + 1
     else:
@@ -734,78 +736,32 @@ async def spin_slot(update, context):
 
     save_user(u)
 
-    # 🎬 OUTPUT FINALE
+    new_balance = u["chips"]
+
+    # =========================
+    # 🧾 OUTPUT FINALE
+    # =========================
     final_text = (
-        "🎰 SLOT RESULT\n\n"
-        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
         f"{status}\n\n"
-        f"💰 SALDO: {u['chips']} CHIPS"
+        f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
+        f"💰 Vincita: +{win} chips\n"
+        f"💎 Saldo: {new_balance}"
     )
 
-    # 🎮 BOTTONI (COLONNA)
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    try:
-        await msg.edit_caption(final_text, reply_markup=keyboard)
-    except:
-        await msg.edit_text(final_text, reply_markup=keyboard)
-
-    # =====================
-    # 💎 MULTIPLIER SAFE
-    # =====================
-    mult = float(u.get("multiplier", 1.0))
-    vip = float(vip)
-
-    win = int(win * vip * mult)
-
-    # =====================
-    # 💰 BALANCE UPDATE (SAFE)
-    # =====================
-    current_chips = int(u.get("chips", 0))
-
-    new_balance = current_chips + win
-    u["chips"] = new_balance
-
-    u["xp"] = int(u.get("xp", 0) + max(1, win // 15))
-
-    save_user(u)
-
-# =====================
-# 🧾 OUTPUT
-# =====================
-final_text = (
-    f"{status}\n\n"
-    f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
-    f"💰 Vincita: +{win} chips\n"
-    f"💎 Saldo: {new_balance}"
-)
-
-keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
-    [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-])
-
     await asyncio.sleep(0.3)
 
     try:
-        await msg.edit_caption(
-            caption=final_text,
-            reply_markup=keyboard
-        )
-
-    except Exception:
+        await msg.edit_caption(caption=final_text, reply_markup=keyboard)
+    except:
         try:
-            await msg.edit_text(
-                text=final_text,
-                reply_markup=keyboard
-            )
-
+            await msg.edit_text(final_text, reply_markup=keyboard)
         except Exception as e:
             print("FINAL ERROR:", e)
-
             try:
                 await context.bot.send_message(
                     chat_id=msg.chat_id,
