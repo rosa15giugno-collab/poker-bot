@@ -644,28 +644,24 @@ async def spin_slot(update, context):
     uid = str(q.from_user.id)
     u = get_user(uid)
 
-    # 🛡️ COOLDOWN
     now = time.time()
     if uid in COOLDOWN and now - COOLDOWN[uid] < 2:
         return
     COOLDOWN[uid] = now
 
-    # 💰 puntata
     try:
         bet = int(q.data.split("_")[-1])
     except:
         bet = 200
 
-    # 🔒 saldo check
     if u["chips"] < bet:
         return await q.answer("❌ Chips insufficienti", show_alert=True)
 
-    # 💸 scala puntata
     u["chips"] -= bet
 
     reels = ["🎰", "🎰", "🎰"]
 
-    # 🎬 animazione tua
+    # 🎬 animazione
     for i in range(6):
         await asyncio.sleep(0.5)
 
@@ -691,25 +687,27 @@ async def spin_slot(update, context):
                 pass
 
     # =========================
-    # 🎯 RISULTATO SLOT
+    # 🎯 RISULTATO
     # =========================
 
     vip = random.choice(VIP_MULT)
 
+    win = 0
+
     if reels[0] == reels[1] == reels[2]:
         win = bet * 10 * vip
         status = "🏆 HAI VINTO!"
+
     elif reels[0] == reels[1] or reels[1] == reels[2]:
         win = bet * 3 * vip
-        status = "✨ QUASI VITTORIA!"
+        status = f"✨ QUASI VITTORIA! (+{bet * 3} chips)"
+
     else:
         win = 0
         status = "💥 HAI PERSO!"
 
-    # 💰 aggiorna saldo
     u["chips"] += win
 
-    # 📊 stats
     if win > 0:
         u["wins"] = u.get("wins", 0) + 1
     else:
@@ -717,7 +715,6 @@ async def spin_slot(update, context):
 
     save_user(u)
 
-    # 🎰 OUTPUT FINALE (COME VOLEVI TU)
     final_text = (
         "🎰 SLOT RESULT\n\n"
         f"┃ {reels[0]} | {reels[1]} | {reels[2]} ┃\n\n"
@@ -725,14 +722,19 @@ async def spin_slot(update, context):
         f"💰 SALDO: {u['chips']} CHIPS"
     )
 
-    # 🎮 BOTTONI
+    # =========================
+    # 🎮 BOTTONI IN COLONNA
+    # =========================
+
     keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🎰 GIOCA ANCORA", callback_data="slot"),
-            InlineKeyboardButton("🏠 MENU", callback_data="menu")
-        ]
+        [InlineKeyboardButton("🎰 SPIN DI NUOVO", callback_data="slot")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
+    try:
+        await msg.edit_caption(final_text, reply_markup=keyboard)
+    except:
+        await msg.edit_text(final_text, reply_markup=keyboard)
     # 🎬 mostra risultato finale
     try:
         await msg.edit_caption(final_text, reply_markup=keyboard)
