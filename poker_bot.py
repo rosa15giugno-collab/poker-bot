@@ -1475,7 +1475,7 @@ async def stand_mp(update, context):
     try:
         await update_table(context.bot, t)
     except Exception as e:
-        print("UPDATE ERROR:", e))
+        print("UPDATE ERROR:", e)
 
 
 # =========================
