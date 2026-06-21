@@ -1536,6 +1536,22 @@ pvp_tables.pop(table_id, None)
 
     # remove table safely
     pvp_tables.pop(table_id, None)
+    
+    # =========================
+    # CLEAN RESET TABLE (FIXED)
+    # =========================
+    table["state"] = "finished"
+
+    # 🛑 stop timer safely
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
+    # 🔒 mark safe deletion flag
+    table["deleted"] = True
+
+    # remove table safely
+    pvp_tables.pop(table_id, None)
 #==========================
 # UPDATE
 #==========================
