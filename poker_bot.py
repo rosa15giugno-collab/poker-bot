@@ -976,27 +976,33 @@ async def pvp_join(update, context, table_id):
         return await q.answer("Tavolo non esiste", show_alert=True)
 
     if table["state"] != "waiting":
-        return await q.answer("La partita è già iniziata", show_alert=True)
+        return await q.answer(
+            "La partita è già iniziata",
+            show_alert=True
+        )
 
     # 🔒 anti-duplicazione
     if uid in table["players"]:
-        return await q.answer("Sei già dentro", show_alert=True)
+        return await q.answer(
+            "Sei già dentro",
+            show_alert=True
+        )
 
     if len(table["players"]) >= PVP_MAX:
-        return await q.answer("Tavolo pieno", show_alert=True)
+        return await q.answer(
+            "Tavolo pieno",
+            show_alert=True
+        )
 
-    # 👤 init names sicuro
+    # 👤 init names
     if "names" not in table:
         table["names"] = {}
 
-    # 🎯 nome pulito (solo @username o nome)
-    username = q.from_user.username
-    first_name = q.from_user.first_name
-
-    if username:
-        name = f"@{username}"
+    # 👤 nome visualizzato
+    if q.from_user.username:
+        name = f"@{q.from_user.username}"
     else:
-        name = first_name
+        name = q.from_user.first_name or "Giocatore"
 
     # 👤 salva player
     table["players"].append(uid)
@@ -1008,16 +1014,23 @@ async def pvp_join(update, context, table_id):
 
     # 👥 lista giocatori
     players_text = "\n".join(
-        f"• {table['names'].get(pid, 'Unknown')}"
+        f"• {table['names'][pid]}"
         for pid in table["players"]
     )
 
-    # 🎬 update caption live
+    # 🎬 aggiorna caption
     try:
         await q.message.edit_caption(
             caption=(
                 "🎬 PVP BLACKJACK LIVE\n\n"
-                f"👥 Gioc
+                f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n\n"
+                f"{players_text}\n\n"
+                "⏳ In attesa avvio..."
+            ),
+            reply_markup=q.message.reply_markup
+        )
+    except Exception as e:
+        print("EDIT CAPTION ERROR:", e)
 # =========================
 # START PARTITA PVP
 # =========================
