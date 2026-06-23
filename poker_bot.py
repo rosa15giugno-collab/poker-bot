@@ -28,8 +28,22 @@ from telegram.error import BadRequest
 # =====================
 # 🔐 AUTH SYSTEM
 # =====================
+CASINO_CHAT_ID = -1002229066951
+CASINO_TOPIC_ID = 1476685
 
+def in_casino_topic(update):
+    msg = update.effective_message
+    chat = update.effective_chat
 
+    if not msg or not chat:
+        return False
+
+    return (
+            chat.id == CASINO_CHAT_ID
+            and msg.message_thread_id == CASINO_TOPIC_ID
+        )
+    except:
+        return False
 
  
 
@@ -2126,19 +2140,23 @@ handlers = {
 
 async def cb_router(update, context):
 
-    
     q = update.callback_query
     data = q.data
     uid = str(update.effective_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
-
-
     try:
         await q.answer()
     except:
         pass
+
+    # 🔒 BLOCCO CASINO TOPIC (QUI!)
+    if not in_casino_topic(update):
+        return await q.answer(
+            "🎰 Usa il Casinò nel topic dedicato.",
+            show_alert=True
+        )
   
 
     # =====================
