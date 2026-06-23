@@ -268,7 +268,7 @@ def save_user(u):
 # 🧠 UTILITY / MENU SYSTEM
 # =========================
 
-async def send_main_menu(chat_id, context):
+async def send_main_menu(chat_id, context, thread_id=None):
     caption = (
         "🏠 MENU PRINCIPALE\n\n"
         "Scegli un gioco:"
@@ -276,11 +276,11 @@ async def send_main_menu(chat_id, context):
 
     await context.bot.send_photo(
         chat_id=chat_id,
+        message_thread_id=thread_id,
         photo=MENU_PHOTO,
         caption=caption,
         reply_markup=main_menu_keyboard()
     )
-
 
 
 
@@ -2164,7 +2164,11 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await send_main_menu(q.message.chat_id, context)
+    return await send_main_menu(
+        q.message.chat_id,
+        context,
+        q.message.message_thread_id
+    )
 
     # =====================
     # 🎰 SLOT EXTRA
