@@ -154,7 +154,7 @@ def card_value(hand):
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
-        # 📸 messaggio media (foto o animazione)
+        # 📸 media (foto o animazione)
         if getattr(msg, "photo", None) or getattr(msg, "animation", None):
             return await msg.edit_caption(
                 caption=text,
@@ -162,7 +162,7 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
                 parse_mode=parse_mode
             )
 
-        # 💬 messaggio testuale
+        # 💬 testo
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
@@ -172,16 +172,17 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     except Exception as e:
         logger.error(f"safe_edit failed: {e}")
 
-        # 🔥 fallback definitivo (evita crash slot)
+        # 🔥 FALLBACK SICURO (TOPIC SAFE)
         try:
-            await msg.get_bot().send_message(
-                chat_id=msg.chat_id,
+            await msg.bot.send_message(
+                chat_id=msg.chat.id,
+                message_thread_id=msg.message_thread_id,  # 🔥 CRUCIALE
                 text=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
-        except:
-            pass
+        except Exception as e2:
+            logger.error(f"fallback failed: {e2}")
 
         return False
 # =========================
@@ -698,7 +699,8 @@ async def slot(update, context):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        # 🎯 SAFE SEND (anti timeout + fallback)
+        thread_id = target.message_thread_id
+
         try:
             await target.reply_animation(
                 animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
@@ -707,19 +709,16 @@ async def slot(update, context):
             )
 
         except Exception:
-            # fallback 1: send_message
-            await context.bot.send_message(
-                chat_id=target.chat_id,
-                text="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
+            await context.bot.send_animation(
+                chat_id=target.chat.id,
+                message_thread_id=thread_id,   # 🔥 FIX TOPIC
+                animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+                caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
                 reply_markup=keyboard
             )
 
     except Exception as e:
         print("SLOT MENU ERROR:", e)
-# =========================
-# 🎰 SPIN SLOT (FIX DEFINITIVO)
-# =========================
-
 async def spin_slot(update, context):
 
     q = update.callback_query
@@ -749,6 +748,8 @@ async def spin_slot(update, context):
 
     reels = ["🎰", "🎰", "🎰"]
 
+    thread_id = msg.message_thread_id
+
     # 🎬 ANIMAZIONE
     for i in range(6):
         await asyncio.sleep(0.6)
@@ -766,9 +767,18 @@ async def spin_slot(update, context):
             f"💰 Puntata: {bet} chips"
         )
 
-        # 🔥 aggiorna il messaggio solo una volta ogni 2 giri
+        # 🔥 FIX: evita spam + evita edit su messaggi non pronti
         if i % 2 == 0:
-            await safe_edit(msg, text)
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=msg.chat.id,
+                    message_id=msg.message_id,
+                    message_thread_id=thread_id,
+                    text=text
+                )
+            except Exception as e:
+                print("SPIN EDIT ERROR:", e)
+                continue
 
     # =========================
     # 🎯 RISULTATO
