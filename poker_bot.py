@@ -32,7 +32,7 @@ CASINO_CHAT_ID = -1002229066951
 CASINO_TOPIC_ID = 1476685
 
 def in_casino_topic(update):
-    try
+    try:
         msg = update.effective_message
         chat = update.effective_chat
 
