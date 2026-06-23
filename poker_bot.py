@@ -2170,11 +2170,11 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-    return await send_main_menu(
-        q.message.chat.id,
-        context,
-        q.message.message_thread_id
-    )
+        return await send_main_menu(
+            q.message.chat.id,
+            context,
+            q.message.message_thread_id
+        )
 
     # =====================
     # 👤 HANDLERS SEMPLICI
