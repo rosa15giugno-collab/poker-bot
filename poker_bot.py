@@ -2131,10 +2131,16 @@ async def cb_router(update, context):
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
+    print(
+    "CHAT_ID:", update.effective_chat.id,
+    "THREAD_ID:", update.effective_message.message_thread_id
+    ) 
+
     try:
         await q.answer()
     except:
         pass
+  
 
     # =====================
     # 🏠 MENU
