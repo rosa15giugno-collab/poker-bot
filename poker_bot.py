@@ -200,7 +200,7 @@ import sqlite3
 import threading
 import os
 
-DB_PATH = os.path.join(os.path.dirname(_file_), "casino_pro.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "casino_pro.db")
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
