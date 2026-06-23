@@ -2159,25 +2159,40 @@ async def cb_router(update, context):
             show_alert=True
         )
   
-
     # =====================
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
+
+        print(
+            "MENU CHAT:", q.message.chat.id,
+            "MENU THREAD:", q.message.message_thread_id
+        )
+
         try:
-            return await q.message.edit_media(
+            await q.message.edit_media(
                 media=InputMediaPhoto(
                     media=MENU_PHOTO,
                     caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:"
                 ),
-    reply_markup=main_menu_keyboard()
+                reply_markup=main_menu_keyboard()
             )
-        except Exception:
-            return await q.message.reply_photo(
+            return
+
+        except Exception as e:
+            print("MENU FALLBACK:", e)
+
+            await context.bot.send_photo(
+                chat_id=q.message.chat.id,
+                message_thread_id=q.message.message_thread_id,
                 photo=MENU_PHOTO,
                 caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
                 reply_markup=main_menu_keyboard()
             )
+            return
+
+
+    
     # =====================
     # 🎰 SLOT EXTRA
     # =====================
