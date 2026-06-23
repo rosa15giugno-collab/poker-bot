@@ -150,7 +150,7 @@ def card_value(hand):
     return total
 
 # =========================
-# SAFE EDIT (STABILE TELEGRAM)
+# SAFE EDIT (UNICO E STABILE)
 # =========================
 async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     try:
@@ -169,41 +169,45 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
             parse_mode=parse_mode
         )
 
-    except Exception as e:
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            return False
         logger.error(f"safe_edit failed: {e}")
 
-        # 🔥 FALLBACK SICURO (TOPIC SAFE)
-        try:
-            await msg.bot.send_message(
-                chat_id=msg.chat.id,
-                message_thread_id=msg.message_thread_id,  # 🔥 CRUCIALE
-                text=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-        except Exception as e2:
-            logger.error(f"fallback failed: {e2}")
+    except Exception as e:
+        logger.error(f"safe_edit fatal: {e}")
 
-        return False
+    # 🔥 FALLBACK TOPIC SAFE
+    try:
+        await msg.bot.send_message(
+            chat_id=msg.chat.id,
+            message_thread_id=msg.message_thread_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+    except Exception as e2:
+        logger.error(f"fallback failed: {e2}")
+
+    return False
+
+
 # =========================
-# DATABASE (OBBLIGATORIO PRIMO)
+# DATABASE INIT (UNICO)
 # =========================
 
 import sqlite3
 import threading
 import os
 
-# 💾 PATH STABILE (EVITA RESET DOPO DEPLOY)
-DB_PATH = os.path.join(os.path.dirname(__file__), "casino_pro.db")
+DB_PATH = os.path.join(os.path.dirname(_file_), "casino_pro.db")
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 
-# 🔥 MIGLIORIA STABILITÀ SQLITE (IMPORTANTISSIMO)
 cursor.execute("PRAGMA journal_mode=WAL")
 cursor.execute("PRAGMA synchronous=NORMAL")
 
-# 📦 CREAZIONE TABELLA
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id TEXT PRIMARY KEY,
@@ -219,33 +223,39 @@ CREATE TABLE IF NOT EXISTS users (
 
 conn.commit()
 
-# 🔒 LOCK THREAD SAFE
 lock = threading.Lock()
 
 
-#=========================
-#  TOKEN CONFIG  ******
-#=========================
-TOKEN = os.getenv("CASINO_TOKEN")
+# =========================
+# TOKEN CONFIG
+# =========================
 
+TOKEN = os.getenv("CASINO_TOKEN")
 if not TOKEN:
     raise ValueError("CASINO_TOKEN mancante")
-    
+
+
+# =========================
+# MEDIA FILES
+# =========================
+
 MENU_PHOTO = "AgACAgQAAxkBAANFajK3EgT-sXBmbmi9vwS-ia3oNPYAAp4SaxuGHZhRRK7nT0alIxkBAAMCAAN5AAM8BA"
+
 PHOTO_BLACKJACK = "AgACAgQAAxkBAANIajL7PfXN3cYXM6NliybRfiPCbP0AAk4PaxvsDJlRLQrkmC2DxfsBAAMCAAN5AAM8BA"
 
-# =========================
-# 🖼️ MEDIA FILE ID CASINO
-# =========================
-
 PROFILE_PHOTO = "AgACAgQAAxkBAANOajYuITssc-pAU6q03jTKI_7zp_oAAi4SaxubbrFRiaOrOLzu75oBAAMCAAN5AAM8BA"
+
 SHOP_PHOTO = "AgACAgQAAxkBAAODajb6Dab8GhkTHecN2tMqSIrH3AYAApoPaxuTR7hRczsjOGoTyzcBAAMCAAN5AAM8BA"
+
 BONUS_PHOTO = "AgACAgQAAxkBAANPajYuK06wNQGQdauEwDzc0O6j09cAAi8SaxubbrFR68wY43pHxZMBAAMCAAN5AAM8BA"
+
 LEADERBOARD_PHOTO = "AgACAgQAAxkBAAOAajb5SIMtlH3auG-qn2qcYUTCccsAApcPaxuTR7hRnzIcNeUkxhABAAMCAAN5AAM8BA"
 
-#=======================
-# SAVE USER
-#======================
+
+# =========================
+# SAVE USER (UNICO)
+# =========================
+
 def save_user(u):
     with lock:
         cursor.execute("""
@@ -266,58 +276,9 @@ def save_user(u):
 
 
 # =========================
-# 🧠 UTILITY / MENU SYSTEM
+# GET USER (UNICO)
 # =========================
 
-async def send_main_menu(chat_id, context, thread_id=None):
-    caption = (
-        "🏠 MENU PRINCIPALE\n\n"
-        "Scegli un gioco:"
-    )
-
-    await context.bot.send_photo(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        photo=MENU_PHOTO,
-        caption=caption,
-        reply_markup=main_menu_keyboard()
-    )
-
-
-
-# =========================
-# SAFE EDIT
-# =========================
-from telegram.error import BadRequest
-
-async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
-    try:
-        # se è una foto → caption
-        if getattr(msg, "photo", None):
-            return await msg.edit_caption(
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-
-        # altrimenti testo normale
-        return await msg.edit_text(
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode
-        )
-
-    except BadRequest as e:
-        # messaggio identico → ignora
-        if "Message is not modified" in str(e):
-            return False
-
-        logger.error(f"safe_edit failed: {e}")
-        return False
-
-    except Exception as e:
-        logger.error(f"safe_edit fatal: {e}")
-        return False
 def get_user(user_id, name="Player"):
     uid = str(user_id)
 
@@ -338,8 +299,8 @@ def get_user(user_id, name="Player"):
             }
 
         cursor.execute("""
-            INSERT INTO users (user_id, name, chips, xp, wins, losses, last_bonus, multiplier)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (user_id, name, chips, xp, wins, losses, last_bonus, multiplier)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (uid, name, 5000, 0, 0, 0, 0, 1.0))
 
         conn.commit()
@@ -354,26 +315,6 @@ def get_user(user_id, name="Player"):
             "last_bonus": 0,
             "multiplier": 1.0
         }
-
-
-def save_user(u):
-    with lock:
-        cursor.execute("""
-        UPDATE users
-        SET name=?, chips=?, xp=?, wins=?, losses=?, last_bonus=?, multiplier=?
-        WHERE user_id=?
-        """, (
-            u["name"],
-            u["chips"],
-            u["xp"],
-            u["wins"],
-            u["losses"],
-            u["last_bonus"],
-            u["multiplier"],
-            u["user_id"]
-        ))
-        conn.commit()
-
 # =========================
 # MAIN MENU
 # =========================
@@ -405,13 +346,12 @@ def main_menu_keyboard():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-
-    uid = str(update.effective_user.id)
+    uid = str(user.id)
 
     # 👤 crea / carica utente
     u = get_user(uid, user.first_name)
 
-    # 🔥 aggiorna nome sempre (opzionale ma consigliato)
+    # 🔥 aggiorna nome sempre
     u["name"] = user.first_name
     save_user(u)
 
@@ -421,8 +361,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     caption = (
         "👑 Benvenuto in CASINO by Rosa\n\n"
-        " 𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
-        "        …𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
+        "𝑰𝒍 𝒄𝒂𝒔𝒐 𝒏𝒐𝒏 è 𝒄𝒂𝒐𝒔: è 𝒖𝒏 𝒍𝒊𝒏𝒈𝒖𝒂𝒈𝒈𝒊𝒐..\n"
+        "…𝒄𝒉𝒊 𝒔𝒂 𝒂𝒔𝒄𝒐𝒍𝒕𝒂𝒓𝒍𝒐 𝒗𝒊𝒏𝒄𝒆\n\n"
         "🎰 Slot | 🎲 Roulette | 🃏 Blackjack 🆚 PvP\n"
         "🏆 Classifiche | 🎁 Bonus\n\n"
         "👇 Scegli una modalità"
@@ -2202,6 +2142,13 @@ async def cb_router(update, context):
     except:
         pass
 
+    # 🔒 BLOCCO CASINO TOPIC (OBBLIGATORIO)
+    if not in_casino_topic(update):
+        return await q.answer(
+            "🎰 Usa il Casinò nel topic dedicato.",
+            show_alert=True
+        )
+
     # =====================
     # 🏠 MENU
     # =====================
@@ -2230,94 +2177,10 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     # =====================
-    # 🎰 SLOT
-    # =====================
-    if data.startswith("spin_slot_"):
-        try:
-            bet = int(data.split("_")[-1])
-        except:
-            bet = 100
-
-        slot_games[uid] = {"bet": bet}
-        return await spin_slot(update, context)
-
-    if data == "spin_slot":
-        return await spin_slot(update, context)
-
-    # =====================
-    # 🃏 BLACKJACK
-    # =====================
-    if data == "blackjack":
-        return await blackjack(update, context)
-
-    if data.startswith("blackjack_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-        except:
-            amount = 100
-
-        return await blackjack_bet(update, context, amount)
-
-    if data == "hit":
-        return await hit(update, context)
-
-    if data == "stand":
-        return await stand(update, context)
-
-    # =====================
-    # 🎲 ROULETTE
-    # =====================
-    if data == "roulette":
-        return await roulette(update, context)
-
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data == "bet_red":
-        return await bet_red(update, context)
-
-    if data == "bet_black":
-        return await bet_black(update, context)
-
-    if data == "bet_even":
-        return await bet_even(update, context)
-
-    if data == "bet_odd":
-        return await bet_odd(update, context)
-
-    if data == "bet_zero":
-        return await bet_zero(update, context)
-
-    if data == "bet_number_value":
-        return await roulette_spin(update, context, "number")
-
-    if data.startswith("bet_number"):
-        return await bet_number(update, context)
-
-    # =====================
-    # 🎮 PVP
-    # =====================
-    if data == "pvp":
-        return await pvp(update, context)
-
-    if data.startswith("pvp_join_"):
-        return await pvp_join(update, context, data.replace("pvp_join_", ""))
-
-    if data.startswith("pvp_start_"):
-        return await pvp_start(update, context, data.replace("pvp_start_", ""))
-
-    if data.startswith("pvp_hit_"):
-        return await pvp_hit(update, context, data.replace("pvp_hit_", ""))
-
-    if data.startswith("pvp_stand_"):
-        return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
-
-    # =====================
     # ❌ FALLBACK
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
-
 
 # =========================
 # 🧠 TEXT HANDLER
@@ -2341,7 +2204,7 @@ async def text_handler(update, context):
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("casino", start))
     app.add_handler(CommandHandler("fileid", fileid))
 
     app.add_handler(CallbackQueryHandler(cb_router))
