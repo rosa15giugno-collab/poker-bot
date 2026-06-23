@@ -2164,12 +2164,20 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await send_main_menu(
-            q.message.chat_id,
-            context,
-            q.message.message_thread_id
-        )
-
+        try:
+            return await q.message.edit_media(
+                media=InputMediaPhoto(
+                    media=MENU_PHOTO,
+                    caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:"
+                ),
+    reply_markup=main_menu_keyboard()
+            )
+        except Exception:
+            return await q.message.reply_photo(
+                photo=MENU_PHOTO,
+                caption="🏠 MENU PRINCIPALE\n\nScegli un gioco:",
+                reply_markup=main_menu_keyboard()
+            )
     # =====================
     # 🎰 SLOT EXTRA
     # =====================
