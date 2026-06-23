@@ -2194,6 +2194,59 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     # =====================
+    # 🎰 SLOT BET (IMPORTANTE)
+    # =====================
+    if data.startswith("spin_slot_"):
+        try:
+            bet = int(data.split("_")[-1])
+        except:
+            bet = 100
+
+        slot_games[uid] = {"bet": bet}
+        return await spin_slot(update, context)
+
+    if data == "spin_slot":
+        return await spin_slot(update, context)
+
+    # =====================
+    # 🃏 BLACKJACK BET
+    # =====================
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
+
+        return await blackjack_bet(update, context, amount)
+
+    if data in ["hit", "stand"]:
+        return await globals()[data](update, context)
+
+    # =====================
+    # 🎲 ROULETTE
+    # =====================
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data.startswith("bet_"):
+        return await globals()[data](update, context)
+
+    # =====================
+    # 🎮 PVP
+    # =====================
+    if data.startswith("pvp_join_"):
+        return await pvp_join(update, context, data.replace("pvp_join_", ""))
+
+    if data.startswith("pvp_start_"):
+        return await pvp_start(update, context, data.replace("pvp_start_", ""))
+
+    if data.startswith("pvp_hit_"):
+        return await pvp_hit(update, context, data.replace("pvp_hit_", ""))
+
+    if data.startswith("pvp_stand_"):
+        return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
+
+    # =====================
     # ❌ FALLBACK
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
