@@ -24,6 +24,17 @@ from telegram.ext import (
 
 from telegram.error import BadRequest
 
+def get_chat(update):
+    msg = update.effective_message
+    return msg.chat.id, msg.message_thread_id
+
+# =========================
+# 🧠 CONTEXT UTILS (TOPIC SAFE)
+# =========================
+def get_ctx(update):
+    chat_id = update.effective_chat.id
+    thread_id = update.effective_message.message_thread_id
+    return chat_id, thread_id
 
 # =====================
 # 🔐 AUTH SYSTEM
@@ -46,7 +57,11 @@ def in_casino_topic(update):
     except:
         return False
 
- 
+def get_topic(update):
+    msg = update.effective_message
+    chat = update.effective_chat
+
+    return chat.id, msg.message_thread_id 
 
 
 def main_menu_keyboard():
@@ -1272,6 +1287,7 @@ async def next_turn(context, table_id):
     # 🎬 messaggio turno
     await context.bot.send_message(
         chat_id=chat_id,
+        message_thread_id=thread_id,
         text=(
             f"🎮 TURNO DI {name}\n\n"
             f"🃏 Mano: {' '.join(hand)}\n"
@@ -1311,10 +1327,11 @@ async def timer_auto(context, table_id):
     chat_id = table.get("chat_id")
 
     if chat_id:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="⏱️ Tempo scaduto → STAND automatico"
-        )
+    await context.bot.send_message(
+        chat_id=chat_id,
+        message_thread_id=table.get("thread_id"),
+        text="⏱️ Tempo scaduto → STAND automatico"
+    )
 
     # 🔁 vai al prossimo turno
     return await next_turn(context, table_id)
@@ -1429,9 +1446,10 @@ async def dealer_phase(context, table_id):
         old_timer.cancel()
 
     await context.bot.send_message(
-        chat_id=chat_id,
-        text="🏦 Il Banco sta giocando..."
-    )
+    chat_id=chat_id,
+    message_thread_id=table.get("thread_id"),
+    text="🏦 Il Banco sta giocando..."
+)
 
     await asyncio.sleep(2)
 
@@ -1509,6 +1527,7 @@ async def dealer_phase(context, table_id):
     try:
         await context.bot.send_message(
             chat_id=chat_id,
+            message_thread_id=table.get("thread_id"),
             text=result,
             reply_markup=keyboard
         )
@@ -1782,7 +1801,8 @@ async def roulette_spin(update, context, bet):
 
     # 🎡 animazione
     await context.bot.send_animation(
-        chat_id=q.message.chat_id,
+        chat_id=q.message.chat.id,
+        message_thread_id=q.message.message_thread_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
         caption="🎡 LA ROULETTE STA GIRANDO..."
     )
@@ -1826,7 +1846,8 @@ async def roulette_spin(update, context, bet):
     color = "🟢 ZERO" if n == 0 else ("🔴 ROSSO" if n in red_numbers else "⚫ NERO")
 
     await context.bot.send_message(
-        chat_id=q.message.chat_id,
+        chat_id=q.message.chat.id,
+        message_thread_id=q.message.message_thread_id,
         text=(
             "╔════════════════╗\n"
             f"{'  🎉 VITTORIA  🎉' if victory else '    💀  PERSO  💀'}\n"
@@ -1986,9 +2007,9 @@ async def roulette_spin(update, context, bet):
 
     u["chips"] -= stake
 
-    # 🎡 animazione
     await context.bot.send_animation(
-        chat_id=q.message.chat_id,
+        chat_id=q.message.chat.id,
+        message_thread_id=q.message.message_thread_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
         caption="🎡 ROULETTE GIRANDO..."
     )
@@ -2032,7 +2053,8 @@ async def roulette_spin(update, context, bet):
     color = "🟢 ZERO" if n == 0 else ("🔴 ROSSO" if n in red_numbers else "⚫ NERO")
 
     await context.bot.send_message(
-        chat_id=q.message.chat_id,
+        chat_id=q.message.chat.id,
+        message_thread_id=q.message.message_thread_id,
         text=(
             "╔════════════════╗\n"
             f"{'🎉 VITTORIA  🎉' if victory else '   💀  PERSO  💀'}\n"
