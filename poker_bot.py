@@ -2125,16 +2125,15 @@ handlers = {
 }
 
 async def cb_router(update, context):
+
+    
     q = update.callback_query
     data = q.data
     uid = str(update.effective_user.id)
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
-    print(
-    "CHAT_ID:", update.effective_chat.id,
-    "THREAD_ID:", update.effective_message.message_thread_id
-    ) 
+
 
     try:
         await q.answer()
@@ -2246,10 +2245,15 @@ async def fileid(update, context):
 
 
 # =========================
-# 🎮 CALLBACK ROUTER UNICO (PULITO)
+# 🎮 CALLBACK ROUTER UNICO
 # =========================
-
 async def cb_router(update, context):
+
+    print(
+        "CHAT_ID:", update.effective_chat.id,
+        "THREAD_ID:", update.effective_message.message_thread_id
+    )
+
     q = update.callback_query
     data = q.data
     uid = str(update.effective_user.id)
@@ -2268,7 +2272,7 @@ async def cb_router(update, context):
         return await send_main_menu(q.message.chat_id, context)
 
     # =====================
-    # 👤 HANDLERS SEMPLICI (QUI VA IL DIZIONARIO)
+    # 👤 HANDLERS SEMPLICI
     # =====================
     handlers = {
         "profile": profile,
@@ -2283,6 +2287,8 @@ async def cb_router(update, context):
 
     if data in handlers:
         return await handlers[data](update, context)
+
+    # qui sotto lascia tutto il resto del tuo router
     # =====================
     # 🎰 SLOT
     # =====================
