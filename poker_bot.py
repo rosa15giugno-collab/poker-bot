@@ -32,13 +32,14 @@ CASINO_CHAT_ID = -1002229066951
 CASINO_TOPIC_ID = 1476685
 
 def in_casino_topic(update):
-    msg = update.effective_message
-    chat = update.effective_chat
+    try
+        msg = update.effective_message
+        chat = update.effective_chat
 
-    if not msg or not chat:
-        return False
+        if not msg or not chat:
+            return False
 
-    return (
+        return (
             chat.id == CASINO_CHAT_ID
             and msg.message_thread_id == CASINO_TOPIC_ID
         )
