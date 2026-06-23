@@ -373,6 +373,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=main_menu_keyboard()
     )
+
+# =========================
+# 🧠 MENU FUNCTION (QUI VA!)
+# =========================
+async def send_main_menu(chat_id, context, thread_id=None):
+
+    caption = (
+        "🏠 MENU PRINCIPALE\n\n"
+        "Scegli un gioco:"
+    )
+
+    await context.bot.send_photo(
+        chat_id=chat_id,
+        message_thread_id=thread_id,
+        photo=MENU_PHOTO,
+        caption=caption,
+        reply_markup=main_menu_keyboard()
+    )
 # =======================
 # PROFILO
 # =======================
@@ -2082,7 +2100,6 @@ handlers = {
     "bonus": daily_bonus,
     "shop": shop,
     "leaderboard": leaderboard,
-    "slot": slot,
     "blackjack": blackjack,
     "roulette": roulette,
     "pvp": pvp,
@@ -2153,11 +2170,11 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await send_main_menu(
-            q.message.chat.id,
-            context,
-            q.message.message_thread_id
-        )
+    return await send_main_menu(
+        q.message.chat.id,
+        context,
+        q.message.message_thread_id
+    )
 
     # =====================
     # 👤 HANDLERS SEMPLICI
