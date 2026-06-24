@@ -511,11 +511,11 @@ async def daily_bonus(update, context):
     u = get_user(uid)
 
     now = time.time()
-    cooldown = 86400  # 24h
+    cooldown = 86400  # 24 ore
 
     last = u.get("last_bonus", 0)
 
-    # ⛔ cooldown check
+    # ⛔ Cooldown
     if now - last < cooldown:
         remaining = int(cooldown - (now - last))
 
@@ -532,24 +532,15 @@ async def daily_bonus(update, context):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        try:
-            return await q.message.edit_caption(
-                caption=text,
-                reply_markup=keyboard
-            )
-        except Exception:
-            try:
-                return await q.message.edit_text(
-                    text,
-                    reply_markup=keyboard
-                )
-            except Exception:
-                return await q.message.reply_text(
-                    text,
-                    reply_markup=keyboard
-                )
+        return await context.bot.send_photo(
+            chat_id=q.message.chat.id,
+            message_thread_id=q.message.message_thread_id,
+            photo=BONUS_PHOTO,
+            caption=text,
+            reply_markup=keyboard
+        )
 
-    # 🎁 reward
+    # 🎁 Premio
     reward = 500
     u["chips"] = int(u.get("chips", 0)) + reward
     u["last_bonus"] = now
@@ -565,23 +556,14 @@ async def daily_bonus(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-# 🔥 invia SEMPRE la grafica bonus
-await context.bot.send_photo(
-    chat_id=q.message.chat.id,
-    message_thread_id=q.message.message_thread_id,
-    photo=BONUS_PHOTO,
-    caption=text,
-    reply_markup=keyboard
-)
+    await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=q.message.message_thread_id,
+        photo=BONUS_PHOTO,
+        caption=text,
+        reply_markup=keyboard
+    )
 
-# 📸 edit media fallback sicuro
-await context.bot.send_photo(
-    chat_id=q.message.chat.id,
-message_thread_id=q.message.message_thread_id,
-    photo=BONUS_PHOTO,
-    caption=text,
-    reply_markup=keyboard
-)
 #======================
 # SHOP
 #======================
