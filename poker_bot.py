@@ -2466,6 +2466,9 @@ async def cb_router(update, context):
         "profile": profile,
         "bonus": daily_bonus,
         "shop": shop,
+        "buy_vip": buy_vip,
+        "buy_slotboost": buy_slotboost,
+        "buy_bjpro": buy_bjpro,
         "leaderboard": leaderboard,
         "slot": slot,
         "blackjack": blackjack,
@@ -2533,9 +2536,9 @@ async def cb_router(update, context):
     # =====================
     # 🎮 SHOP
     # =====================
-    
-    if data in ["shop", "buy_vip", "buy_slotboost", "buy_bjpro"]:
-        return await globals()[data](update, context)
+
+    if data in SHOP_HANDLERS:
+        return await SHOP_HANDLERS[data](update, context)
     
     # =====================
     # ❌ FALLBACK
