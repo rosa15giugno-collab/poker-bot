@@ -2248,7 +2248,7 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await menu(updade,context)
+        return await menu(update,context)
 
     # =====================
     # 👤 HANDLERS SEMPLICI
