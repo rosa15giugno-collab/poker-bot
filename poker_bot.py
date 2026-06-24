@@ -574,23 +574,146 @@ async def shop(update, context):
 
     text = (
         "🛒 SHOP CASINO\n\n"
-        "💎 VIP Pack - presto\n"
-        "🎰 Skin Slot - presto\n"
-        "🃏 Carte speciali - presto\n"
+        "💎 VIP PASS - 5000 chips\n"
+        "   → +20% vincite su tutti i giochi\n\n"
+        "🎰 BOOST SLOT - 3000 chips\n"
+        "   → aumenta la fortuna nelle slot\n\n"
+        "🃏 BLACKJACK PRO - 7000 chips\n"
+        "   → miglior payout nel blackjack\n\n"
+        "👇 Scegli un potenziamento:"
     )
 
-    try:
-        await q.message.edit_media(
-            media=InputMediaPhoto(
-                media=SHOP_PHOTO,
-                caption=text
-            ),
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-            ])
-        )
-    except:
-        await q.message.edit_text(text)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("💎 Acquista VIP PASS", callback_data="buy_vip")],
+        [InlineKeyboardButton("🎰 Acquista BOOST SLOT", callback_data="buy_slotboost")],
+        [InlineKeyboardButton("🃏 Acquista BLACKJACK PRO", callback_data="buy_bjpro")],
+        [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+    ])
+
+    await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_PHOTO,
+        caption=text,
+        reply_markup=keyboard
+    )
+#======================
+# 💎 ACQUISTO VIP
+#======================
+
+async def buy_vip(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    price = 5000
+
+    if u["chips"] < price:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    u["chips"] -= price
+    u["vip"] = True
+    save_user(u)
+
+    return await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_VIP_PHOTO,
+        caption=(
+            "💎 VIP ATTIVATO!\n\n"
+            "✔️ Ora guadagni +20% su tutte le vincite"
+        ),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+        ])
+    )
+#==========================
+# BUY SLOT BOOST SHOP
+#==========================
+async def buy_slotboost(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    price = 3000
+
+    if u["chips"] < price:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    u["chips"] -= price
+    u["slot_boost"] = True
+    save_user(u)
+
+    return await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_SLOT_PHOTO,
+        caption="🎰 BOOST SLOT ATTIVATO!\n\n✔️ Più fortuna nelle slot",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+        ])
+    )
+
+#==========================
+# BUY SLOT SHOP
+#==========================
+async def buy_slotboost(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    price = 3000
+
+    if u["chips"] < price:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    u["chips"] -= price
+    u["slot_boost"] = True
+    save_user(u)
+
+    return await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_SLOT_PHOTO,
+        caption="🎰 BOOST SLOT ATTIVATO!\n\n✔️ Più fortuna nelle slot",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+        ])
+    )
+#==========================
+# BUY BLACK JACK SHOP
+#==========================
+async def buy_bjpro(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    uid = str(q.from_user.id)
+    u = get_user(uid)
+
+    price = 7000
+
+    if u["chips"] < price:
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
+
+    u["chips"] -= price
+    u["bj_pro"] = True
+    save_user(u)
+
+    return await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_BJ_PHOTO,
+        caption="🃏 BLACKJACK PRO ATTIVATO!\n\n✔️ Payout migliorato",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+        ])
+    )
 
 #==========================
 # CLASSIFICA
@@ -2346,6 +2469,14 @@ async def cb_router(update, context):
     if data.startswith("pvp_stand_"):
         return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
 
+     
+    # =====================
+    # 🎮 SHOP
+    # =====================
+    
+    if data in ["shop", "buy_vip", "buy_slotboost", "buy_bjpro"]:
+        return await globals()[data](update, context)
+    
     # =====================
     # ❌ FALLBACK
     # =====================
