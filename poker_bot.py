@@ -1825,6 +1825,29 @@ async def select_number(update, context):
     )
 
 # =========================
+# 🎡 AVVIA ROULETTE NUMERO
+# =========================
+async def bet_number_value(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    # sicurezza
+    if "bet_number" not in context.user_data:
+        return await q.answer(
+            "🎯 Prima scegli un numero!",
+            show_alert=True
+        )
+
+    # avvia la roulette in modalità numero
+    return await roulette_spin(
+        update,
+        context,
+        "number"
+    )
+
+
+
+# =========================
 # 🎡 SPIN ROULETTE
 # =========================
 
