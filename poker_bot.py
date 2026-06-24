@@ -523,14 +523,31 @@ async def daily_bonus(update, context):
         m = (remaining % 3600) // 60
         s = remaining % 60
 
-        # 🔥 MIGLIORE UX: message invece di alert
-        return await q.message.edit_text(
-            f"🎁 Bonus già riscattato!\n\n"
-            f"⏳ Riprova tra {h}h {m}m {s}s",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-            ])
+        text = (
+            "🎁 Bonus già riscattato!\n\n"
+            f"⏳ Riprova tra {h}h {m}m {s}s"
         )
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
+
+        try:
+            return await q.message.edit_caption(
+                caption=text,
+                reply_markup=keyboard
+            )
+        except Exception:
+            try:
+                return await q.message.edit_text(
+                    text,
+                    reply_markup=keyboard
+                )
+            except Exception:
+                return await q.message.reply_text(
+                    text,
+                    reply_markup=keyboard
+                )
 
     # 🎁 reward
     reward = 500
