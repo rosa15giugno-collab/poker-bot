@@ -2150,6 +2150,14 @@ async def roulette_spin(update, context, bet):
 # =====================
 async def menu(update, context):
     q = update.callback_query
+
+    # 🔒 BLOCCO TOPIC
+    if not in_casino_topic(update):
+        return await q.answer(
+            "🎰 Vai nel topic CASINO per giocare!",
+            show_alert=True
+        )
+
     await q.answer()
 
     try:
