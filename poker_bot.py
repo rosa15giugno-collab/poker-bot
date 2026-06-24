@@ -553,7 +553,6 @@ async def daily_bonus(update, context):
     reward = 500
     u["chips"] = int(u.get("chips", 0)) + reward
     u["last_bonus"] = now
-
     save_user(u)
 
     text = (
@@ -566,33 +565,23 @@ async def daily_bonus(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    # 📸 edit media fallback sicuro
-    try:
-        await q.message.edit_media(
-            media=InputMediaPhoto(
-                media=BONUS_PHOTO,
-                caption=text
-            ),
-            reply_markup=keyboard
-        )
+# 🔥 invia SEMPRE la grafica bonus
+await context.bot.send_photo(
+    chat_id=q.message.chat.id,
+    message_thread_id=q.message.message_thread_id,
+    photo=BONUS_PHOTO,
+    caption=text,
+    reply_markup=keyboard
+)
 
-    except Exception:
-        try:
-            await q.message.edit_caption(
-                caption=text,
-                reply_markup=keyboard
-            )
-        except Exception:
-            try:
-                await q.message.edit_text(
-                    text,
-                    reply_markup=keyboard
-                )
-            except Exception:
-                await q.message.reply_text(
-                    text,
-                    reply_markup=keyboard
-                )
+    # 📸 edit media fallback sicuro
+    await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+    message_thread_id=q.message.message_thread_id,
+        photo=BONUS_PHOTO,
+        caption=text,
+        reply_markup=keyboard
+    )
 #======================
 # SHOP
 #======================
