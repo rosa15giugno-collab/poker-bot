@@ -1357,11 +1357,11 @@ async def timer_auto(context, table_id):
     chat_id = table.get("chat_id")
 
     if chat_id:
-    await context.bot.send_message(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        text="⏱️ Tempo scaduto → STAND automatico"
-    )
+        await context.bot.send_message(
+            chat_id=chat_id,
+            message_thread_id=thread_id,
+            text="⏱️ Tempo scaduto → STAND automatico"
+        )
 
     # 🔁 vai al prossimo turno
     return await next_turn(context, table_id)
