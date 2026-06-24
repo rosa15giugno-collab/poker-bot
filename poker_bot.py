@@ -390,22 +390,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
-# 🧠 MENU FUNCTION (QUI VA!)
+# 🧠 TOPIC SAFE SENDER
 # =========================
-async def send_main_menu(chat_id, context, thread_id=None):
 
-    caption = (
-        "🏠 MENU PRINCIPALE\n\n"
-        "Scegli un gioco:"
-    )
+async def send_topic(context, table, text=None, photo=None, animation=None, reply_markup=None):
+    chat_id = table["chat_id"]
+    thread_id = table["thread_id"]
 
-    await context.bot.send_photo(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        photo=MENU_PHOTO,
-        caption=caption,
-        reply_markup=main_menu_keyboard()
-    )
+    try:
+        if photo:
+            return await context.bot.send_photo(
+                chat_id=chat_id,
+                message_thread_id=thread_id,
+                photo=photo,
+                caption=text,
+                reply_markup=reply_markup
+            )
+
+        if animation:
+            return await context.bot.send_animation(
+                chat_id=chat_id,
+                message_thread_id=thread_id,
+                animation=animation,
+                caption=text,
+                reply_markup=reply_markup
+            )
+
+        return await context.bot.send_message(
+            chat_id=chat_id,
+            message_thread_id=thread_id,
+            text=text,
+            reply_markup=reply_markup
+        )
+
+    except Exception as e:
+        print("SEND_TOPIC ERROR:", e)
 # =======================
 # PROFILO
 # =======================
@@ -454,6 +473,7 @@ async def profile(update, context):
     )
 
     try:
+        
         await q.message.edit_media(
             media=InputMediaPhoto(
                 media=PROFILE_PHOTO,
@@ -684,11 +704,11 @@ async def slot(update, context):
         except Exception:
             await context.bot.send_animation(
                 chat_id=target.chat.id,
-                message_thread_id=thread_id,   # 🔥 FIX TOPIC
-                animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
-                caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
-                reply_markup=keyboard
-            )
+        message_thread_id=target.message_thread_id,
+        animation="BAACAgQAAxkBAANCajJYH3Jfdd7S1sx5SVA2snDBo-kAAuwmAAKGHZhRonuMrpmMdyg8BA",
+            caption="🎰 SLOT MACHINE\n\n💰 Scegli la puntata!",
+            reply_markup=keyboard
+        )
 
     except Exception as e:
         print("SLOT MENU ERROR:", e)
@@ -816,11 +836,14 @@ async def spin_slot(update, context):
         except Exception as e:
             print("FINAL ERROR:", e)
             try:
+                thread_id = getattr(msg, "message_thread_id", None)
+
                 await context.bot.send_message(
-                    chat_id=msg.chat_id,
+                    chat_id=msg.chat.id,
+                    message_thread_id=thread_id,
                     text=final_text,
                     reply_markup=keyboard
-                )
+                )    
             except:
                 pass
 
@@ -843,13 +866,15 @@ async def blackjack(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
+    chat_id, thread_id = get_chat(update)
+
     await context.bot.send_photo(
-        chat_id=q.message.chat_id,
+        chat_id=chat_id,
+        message_thread_id=thread_id,
         photo=PHOTO_BLACKJACK,
         caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
         reply_markup=keyboard
     )
-
 
 # =========================
 # 💰 START PARTITA
@@ -1095,9 +1120,13 @@ async def pvp(update, context):
         ]
     ])
 
+    chat_id = q.message.chat.id
+    thread_id = q.message.message_thread_id
+
     msg = await context.bot.send_animation(
-        chat_id=q.message.chat.id,
-        animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
+        chat_id=chat_id,
+        message_thread_id=thread_id,
+    animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
         caption=(
             "🎬 PVP BLACKJACK\n\n"
             "👥 Tavolo aperto (2-6 giocatori)\n"
@@ -1117,7 +1146,8 @@ async def pvp(update, context):
         "turn_index": 0,
 
         # FIX IMPORTANTE
-        "chat_id": msg.chat.id,
+         "chat_id": msg.chat.id,
+        "thread_id": msg.message_thread_id,
         "message_id": msg.message_id
     }
 # =========================
@@ -1329,7 +1359,7 @@ async def timer_auto(context, table_id):
     if chat_id:
     await context.bot.send_message(
         chat_id=chat_id,
-        message_thread_id=table.get("thread_id"),
+        message_thread_id=thread_id,
         text="⏱️ Tempo scaduto → STAND automatico"
     )
 
@@ -1446,10 +1476,10 @@ async def dealer_phase(context, table_id):
         old_timer.cancel()
 
     await context.bot.send_message(
-    chat_id=chat_id,
-    message_thread_id=table.get("thread_id"),
-    text="🏦 Il Banco sta giocando..."
-)
+        chat_id=chat_id,
+        message_thread_id=thread_id,
+        text="🏦 Il Banco sta giocando..."
+    )
 
     await asyncio.sleep(2)
 
@@ -1526,8 +1556,8 @@ async def dealer_phase(context, table_id):
 
     try:
         await context.bot.send_message(
-            chat_id=chat_id,
-            message_thread_id=table.get("thread_id"),
+            chat_id=table["chat_id"],
+            message_thread_id=table["thread_id"],
             text=result,
             reply_markup=keyboard
         )
@@ -1560,11 +1590,15 @@ async def update_table(bot, t):
     text = render_table(t)
     keyboard = table_buttons(t)
 
+    chat_id = t.get("chat_id")
+    message_id = t.get("message_id")
+    thread_id = t.get("thread_id")  # 🔥 AGGIUNTO
+
     try:
-        # prova prima caption
         await bot.edit_message_caption(
-            chat_id=t["chat_id"],
-            message_id=t["message_id"],
+            chat_id=chat_id,
+            message_id=message_id,
+            message_thread_id=thread_id,   # 🔥 FIX TOPIC
             caption=text,
             reply_markup=keyboard,
             parse_mode="HTML"
@@ -1572,10 +1606,10 @@ async def update_table(bot, t):
 
     except Exception:
         try:
-            # se invece è testo
             await bot.edit_message_text(
-                chat_id=t["chat_id"],
-                message_id=t["message_id"],
+                chat_id=chat_id,
+                message_id=message_id,
+                message_thread_id=thread_id,  # 🔥 FIX TOPIC
                 text=text,
                 reply_markup=keyboard,
                 parse_mode="HTML"
@@ -1587,12 +1621,12 @@ async def update_table(bot, t):
 
             try:
                 await bot.send_message(
-                    chat_id=t["chat_id"],
+                    chat_id=chat_id,
+                    message_thread_id=thread_id,  # 🔥 FIX TOPIC
                     text=f"⚠️ Errore update tavolo:\n{e}"
                 )
             except:
                 pass
-
 
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
@@ -1800,9 +1834,12 @@ async def roulette_spin(update, context, bet):
     u["chips"] -= stake
 
     # 🎡 animazione
+    chat_id = q.message.chat.id
+    thread_id = q.message.message_thread_id
+
     await context.bot.send_animation(
-        chat_id=q.message.chat.id,
-        message_thread_id=q.message.message_thread_id,
+        chat_id=chat_id,
+        message_thread_id=thread_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
         caption="🎡 LA ROULETTE STA GIRANDO..."
     )
@@ -1845,12 +1882,18 @@ async def roulette_spin(update, context, bet):
 
     color = "🟢 ZERO" if n == 0 else ("🔴 ROSSO" if n in red_numbers else "⚫ NERO")
 
+    chat_id = q.message.chat.id
+    thread_id = q.message.message_thread_id
+
+    if thread_id is None:
+        thread_id = getattr(q.message, "message_thread_id", None)
+
     await context.bot.send_message(
-        chat_id=q.message.chat.id,
-        message_thread_id=q.message.message_thread_id,
+        chat_id=chat_id,
+        message_thread_id=thread_id,
         text=(
             "╔════════════════╗\n"
-            f"{'  🎉 VITTORIA  🎉' if victory else '    💀  PERSO  💀'}\n"
+            f"{'🎉 VITTORIA  🎉' if victory else '   💀  PERSO  💀'}\n"
             "╚════════════════╝\n\n"
             f"🎯 Numero: {n} - {color}\n"
             f"💰 +{win}\n"
@@ -2007,9 +2050,12 @@ async def roulette_spin(update, context, bet):
 
     u["chips"] -= stake
 
+    chat_id = q.message.chat.id
+    thread_id = q.message.message_thread_id
+
     await context.bot.send_animation(
-        chat_id=q.message.chat.id,
-        message_thread_id=q.message.message_thread_id,
+        chat_id=chat_id,
+        message_thread_id=thread_id,
         animation="BAACAgQAAxkBAAMyai-t7QABk6-viJWJJNrPpu1h8B4-AAJxGwACDEyAUQ9qmdWU-FGYPAQ",
         caption="🎡 ROULETTE GIRANDO..."
     )
@@ -2052,9 +2098,12 @@ async def roulette_spin(update, context, bet):
 
     color = "🟢 ZERO" if n == 0 else ("🔴 ROSSO" if n in red_numbers else "⚫ NERO")
 
+    chat_id = q.message.chat.id
+    thread_id = q.message.message_thread_id
+
     await context.bot.send_message(
-        chat_id=q.message.chat.id,
-        message_thread_id=q.message.message_thread_id,
+        chat_id=chat_id,
+        message_thread_id=thread_id,
         text=(
             "╔════════════════╗\n"
             f"{'🎉 VITTORIA  🎉' if victory else '   💀  PERSO  💀'}\n"
