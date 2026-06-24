@@ -574,14 +574,14 @@ await context.bot.send_photo(
     reply_markup=keyboard
 )
 
-    # 📸 edit media fallback sicuro
-    await context.bot.send_photo(
-        chat_id=q.message.chat.id,
-    message_thread_id=q.message.message_thread_id,
-        photo=BONUS_PHOTO,
-        caption=text,
-        reply_markup=keyboard
-    )
+# 📸 edit media fallback sicuro
+await context.bot.send_photo(
+    chat_id=q.message.chat.id,
+message_thread_id=q.message.message_thread_id,
+    photo=BONUS_PHOTO,
+    caption=text,
+    reply_markup=keyboard
+)
 #======================
 # SHOP
 #======================
