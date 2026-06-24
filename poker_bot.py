@@ -767,10 +767,16 @@ async def spin_slot(update, context):
                     chat_id=msg.chat.id,
                     message_id=msg.message_id,
                     text=text
+                )    
+            except:
+                await context.bot.edit_message_caption(
+                    chat_id=msg.chat.id,
+                    message_id=msg.message_id,
+                    caption=txt
                 )
             except Exception as e:
                 print("SPIN EDIT ERROR:", e)
-                continue
+                
 
     # =========================
     # 🎯 RISULTATO
@@ -2241,11 +2247,7 @@ async def cb_router(update, context):
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await send_main_menu(
-            q.message.chat.id,
-            context,
-            q.message.message_thread_id
-        )
+        return await menu(updade,context)
 
     # =====================
     # 👤 HANDLERS SEMPLICI
