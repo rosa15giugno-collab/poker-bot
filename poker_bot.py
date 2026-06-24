@@ -363,10 +363,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     uid = str(user.id)
 
+    # 🔒 BLOCCO TOPIC
+    msg = update.effective_message
+    thread_id = getattr(msg, "message_thread_id", None)
+
+    if thread_id is None or not in_casino_topic(update):
+        return await update.message.reply_text(
+            "🎰 Vai nel topic CASINO per giocare!"
+        )
+
     # 👤 crea / carica utente
     u = get_user(uid, user.first_name)
 
-    # 🔥 aggiorna nome sempre
     u["name"] = user.first_name
     save_user(u)
 
@@ -388,7 +396,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption=caption,
         reply_markup=main_menu_keyboard()
     )
-
 # =========================
 # 🧠 TOPIC SAFE SENDER
 # =========================
