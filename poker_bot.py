@@ -769,13 +769,14 @@ async def spin_slot(update, context):
                     text=text
                 )    
             except:
-                await context.bot.edit_message_caption(
-                    chat_id=msg.chat.id,
-                    message_id=msg.message_id,
-                    caption=txt
-                )
-            except Exception as e:
-                print("SPIN EDIT ERROR:", e)
+                try:
+                    await context.bot.edit_message_caption(
+                        chat_id=msg.chat.id,
+                        message_id=msg.message_id,
+                        caption=text
+                    )
+                except Exception as e:
+                    print("SPIN EDIT ERROR:", e)
                 
 
     # =========================
