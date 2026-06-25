@@ -1418,7 +1418,7 @@ async def pvp(update, context):
         "deck": [],
         "state": "waiting",
         "turn_index": 0,
-        "table_id": table_id,
+        "names": {},
 
         "chat_id": msg.chat.id,
         "thread_id": getattr(msg, "message_thread_id", None),
@@ -1508,6 +1508,11 @@ async def pvp_start(update, context, table_id):
     if len(table["players"]) < PVP_MIN:
         return await q.answer("Servono almeno 2 giocatori", show_alert=True)
 
+    # 🧠 salva SEMPRE riferimenti messaggio (FONDAMENTALE)
+    table["chat_id"] = q.message.chat.id
+    table["message_id"] = q.message.message_id
+    table["thread_id"] = getattr(q.message, "message_thread_id", None)
+
     # 🃏 deck setup
     deck = CARDS.copy()
     random.shuffle(deck)
@@ -1516,30 +1521,19 @@ async def pvp_start(update, context, table_id):
     table["state"] = "playing"
     table["turn_index"] = 0
 
-    # 👤 salva info chat/topic (CRUCIALE)
-   # table["thread_id"] = getattr(q.message, "message_thread_id", None)
-   # table["chat_id"] = q.message.chat.id
-   # table["message_id"] = q.message.message_id
-
-    # 👤 deal players (safe)
+    # 👤 deal players
     for uid in table["players"]:
-        table["hands"][uid] = [
-            deck.pop(),
-            deck.pop()
-        ]
+        table["hands"][uid] = [deck.pop(), deck.pop()]
 
-    # 🏦 dealer hand
-    table["dealer"] = [
-        deck.pop(),
-        deck.pop()
-    ]
+    # 🏦 dealer
+    table["dealer"] = [deck.pop(), deck.pop()]
 
-    # 🛑 stop timer precedente (ANTI BUG)
+    # 🛑 stop timer precedente
     old_timer = table.get("timer_task")
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    # 🎬 cinematic start message
+    # 🎬 animazione start
     try:
         await q.message.edit_caption(
             caption="🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo...",
@@ -1552,16 +1546,12 @@ async def pvp_start(update, context, table_id):
 
     await asyncio.sleep(1.2)
 
-    # 🔥 update tavolo UI (SAFE)
-    if table.get("message_id"):
-        try:
-            await update_table(context.bot, table)
-        except Exception as e:
-            print("UPDATE TABLE ERROR:", e)
+    # 🔥 aggiorna tavolo
+    await update_table(context.bot, table)
 
     await asyncio.sleep(0.3)
 
-    # ▶️ start turno
+    # ▶️ primo turno
     return await next_turn(context, table_id)
 # =========================
 # TURNO CON TIMER PVP
@@ -1893,24 +1883,61 @@ async def update_table(bot, t):
     message_id = t.get("message_id")
 
     if not chat_id or not message_id:
+        print("❌ update_table: chat_id o message_id mancanti")
         return
 
+    # =========================
+    # 🎮 BUILD UI TESTO
+    # =========================
     text = render_table(t)
+
+    # 👥 dettagli giocatori + mani
+    players_text = "\n\n👥 MANI:\n"
+
+    for uid in t.get("players", []):
+        hand = t.get("hands", {}).get(uid, [])
+        score = card_value(hand)
+
+        name = (t.get("names") or {}).get(uid, f"User {uid}")
+
+        cards = " ".join(hand) if hand else "—"
+
+        players_text += f"• {name} → {cards} ({score})\n"
+
+    dealer = t.get("dealer", [])
+    dealer_score = card_value(dealer)
+
+    text += players_text
+    text += f"\n🏦 Banco: {' '.join(dealer)} ({dealer_score})"
+
     keyboard = table_buttons(t)
 
+    # =========================
+    # 📸 CAPTION FIRST
+    # =========================
     try:
-        # 🔥 SEMPRE caption (perché è animation/photo)
-        await bot.edit_message_caption(
+        return await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
             caption=text,
             reply_markup=keyboard
         )
-        return
-
     except Exception as e:
-        print("EDIT CAPTION FAIL:", e)
-        return  # ❌ NIENTE FALLBACK TEXT
+        print("caption edit fail:", e)
+
+    # =========================
+    # 💬 FALLBACK TEXT
+    # =========================
+    try:
+        return await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("text edit fail:", e)
+        
     # =========================
     # 📸 EDIT CAPTION (file_id / animation / photo)
     # =========================
@@ -1943,28 +1970,65 @@ async def update_table(bot, t):
 # =========================
 
 def table_buttons(t):
-    table_id = CURRENT_PVP_TABLE
-    state = t.get("state")
+    # ⚠️ usa SEMPRE l'id del tavolo reale, non una costante globale
+    table_id = t.get("table_id", CURRENT_PVP_TABLE)
+    state = t.get("state", "waiting")
 
+    # =========================
+    # 🎮 FASE LOBBY (WAITING)
+    # =========================
     if state != "playing":
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("🎯 ENTRA TAVOLO", callback_data=f"pvp_join_{table_id}")],
-            [InlineKeyboardButton("🚀 AVVIA PARTITA", callback_data=f"pvp_start_{table_id}")],
-            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+            [
+                InlineKeyboardButton(
+                    "🎯 ENTRA TAVOLO",
+                    callback_data=f"pvp_join_{table_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🚀 AVVIA PARTITA",
+                    callback_data=f"pvp_start_{table_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 MENU",
+                    callback_data="menu"
+                )
+            ]
         ])
 
-    turn_index = t.get("turn_index", 0)
+    # =========================
+    # 🎮 FASE GAME (PLAYING)
+    # =========================
     players = t.get("players", [])
+    turn_index = t.get("turn_index", 0)
 
-    # 👇 se non è turno attivo → disabilitiamo logica UX
-    your_turn_hint = t.get("state") == "playing"
+    # 🔥 sicurezza: evita bottoni attivi se fuori turno
+    is_valid_game = len(players) > 0 and turn_index < len(players)
+
+    if not is_valid_game:
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🏠 MENU", callback_data="menu")
+            ]
+        ])
 
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("➕ CARTA", callback_data=f"pvp_hit_{table_id}"),
-            InlineKeyboardButton("🖐️ STAI", callback_data=f"pvp_stand_{table_id}")
+            InlineKeyboardButton(
+                "➕ CARTA",
+                callback_data=f"pvp_hit_{table_id}"
+            ),
+            InlineKeyboardButton(
+                "🖐️ STAI",
+                callback_data=f"pvp_stand_{table_id}"
+            )
         ],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
     ])
 
 
@@ -2659,16 +2723,20 @@ async def cb_router(update, context):
     # 🎮 PVP
     # =====================
     if data.startswith("pvp_join_"):
-        return await pvp_join(update, context, data.replace("pvp_join_", ""))
+        table_id = data.split("_", 2)[2]
+        return await pvp_join(update, context, table_id)
 
     if data.startswith("pvp_start_"):
-        return await pvp_start(update, context, data.replace("pvp_start_", ""))
+        table_id = data.split("_", 2)[2]
+        return await pvp_start(update, context, table_id)
 
     if data.startswith("pvp_hit_"):
-        return await pvp_hit(update, context, data.replace("pvp_hit_", ""))
+        table_id = data.split("_", 2)[2]
+        return await pvp_hit(update, context, table_id)
 
     if data.startswith("pvp_stand_"):
-        return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
+        table_id = data.split("_", 2)[2]
+        return await pvp_stand(update, context, table_id)
 
     # =====================
     # 🛒 SHOP (FIX)
