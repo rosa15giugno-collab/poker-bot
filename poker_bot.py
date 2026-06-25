@@ -2446,30 +2446,23 @@ async def cb_router(update, context):
     data = q.data
     uid = str(update.effective_user.id)
 
-    print(
-        "CHAT_ID:", update.effective_chat.id,
-        "THREAD_ID:", update.effective_message.message_thread_id
-    )
+    print("🔥 CALLBACK DEBUG:", repr(data))
 
-    print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
+    await q.answer()
 
-    try:
-        await q.answer()
-    except:
-        pass
+    # 🔒 topic fix
+    ALLOWED_OUTSIDE_TOPIC = {"menu", "go_menu", "shop", "bonus"}
 
-    # 🔒 BLOCCO CASINO TOPIC (OBBLIGATORIO)
-    if not in_casino_topic(update):
+    if not in_casino_topic(update) and data not in ALLOWED_OUTSIDE_TOPIC:
         return await q.answer(
-            "🎰 Usa il Casinò nel topic dedicato.",
+            "🎰 Vai nel topic CASINO per giocare!",
             show_alert=True
         )
-
     # =====================
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
-        return await menu(update,context)
+        return await menu(update, context)
 
     # =====================
     # 👤 HANDLERS SEMPLICI
@@ -2488,8 +2481,17 @@ async def cb_router(update, context):
         "pvp": pvp,
     }
 
-    if data in handlers:
+     if data in handlers:
         return await handlers[data](update, context)
+
+    if data.startswith("num_"):
+        return await select_number(update, context)
+
+    if data.startswith("bet_"):
+        return await globals()[data](update, context)
+
+    if data in ["hit", "stand"]:
+        return await globals()[data](update, context)
 
     # =====================
     # 🎰 SLOT BET (IMPORTANTE)
@@ -2543,7 +2545,8 @@ async def cb_router(update, context):
 
     if data.startswith("pvp_stand_"):
         return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
-
+ 
+    print("❌ CALLBACK NON GESTITA:", data)
      
     # =====================
     # 🎮 SHOP
