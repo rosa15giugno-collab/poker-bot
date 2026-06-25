@@ -686,47 +686,34 @@ async def buy_slotboost(update, context):
         caption=text,
         reply_markup=keyboard
     )
-#==========================
-# 🎰 BUY SLOT SHOP
-#==========================
 
-async def buy_slotboost(update, context):
+#==========================
+# BUY BLACK JACK SHOP
+#==========================
+async def buy_bjpro(update, context):
     q = update.callback_query
     await q.answer()
 
     uid = str(q.from_user.id)
     u = get_user(uid)
 
-    price = 3000
+    price = 7000
 
-    # ❌ saldo insufficiente
     if u["chips"] < price:
-        await q.answer("❌ Chips insufficienti", show_alert=True)
-        return
+        return await q.answer("❌ Chips insufficienti", show_alert=True)
 
-    # 💰 acquisto
     u["chips"] -= price
-    u["slot_boost"] = True
+    u["bj_pro"] = True
     save_user(u)
 
-    text = (
-        "🎰 BOOST SLOT ATTIVATO!\n\n"
-        "✔️ Più fortuna nelle slot"
-    )
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
-    ])
-
-    chat_id = q.message.chat.id
-    thread_id = getattr(q.message, "message_thread_id", None)
-
-    await context.bot.send_photo(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        photo=SHOP_SLOT_PHOTO,
-        caption=text,
-        reply_markup=keyboard
+    return await context.bot.send_photo(
+        chat_id=q.message.chat.id,
+        message_thread_id=getattr(q.message, "message_thread_id", None),
+        photo=SHOP_BJ_PHOTO,
+        caption="🃏 BLACKJACK PRO ATTIVATO!\n\n✔️ Payout migliorato",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+        ])
     )
 #==========================
 # 🎰 BUY SLOT SHOP
