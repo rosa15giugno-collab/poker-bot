@@ -602,11 +602,18 @@ async def shop(update, context):
 #======================
 
 async def buy_vip(update, context):
+    print("BUY_VIP START")
+
     q = update.callback_query
     await q.answer()
 
     uid = str(q.from_user.id)
+
+    print("UID:", uid)
+
     u = get_user(uid)
+
+    print("USER:", u)
 
     price = 5000
 
