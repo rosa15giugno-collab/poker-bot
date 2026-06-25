@@ -649,7 +649,7 @@ async def buy_vip(update, context):
     await context.bot.send_photo(
         chat_id=chat_id,
         message_thread_id=thread_id,
-        photo=SHOP_VIP_PHOTO,
+        photo=SHOP_PHOTO,
         caption=text,
         reply_markup=keyboard
     )
@@ -696,7 +696,7 @@ async def buy_slotboost(update, context):
     return await context.bot.send_photo(
         chat_id=chat_id,
         message_thread_id=thread_id,
-        photo=SHOP_SLOT_PHOTO,
+        photo=SHOP_PHOTO,
         caption=text,
         reply_markup=keyboard
     )
@@ -723,7 +723,7 @@ async def buy_bjpro(update, context):
     return await context.bot.send_photo(
         chat_id=q.message.chat.id,
         message_thread_id=getattr(q.message, "message_thread_id", None),
-        photo=SHOP_BJ_PHOTO,
+        photo=SHOP_PHOTO,
         caption="🃏 BLACKJACK PRO ATTIVATO!\n\n✔️ Payout migliorato",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
