@@ -1711,7 +1711,7 @@ async def pvp_hit(update, context, table_id):
         await update_table(context.bot, table)
 
         # 💬 feedback immediato player
-        await q.answer(f"🃏 {card} | {score}", show_alert=False
+        await q.answer(f"🃏 {card} | {score}", show_alert=False)
 # =========================
 # STAND PVP (FIXED STABLE)
 # =========================
