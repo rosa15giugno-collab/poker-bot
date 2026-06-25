@@ -1865,46 +1865,38 @@ async def update_table(bot, t):
 
     chat_id = t.get("chat_id")
     message_id = t.get("message_id")
-    thread_id = t.get("thread_id")
 
     if not chat_id or not message_id:
         print("❌ update_table: chat_id o message_id mancanti")
         return
 
     # =========================
-    # 📸 TRY: EDIT CAPTION (prima scelta)
+    # 📸 EDIT CAPTION (file_id / animation / photo)
     # =========================
     try:
         return await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
-            message_thread_id=thread_id,
             caption=text,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
 
     # =========================
-    # 💬 FALLBACK: EDIT TEXT
+    # 💬 FALLBACK TEXT
     # =========================
     except Exception:
         try:
             return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                message_thread_id=thread_id,
                 text=text,
                 reply_markup=keyboard,
                 parse_mode="HTML"
             )
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-
-            # ❌ niente send_message (evita duplicati tavolo)
             print(f"❌ UPDATE TABLE FAILED: {e}")
-
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
