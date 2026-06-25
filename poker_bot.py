@@ -73,6 +73,7 @@ def main_menu_keyboard():
         [InlineKeyboardButton("👤 PROFILO", callback_data="profilo")],
         [InlineKeyboardButton("🏆 CLASSIFICA", callback_data="classifica")],
         [InlineKeyboardButton("🛒 SHOP", callback_data="shop")],
+        InlineKeyboardButton("🧠 INFO TURNO", callback_data="pvp_info"),
         [InlineKeyboardButton("🎁 BONUS", callback_data="bonus")]
     ])
 
@@ -101,11 +102,29 @@ pvp_lock = asyncio.Lock()
 def render_table(t):
     players = t.get("players", [])
 
+    # 👥 lista giocatori con mani e punteggio
+    players_text = ""
+
+    for uid in players:
+        name = t.get("names", {}).get(uid, f"User {uid}")
+        hand = t.get("hands", {}).get(uid, [])
+        score = card_value(hand) if hand else 0
+
+        cards = " ".join(hand) if hand else "—"
+
+        players_text += (
+            f"👤 {name}\n"
+            f"🃏 {cards}\n"
+            f"💯 {score}\n\n"
+        )
+
     return (
-        "🎮 PVP TABLE\n\n"
+        "🎮 PVP BLACKJACK\n\n"
         f"👥 Giocatori: {len(players)}\n"
         f"💰 Puntata: {t.get('bet', 0)}\n"
-        f"📊 Stato: {t.get('state', 'waiting')}\n"
+        f"📊 Stato: {t.get('state', 'waiting')}\n\n"
+        f"🧠 Ultima azione:\n{t.get('last_action', '—')}\n\n"
+        f"{players_text}"
     )
 
 # =========================
@@ -1654,25 +1673,45 @@ async def pvp_hit(update, context, table_id):
             return await q.answer("Tavolo non valido", show_alert=True)
 
         idx = table["turn_index"]
+
+        if idx >= len(table["players"]):
+            return await q.answer("Turno finito", show_alert=True)
+
         uid = str(table["players"][idx])
 
+        # ⛔ controllo turno
         if str(q.from_user.id) != uid:
             return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
+        # 🛑 deck safety
+        if not table.get("deck"):
+            return await q.answer("Mazzo finito", show_alert=True)
+
+        # 🃏 pesca carta
         card = table["deck"].pop()
         table["hands"][uid].append(card)
 
+        # 💯 punteggio
         score = card_value(table["hands"][uid])
 
+        # 🔥 UI LOG AZIONE (FONDAMENTALE)
+        name = table.get("names", {}).get(uid, uid)
+
+        table["last_action"] = (
+            f"🃏 {name} pesca {card}\n"
+            f"💯 Totale: {score}"
+        )
+
+        # 💥 bust → cambia turno
         if score > 21:
+            table["last_action"] += "\n💥 BUST → turno passato"
             table["turn_index"] += 1
 
+        # 🔁 aggiorna tavolo PRIMA risposta UI
         await update_table(context.bot, table)
-        await q.answer(f"Score: {score}")
 
-
-
-
+        # 💬 feedback immediato player
+        await q.answer(f"🃏 {card} | {score}", show_alert=False
 # =========================
 # STAND PVP (FIXED STABLE)
 # =========================
@@ -1854,13 +1893,13 @@ async def update_table(bot, t):
     message_id = t.get("message_id")
 
     if not chat_id or not message_id:
-        print("❌ update_table: missing ids")
         return
 
     text = render_table(t)
     keyboard = table_buttons(t)
 
     try:
+        # 🔥 SEMPRE caption (perché è animation/photo)
         await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
@@ -1870,18 +1909,8 @@ async def update_table(bot, t):
         return
 
     except Exception as e:
-        # fallback se non è caption
-        try:
-            await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-            return
-
-        except Exception as e2:
-            print("❌ UPDATE TABLE FAILED:", e2)
+        print("EDIT CAPTION FAIL:", e)
+        return  # ❌ NIENTE FALLBACK TEXT
     # =========================
     # 📸 EDIT CAPTION (file_id / animation / photo)
     # =========================
@@ -1914,22 +1943,29 @@ async def update_table(bot, t):
 # =========================
 
 def table_buttons(t):
+    table_id = CURRENT_PVP_TABLE
+    state = t.get("state")
 
-    table_id = t.get("table_id")
+    if state != "playing":
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("🎯 ENTRA TAVOLO", callback_data=f"pvp_join_{table_id}")],
+            [InlineKeyboardButton("🚀 AVVIA PARTITA", callback_data=f"pvp_start_{table_id}")],
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
+
+    turn_index = t.get("turn_index", 0)
+    players = t.get("players", [])
+
+    # 👇 se non è turno attivo → disabilitiamo logica UX
+    your_turn_hint = t.get("state") == "playing"
 
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton(
-                "➕ CARTA",
-                callback_data=f"pvp_hit_{table_id}"
-            ),
-            InlineKeyboardButton(
-                "🖐️ STAI",
-                callback_data=f"pvp_stand_{table_id}"
-            )
-        ]
+            InlineKeyboardButton("➕ CARTA", callback_data=f"pvp_hit_{table_id}"),
+            InlineKeyboardButton("🖐️ STAI", callback_data=f"pvp_stand_{table_id}")
+        ],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
-
 
 
 
