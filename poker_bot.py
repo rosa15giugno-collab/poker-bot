@@ -593,7 +593,7 @@ async def shop(update, context):
     await context.bot.send_photo(
         chat_id=q.message.chat.id,
         message_thread_id=getattr(q.message, "message_thread_id", None),
-        photo=SHOP_PHOTO,
+        photo=BONUS_PHOTO,
         caption=text,
         reply_markup=keyboard
     )
