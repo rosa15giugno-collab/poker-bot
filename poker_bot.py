@@ -619,9 +619,13 @@ async def buy_vip(update, context):
 
     # ❌ saldo insufficiente
     if u["chips"] < price:
-        return await q.answer(
-            "❌ Chips insufficienti",
-            show_alert=True
+        return await q.message.reply_text(
+            f"❌ Non hai abbastanza chips.\n\n"
+            f"💰 Saldo attuale: {u['chips']}\n"
+            f"💎 Costo VIP: {price}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+            ])
         )
 
     # 💰 pagamento
@@ -664,11 +668,14 @@ async def buy_slotboost(update, context):
 
     # ❌ saldo insufficiente
     if u["chips"] < price:
-        return await q.answer(
-            "❌ Chips insufficienti",
-            show_alert=True
+        return await q.message.reply_text(
+            f"❌ Non hai abbastanza chips.\n\n"
+            f"💰 Saldo attuale: {u['chips']}\n"
+            f"💎 Costo VIP: {price}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+            ])
         )
-
     # 💰 acquisto
     u["chips"] -= price
     u["slot_boost"] = True
@@ -737,8 +744,14 @@ async def buy_slotboost(update, context):
 
     # ❌ saldo insufficiente
     if u["chips"] < price:
-        await q.answer("❌ Chips insufficienti", show_alert=True)
-        return
+        return await q.message.reply_text(
+            f"❌ Non hai abbastanza chips.\n\n"
+            f"💰 Saldo attuale: {u['chips']}\n"
+            f"💎 Costo VIP: {price}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
+            ])
+        )
 
     # 💰 acquisto
     u["chips"] -= price
