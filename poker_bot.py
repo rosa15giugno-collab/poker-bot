@@ -1492,9 +1492,9 @@ async def pvp_start(update, context, table_id):
     table["turn_index"] = 0
 
     # 👤 salva info chat/topic (CRUCIALE)
-    table["thread_id"] = getattr(q.message, "message_thread_id", None)
-    table["chat_id"] = q.message.chat.id
-    table["message_id"] = q.message.message_id
+   # table["thread_id"] = getattr(q.message, "message_thread_id", None)
+   # table["chat_id"] = q.message.chat.id
+   # table["message_id"] = q.message.message_id
 
     # 👤 deal players (safe)
     for uid in table["players"]:
@@ -1860,15 +1860,12 @@ async def dealer_phase(context, table_id):
 #==========================
 
 async def update_table(bot, t):
+
     if not t:
         return
 
-    # 🛑 stop se tavolo chiuso
     if t.get("state") == "finished" or t.get("deleted"):
         return
-
-    text = render_table(t)
-    keyboard = table_buttons(t)
 
     chat_id = t.get("chat_id")
     message_id = t.get("message_id")
@@ -1877,6 +1874,17 @@ async def update_table(bot, t):
         print("❌ update_table: chat_id o message_id mancanti")
         return
 
+    try:
+        await bot.edit_message_caption(
+            chat_id=chat_id,
+            message_id=message_id,
+            caption=render_table(t),
+            reply_markup=table_buttons(t),
+            parse_mode="HTML"
+        )
+
+    except Exception as e:
+        print("❌ EDIT CAPTION ERROR:", e)
     # =========================
     # 📸 EDIT CAPTION (file_id / animation / photo)
     # =========================
@@ -1909,10 +1917,19 @@ async def update_table(bot, t):
 # =========================
 
 def table_buttons(t):
+
+    table_id = CURRENT_PVP_TABLE
+
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("➕ CARTA", callback_data="hit_mp"),
-            InlineKeyboardButton("🖐️ STAI", callback_data="stand_mp")
+            InlineKeyboardButton(
+                "➕ CARTA",
+                callback_data=f"pvp_hit_{table_id}"
+            ),
+            InlineKeyboardButton(
+                "🖐️ STAI",
+                callback_data=f"pvp_stand_{table_id}"
+            )
         ]
     ])
 
