@@ -92,6 +92,8 @@ COOLDOWN = {}
 pvp_tables = {}
 pvp_turn_index = {}
 pvp_deadlines = {}
+# 🔒 LOCK GLOBALE PvP (QUI)
+pvp_lock = asyncio.Lock()
 
 # =========================
 # RENDER PVP TABLE
@@ -1330,6 +1332,9 @@ async def stand(update, context):
     ])
 
     await safe_edit(q.message, testo, reply_markup=keyboard)
+#
+#  PVP
+#
 
 async def pvp(update, context):
     q = update.callback_query
@@ -1394,6 +1399,7 @@ async def pvp(update, context):
         "deck": [],
         "state": "waiting",
         "turn_index": 0,
+        "table_id": table_id,
 
         "chat_id": msg.chat.id,
         "thread_id": getattr(msg, "message_thread_id", None),
@@ -1615,7 +1621,7 @@ async def timer_auto(context, table_id):
     await asyncio.sleep(PVP_TIME)
 
     # 🔒 se turno è già cambiato → IGNORA COMPLETAMENTE
-    if time.time() < table.get("deadline", 0):
+    if time.time() > table.get("deadline", 0):
         return
 
     # 🔥 sicurezza anti doppio trigger
@@ -1640,51 +1646,29 @@ async def timer_auto(context, table_id):
 # HIT PVP (FIXED STABLE)
 # =========================
 async def pvp_hit(update, context, table_id):
-    q = update.callback_query
-    table = pvp_tables.get(table_id)
+    async with pvp_lock:
+        q = update.callback_query
+        table = pvp_tables.get(table_id)
 
-    if not table or table.get("state") != "playing":
-        return await q.answer("Tavolo non valido", show_alert=True)
+        if not table or table.get("state") != "playing":
+            return await q.answer("Tavolo non valido", show_alert=True)
 
-    # 🔒 anti double click / race condition
-    if table.get("action_lock"):
-        return await q.answer("⏳ Attendi...", show_alert=True)
-
-    table["action_lock"] = True
-
-    try:
         idx = table["turn_index"]
-
-        if idx >= len(table["players"]):
-            return await q.answer("Turno finito", show_alert=True)
-
         uid = str(table["players"][idx])
-
-        print("PVP HIT USER:", q.from_user.id)
-        print("PVP TURN:", uid)
 
         if str(q.from_user.id) != uid:
             return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-        # 🃏 pesca carta
         card = table["deck"].pop()
         table["hands"][uid].append(card)
 
-        hand = table["hands"][uid]
-        score = card_value(hand)
+        score = card_value(table["hands"][uid])
 
-        await q.answer(f"HIT → {score}")
-
-        # 💥 bust → cambia turno
         if score > 21:
             table["turn_index"] += 1
-            return await next_turn(context, table_id)
 
-        # 🔁 aggiorna UI senza cambiare turno
         await update_table(context.bot, table)
-
-    finally:
-        table["action_lock"] = False
+        await q.answer(f"Score: {score}")
 
 
 
@@ -1860,7 +1844,6 @@ async def dealer_phase(context, table_id):
 #==========================
 
 async def update_table(bot, t):
-
     if not t:
         return
 
@@ -1871,20 +1854,34 @@ async def update_table(bot, t):
     message_id = t.get("message_id")
 
     if not chat_id or not message_id:
-        print("❌ update_table: chat_id o message_id mancanti")
+        print("❌ update_table: missing ids")
         return
+
+    text = render_table(t)
+    keyboard = table_buttons(t)
 
     try:
         await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
-            caption=render_table(t),
-            reply_markup=table_buttons(t),
-            parse_mode="HTML"
+            caption=text,
+            reply_markup=keyboard
         )
+        return
 
     except Exception as e:
-        print("❌ EDIT CAPTION ERROR:", e)
+        # fallback se non è caption
+        try:
+            await bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=text,
+                reply_markup=keyboard
+            )
+            return
+
+        except Exception as e2:
+            print("❌ UPDATE TABLE FAILED:", e2)
     # =========================
     # 📸 EDIT CAPTION (file_id / animation / photo)
     # =========================
@@ -1918,7 +1915,7 @@ async def update_table(bot, t):
 
 def table_buttons(t):
 
-    table_id = CURRENT_PVP_TABLE
+    table_id = t.get("table_id")
 
     return InlineKeyboardMarkup([
         [
