@@ -1344,7 +1344,8 @@ async def pvp(update, context):
     # Tavolo già attivo
     if table_id in pvp_tables:
         table = pvp_tables[table_id]
-
+        
+        
         if table.get("state") != "finished":
             return await q.answer(
                 "🎮 Tavolo già aperto!",
@@ -1372,8 +1373,7 @@ async def pvp(update, context):
         ]
     ])
 
-    chat_id = q.message.chat.id
-    thread_id = q.message.message_thread_id
+    "thread_id": getattr(msg, "message_thread_id", None),
 
     msg = await context.bot.send_animation(
         chat_id=chat_id,
@@ -1494,6 +1494,11 @@ async def pvp_start(update, context, table_id):
     table["state"] = "playing"
     table["turn_index"] = 0
 
+    # 👤 salva info chat/topic (CRUCIALE)
+    table["thread_id"] = getattr(q.message, "message_thread_id", None)
+    table["chat_id"] = q.message.chat.id
+    table["message_id"] = q.message.message_id
+
     # 👤 deal players (safe)
     for uid in table["players"]:
         table["hands"][uid] = [
@@ -1507,6 +1512,11 @@ async def pvp_start(update, context, table_id):
         deck.pop()
     ]
 
+    # 🛑 stop timer precedente (ANTI BUG)
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
+
     # 🎬 cinematic start message
     try:
         await q.message.edit_caption(
@@ -1514,16 +1524,20 @@ async def pvp_start(update, context, table_id):
             reply_markup=None
         )
     except:
-        await q.message.edit_text("🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo...")
+        await q.message.edit_text(
+            "🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo..."
+        )
 
     await asyncio.sleep(1.2)
 
-    # 🔥 IMPORTANTISSIMO: prima render della UI tavolo
-    if "message_id" in table:
+    # 🔥 update tavolo UI (SAFE)
+    if table.get("message_id"):
         try:
             await update_table(context.bot, table)
         except Exception as e:
             print("UPDATE TABLE ERROR:", e)
+
+    await asyncio.sleep(0.3)
 
     # ▶️ start turno
     return await next_turn(context, table_id)
@@ -1536,17 +1550,21 @@ async def next_turn(context, table_id):
     if not table or table.get("state") != "playing":
         return
 
+    thread_id = table.get("thread_id")
+    chat_id = table.get("chat_id")
+
     players = table["players"]
 
-    # 🏁 fine giocatori → dealer
+    # 🏁 fine giocatori → dealer phase
     if table["turn_index"] >= len(players):
         return await dealer_phase(context, table_id)
 
     uid = players[table["turn_index"]]
-    hand = table["hands"][uid]
+    hand = table["hands"].get(uid, [])
 
     name = table.get("names", {}).get(uid, f"User {uid}")
 
+    # ⏱️ deadline turno
     table["deadline"] = time.time() + PVP_TIME
 
     keyboard = InlineKeyboardMarkup([
@@ -1556,9 +1574,8 @@ async def next_turn(context, table_id):
         ]
     ])
 
-    chat_id = table.get("chat_id")
     if not chat_id:
-        print("❌ chat_id mancante")
+        print("❌ chat_id mancante in next_turn")
         return
 
     # 🧠 stop timer precedente (IMPORTANTISSIMO)
@@ -1566,18 +1583,22 @@ async def next_turn(context, table_id):
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    # 🎬 messaggio turno
-    await context.bot.send_message(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        text=(
-            f"🎮 TURNO DI {name}\n\n"
-            f"🃏 Mano: {' '.join(hand)}\n"
-            f"💯 Totale: {card_value(hand)}\n\n"
-            f"⏱️ Hai {PVP_TIME} secondi!"
-        ),
-        reply_markup=keyboard
-    )
+    # 🎮 messaggio turno
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            message_thread_id=thread_id,
+            text=(
+                f"🎮 TURNO DI {name}\n\n"
+                f"🃏 Mano: {' '.join(hand) if hand else '—'}\n"
+                f"💯 Totale: {card_value(hand)}\n\n"
+                f"⏱️ Hai {PVP_TIME} secondi!"
+            ),
+            reply_markup=keyboard
+        )
+
+    except Exception as e:
+        print("❌ NEXT_TURN SEND ERROR:", e)
 
     # 🔥 nuovo timer pulito
     table["timer_task"] = asyncio.create_task(
@@ -1588,6 +1609,7 @@ async def next_turn(context, table_id):
 # =========================
 async def timer_auto(context, table_id):
     table = pvp_tables.get(table_id)
+    thread_id = table.get("thread_id")
 
     if not table or table.get("state") != "playing":
         return
@@ -1712,6 +1734,7 @@ async def pvp_stand(update, context, table_id):
 # =========================
 async def dealer_phase(context, table_id):
     table = pvp_tables.get(table_id)
+    thread_id = table.get("thread_id")
 
     if not table:
         return
@@ -1836,6 +1859,7 @@ async def update_table(bot, t):
     if not t:
         return
 
+    # 🛑 stop se tavolo chiuso
     if t.get("state") == "finished" or t.get("deleted"):
         return
 
@@ -1844,24 +1868,34 @@ async def update_table(bot, t):
 
     chat_id = t.get("chat_id")
     message_id = t.get("message_id")
-    thread_id = t.get("thread_id")  # 🔥 AGGIUNTO
+    thread_id = t.get("thread_id")
 
+    if not chat_id or not message_id:
+        print("❌ update_table: chat_id o message_id mancanti")
+        return
+
+    # =========================
+    # 📸 TRY: EDIT CAPTION (prima scelta)
+    # =========================
     try:
-        await bot.edit_message_caption(
+        return await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
-            message_thread_id=thread_id,   # 🔥 FIX TOPIC
+            message_thread_id=thread_id,
             caption=text,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
 
+    # =========================
+    # 💬 FALLBACK: EDIT TEXT
+    # =========================
     except Exception:
         try:
-            await bot.edit_message_text(
+            return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                message_thread_id=thread_id,  # 🔥 FIX TOPIC
+                message_thread_id=thread_id,
                 text=text,
                 reply_markup=keyboard,
                 parse_mode="HTML"
@@ -1871,14 +1905,8 @@ async def update_table(bot, t):
             import traceback
             traceback.print_exc()
 
-            try:
-                await bot.send_message(
-                    chat_id=chat_id,
-                    message_thread_id=thread_id,  # 🔥 FIX TOPIC
-                    text=f"⚠️ Errore update tavolo:\n{e}"
-                )
-            except:
-                pass
+            # ❌ niente send_message (evita duplicati tavolo)
+            print(f"❌ UPDATE TABLE FAILED: {e}")
 
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
