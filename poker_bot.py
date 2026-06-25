@@ -1658,13 +1658,13 @@ async def pvp_hit(update, context, table_id):
         if idx >= len(table["players"]):
             return await q.answer("Turno finito", show_alert=True)
 
-        uid = table["players"][idx]
+        uid = str(table["players"][idx])
 
-        if q.from_user.id != uid:
+        print("PVP HIT USER:", q.from_user.id)
+        print("PVP TURN:", uid)
+
+        if str(q.from_user.id) != uid:
             return await q.answer("⛔ Non è il tuo turno", show_alert=True)
-
-        if not table["deck"]:
-            return await q.answer("Deck finito", show_alert=True)
 
         # 🃏 pesca carta
         card = table["deck"].pop()
