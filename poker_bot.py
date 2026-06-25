@@ -2438,26 +2438,30 @@ async def fileid(update, context):
 
 
 # =========================
-# 🎮 CALLBACK ROUTER UNICO (FIX DEFINITIVO)
+# 🎮 CALLBACK ROUTER FIXED
 # =========================
+
 async def cb_router(update, context):
 
     q = update.callback_query
     data = q.data
     uid = str(update.effective_user.id)
 
-    print("🔥 CALLBACK DEBUG:", repr(data))
+    print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
-    await q.answer()
+    # ⚠️ risposta callback UNA SOLA VOLTA
+    try:
+        await q.answer()
+    except:
+        pass
 
-    # 🔒 topic fix
+    # 🔒 BLOCCO TOPIC CASINO
     ALLOWED_OUTSIDE_TOPIC = {"menu", "go_menu", "shop", "bonus"}
 
     if not in_casino_topic(update) and data not in ALLOWED_OUTSIDE_TOPIC:
-        return await q.answer(
-            "🎰 Vai nel topic CASINO per giocare!",
-            show_alert=True
-        )
+        await q.answer("🎰 Vai nel topic CASINO per giocare!", show_alert=True)
+        return
+
     # =====================
     # 🏠 MENU
     # =====================
@@ -2465,7 +2469,7 @@ async def cb_router(update, context):
         return await menu(update, context)
 
     # =====================
-    # 👤 HANDLERS SEMPLICI
+    # 👤 HANDLERS BASE
     # =====================
     handlers = {
         "profile": profile,
@@ -2481,20 +2485,11 @@ async def cb_router(update, context):
         "pvp": pvp,
     }
 
-     if data in handlers:
+    if data in handlers:
         return await handlers[data](update, context)
 
-    if data.startswith("num_"):
-        return await select_number(update, context)
-
-    if data.startswith("bet_"):
-        return await globals()[data](update, context)
-
-    if data in ["hit", "stand"]:
-        return await globals()[data](update, context)
-
     # =====================
-    # 🎰 SLOT BET (IMPORTANTE)
+    # 🎰 SLOT
     # =====================
     if data.startswith("spin_slot_"):
         try:
@@ -2509,7 +2504,7 @@ async def cb_router(update, context):
         return await spin_slot(update, context)
 
     # =====================
-    # 🃏 BLACKJACK BET
+    # 🃏 BLACKJACK
     # =====================
     if data.startswith("blackjack_bet_"):
         try:
@@ -2545,16 +2540,13 @@ async def cb_router(update, context):
 
     if data.startswith("pvp_stand_"):
         return await pvp_stand(update, context, data.replace("pvp_stand_", ""))
- 
-    print("❌ CALLBACK NON GESTITA:", data)
-     
-    # =====================
-    # 🎮 SHOP
-    # =====================
 
+    # =====================
+    # 🛒 SHOP (FIX)
+    # =====================
     if data in SHOP_HANDLERS:
         return await SHOP_HANDLERS[data](update, context)
-    
+
     # =====================
     # ❌ FALLBACK
     # =====================
