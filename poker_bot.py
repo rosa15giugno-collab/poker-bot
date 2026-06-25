@@ -1681,7 +1681,7 @@ async def pvp_hit(update, context, table_id):
             return await next_turn(context, table_id)
 
         # 🔁 aggiorna UI senza cambiare turno
-        return await update_table_message(context, table_id)
+        await update_table(context.bot, table)
 
     finally:
         table["action_lock"] = False
