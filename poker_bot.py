@@ -1331,21 +1331,16 @@ async def stand(update, context):
 
     await safe_edit(q.message, testo, reply_markup=keyboard)
 
-# =========================
-# ENTRATA ANIMATA TABLE PVP
-# =========================
-
 async def pvp(update, context):
     q = update.callback_query
     await q.answer()
 
     table_id = CURRENT_PVP_TABLE
 
-    # Tavolo già attivo
+    # 🛑 tavolo già attivo
     if table_id in pvp_tables:
         table = pvp_tables[table_id]
-        
-        
+
         if table.get("state") != "finished":
             return await q.answer(
                 "🎮 Tavolo già aperto!",
@@ -1373,12 +1368,14 @@ async def pvp(update, context):
         ]
     ])
 
-    "thread_id": getattr(msg, "message_thread_id", None),
+    chat_id = q.message.chat.id
+    thread_id = getattr(q.message, "message_thread_id", None)
 
+    # 🎬 INVIO MESSAGGIO
     msg = await context.bot.send_animation(
         chat_id=chat_id,
         message_thread_id=thread_id,
-    animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
+        animation="BAACAgQAAxkBAANSajYyOYLMYvipiOk9MIO_9GrCnEQAArUnAAKbbrFRZhzxx2G87ck8BA",
         caption=(
             "🎬 PVP BLACKJACK\n\n"
             "👥 Tavolo aperto (2-6 giocatori)\n"
@@ -1388,6 +1385,7 @@ async def pvp(update, context):
         reply_markup=keyboard
     )
 
+    # 🧠 SALVATAGGIO TAVOLO
     pvp_tables[table_id] = {
         "players": [],
         "hands": {},
@@ -1397,9 +1395,8 @@ async def pvp(update, context):
         "state": "waiting",
         "turn_index": 0,
 
-        # FIX IMPORTANTE
-         "chat_id": msg.chat.id,
-        "thread_id": msg.message_thread_id,
+        "chat_id": msg.chat.id,
+        "thread_id": getattr(msg, "message_thread_id", None),
         "message_id": msg.message_id
     }
 # =========================
