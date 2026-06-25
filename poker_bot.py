@@ -1086,8 +1086,21 @@ async def blackjack_bet(update, context, amount):
     u = get_user(uid)
 
     if u.get("chips", 0) < amount:
-        await safe_edit(q.message, "❌ Non hai abbastanza chips.")
-        return
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
+
+        try:
+            return await q.message.edit_text(
+                "❌ Non hai abbastanza chips per questa puntata.",
+                reply_markup=keyboard
+            )
+        except:
+            return await q.message.reply_text(
+                "❌ Non hai abbastanza chips per questa puntata.",
+                reply_markup=keyboard
+            )
 
     u["chips"] -= amount
     save_user(u)
