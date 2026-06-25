@@ -1699,7 +1699,6 @@ async def pvp_stand(update, context, table_id):
     if not table or table.get("state") != "playing":
         return await q.answer("Tavolo non valido", show_alert=True)
 
-    # 🔒 anti race condition
     if table.get("action_lock"):
         return await q.answer("⏳ Attendi...", show_alert=True)
 
@@ -1711,15 +1710,23 @@ async def pvp_stand(update, context, table_id):
         if idx >= len(table["players"]):
             return await q.answer("Turno finito", show_alert=True)
 
-        uid = table["players"][idx]
+        uid = str(table["players"][idx])
 
-        if q.from_user.id != uid:
+        if str(q.from_user.id) != uid:
             return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
         await q.answer("STAND")
 
-        # 🔥 avanza turno in modo sicuro
+        # 🛑 stop timer
+        old_timer = table.get("timer_task")
+        if old_timer and not old_timer.done():
+            old_timer.cancel()
+
+        # ➡️ next player
         table["turn_index"] += 1
+
+        # 🔥 update UI
+        await update_table(context.bot, table)
 
         return await next_turn(context, table_id)
 
