@@ -718,22 +718,43 @@ async def buy_bjpro(update, context):
 
     price = 7000
 
-    if u["chips"] < price:
-        return await q.answer("❌ Chips insufficienti", show_alert=True)
+    if u.get("chips", 0) < price:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+        ])
+
+        return await q.message.edit_text(
+            "❌ Chips insufficienti per BLACKJACK PRO",
+            reply_markup=keyboard
+        )
 
     u["chips"] -= price
     u["bj_pro"] = True
     save_user(u)
 
-    return await context.bot.send_photo(
-        chat_id=q.message.chat.id,
-        message_thread_id=getattr(q.message, "message_thread_id", None),
-        photo=SHOP_PHOTO,
-        caption="🃏 BLACKJACK PRO ATTIVATO!\n\n✔️ Payout migliorato",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🏠 Torna al Menu", callback_data="menu")]
-        ])
+    text = (
+        "🃏 BLACKJACK PRO ATTIVATO!\n\n"
+        "✔️ Payout migliorato"
     )
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
+
+    chat_id = q.message.chat.id
+    thread_id = getattr(q.message, "message_thread_id", None)
+
+    try:
+        await context.bot.send_photo(
+            chat_id=chat_id,
+            message_thread_id=thread_id,
+            photo=SHOP_BJ_PHOTO,
+            caption=text,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print("❌ ERROR BUY_BJPRO:", e)
+        await q.message.reply_text(text, reply_markup=keyboard)
 #==========================
 # 🎰 BUY SLOT SHOP
 #==========================
