@@ -1579,40 +1579,21 @@ async def next_turn(context, table_id):
     # ⏱️ deadline turno
     table["deadline"] = time.time() + PVP_TIME
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("➕ CARTA", callback_data=f"pvp_hit_{table_id}"),
-            InlineKeyboardButton("🖐️ STAI", callback_data=f"pvp_stand_{table_id}")
-        ]
-    ])
+    # 🎮 UI bottoni turno (solo se vuoi mantenerli nel tavolo live)
+    table["current_turn_uid"] = uid
 
-    if not chat_id:
-        print("❌ chat_id mancante in next_turn")
-        return
-
-    # 🧠 stop timer precedente (IMPORTANTISSIMO)
+    # 🧠 stop timer precedente
     old_timer = table.get("timer_task")
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    # 🎮 messaggio turno
-    try:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            message_thread_id=thread_id,
-            text=(
-                f"🎮 TURNO DI {name}\n\n"
-                f"🃏 Mano: {' '.join(hand) if hand else '—'}\n"
-                f"💯 Totale: {card_value(hand)}\n\n"
-                f"⏱️ Hai {PVP_TIME} secondi!"
-            ),
-            reply_markup=keyboard
-        )
+    # 🔥 invece di send_message → aggiorniamo SOLO la tavola
+    table["last_action"] = f"🎮 Turno di {name}"
 
-    except Exception as e:
-        print("❌ NEXT_TURN SEND ERROR:", e)
+    # 📊 aggiorna UI LIVE
+    await update_table(context.bot, table)
 
-    # 🔥 nuovo timer pulito
+    # 🔥 nuovo timer
     table["timer_task"] = asyncio.create_task(
         timer_auto(context, table_id)
     )
@@ -1669,38 +1650,31 @@ async def pvp_hit(update, context, table_id):
 
         uid = str(table["players"][idx])
 
-        # ⛔ controllo turno
         if str(q.from_user.id) != uid:
             return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-        # 🛑 deck safety
         if not table.get("deck"):
             return await q.answer("Mazzo finito", show_alert=True)
 
-        # 🃏 pesca carta
+        # 🃏 carta
         card = table["deck"].pop()
         table["hands"][uid].append(card)
 
-        # 💯 punteggio
         score = card_value(table["hands"][uid])
 
-        # 🔥 UI LOG AZIONE (FONDAMENTALE)
         name = table.get("names", {}).get(uid, uid)
 
-        table["last_action"] = (
-            f"🃏 {name} pesca {card}\n"
-            f"💯 Totale: {score}"
-        )
+        # 🔥 LOG VISIVO (QUESTO SOSTITUISCE send_message turno)
+        table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        # 💥 bust → cambia turno
+        # 💥 bust
         if score > 21:
-            table["last_action"] += "\n💥 BUST → turno passato"
+            table["last_action"] += " 💥 BUST"
             table["turn_index"] += 1
 
-        # 🔁 aggiorna tavolo PRIMA risposta UI
+        # 🔁 aggiorna SOLO UI tavolo
         await update_table(context.bot, table)
 
-        # 💬 feedback immediato player
         await q.answer(f"🃏 {card} | {score}", show_alert=False)
 # =========================
 # STAND PVP (FIXED STABLE)
@@ -1866,12 +1840,10 @@ async def dealer_phase(context, table_id):
     table["deleted"] = True
     pvp_tables.pop(table_id, None)
    
+#=======================
+# UPDATE_TABLE
+#======================
     
-    
-#==========================
-# UPDATE
-#==========================
-
 async def update_table(bot, t):
     if not t:
         return
@@ -1887,11 +1859,10 @@ async def update_table(bot, t):
         return
 
     # =========================
-    # 🎮 BUILD UI TESTO
+    # 🎮 BUILD UI
     # =========================
     text = render_table(t)
 
-    # 👥 dettagli giocatori + mani
     players_text = "\n\n👥 MANI:\n"
 
     for uid in t.get("players", []):
@@ -1899,7 +1870,6 @@ async def update_table(bot, t):
         score = card_value(hand)
 
         name = (t.get("names") or {}).get(uid, f"User {uid}")
-
         cards = " ".join(hand) if hand else "—"
 
         players_text += f"• {name} → {cards} ({score})\n"
@@ -1910,18 +1880,22 @@ async def update_table(bot, t):
     text += players_text
     text += f"\n🏦 Banco: {' '.join(dealer)} ({dealer_score})"
 
+    if t.get("last_action"):
+        text += f"\n\n🔥 {t['last_action']}"
+
     keyboard = table_buttons(t)
 
     # =========================
-    # 📸 CAPTION FIRST
+    # 📸 TRY CAPTION
     # =========================
     try:
-        return await bot.edit_message_caption(
+        await bot.edit_message_caption(
             chat_id=chat_id,
             message_id=message_id,
             caption=text,
             reply_markup=keyboard
         )
+        return
     except Exception as e:
         print("caption edit fail:", e)
 
@@ -1929,7 +1903,7 @@ async def update_table(bot, t):
     # 💬 FALLBACK TEXT
     # =========================
     try:
-        return await bot.edit_message_text(
+        await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
@@ -1937,34 +1911,6 @@ async def update_table(bot, t):
         )
     except Exception as e:
         print("text edit fail:", e)
-        
-    # =========================
-    # 📸 EDIT CAPTION (file_id / animation / photo)
-    # =========================
-    try:
-        return await bot.edit_message_caption(
-            chat_id=chat_id,
-            message_id=message_id,
-            caption=text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-
-    # =========================
-    # 💬 FALLBACK TEXT
-    # =========================
-    except Exception:
-        try:
-            return await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard,
-                parse_mode="HTML"
-            )
-
-        except Exception as e:
-            print(f"❌ UPDATE TABLE FAILED: {e}")
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
