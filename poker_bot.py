@@ -1762,107 +1762,104 @@ async def dealer_phase(context, table_id):
     dealer_hand = table.get("dealer", [])
     dealer_score = card_value(dealer_hand)
 
+    # =========================
+    # 🏆 RESULT BUILD
+    # =========================
 
-    # =========================
-    # RESULT BUILD
-    # =========================
-    
     result = (
-    "🏆🏆 RISULTATO PARTITA 🏆🏆\n\n"
-    f"🎩 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-    f"💯 Totale Banco: {dealer_score}\n\n"
-    "━━━━━━━━━━━━━━━━━━\n\n"
-)
+        "🏆🏆 RISULTATO PARTITA 🏆🏆\n\n"
+        f"🎩 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+        f"💯 Totale Banco: {dealer_score}\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+    )
 
-bet = table.get("bet", 500)
+    bet = table.get("bet", 500)
 
-winner_block = ""
-others_block = ""
+    winner_block = ""
+    others_block = ""
 
-for uid in table.get("players", []):
+    for uid in table.get("players", []):
 
-    name = (table.get("names") or {}).get(uid, f"User {uid}")
+        name = (table.get("names") or {}).get(uid, f"User {uid}")
 
-    hand = table.get("hands", {}).get(uid, [])
-    score = card_value(hand)
+        hand = table.get("hands", {}).get(uid, [])
+        score = card_value(hand)
 
-    hand_text = " ".join(hand) if hand else "—"
+        hand_text = " ".join(hand) if hand else "—"
 
-    u = get_user(str(uid))
-    chips = u.get("chips", 0)
+        u = get_user(str(uid))
+        chips = u.get("chips", 0)
 
-    # =========================
-    # 🏆 VINTO
-    # =========================
-    if dealer_score <= 21 and score <= 21 and score > dealer_score:
+        # =========================
+        # 🏆 VINTO (UNICO BLOCCO WINNER)
+        # =========================
+        if dealer_score <= 21 and score <= 21 and score > dealer_score:
 
-        u["wins"] = u.get("wins", 0) + 1
-        u["chips"] = chips + bet
+            u["wins"] = u.get("wins", 0) + 1
+            u["chips"] = chips + bet
 
-        winner_block = (
-            "       ━━━━━━━━━━━━━━━━━━\n"
-            "        🏆 VINCITORE 🏆\n"
-            "       ━━━━━━━━━━━━━━━━━━\n\n"
-            f"        👑 {name}\n"
-            f"        🃏 {hand_text}\n"
-            f"        💯 {score}\n"
-            f"        💰 +{bet} 🪙\n"
-            f"        🏦 Chips: {u['chips']}\n\n"
-            "       ━━━━━━━━━━━━━━━━━━\n\n"
-        )
+            winner_block = (
+                "━━━━━━━━━━━━━━━━━━\n"
+                "        🏆 VINCITORE 🏆\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                f"        👑 {name}\n"
+                f"        🃏 {hand_text}\n"
+                f"        💯 {score}\n"
+                f"        💰 +{bet} 🪙\n"
+                f"        🏦 Chips: {u['chips']}\n\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+            )
+
+            save_user(u)
+            continue
+
+        # =========================
+        # ❌ RISULTATI NORMALI
+        # =========================
+
+        if score > 21:
+            res = f"💥 PERSO (-{bet} 🪙)"
+            u["losses"] = u.get("losses", 0) + 1
+            u["chips"] = max(0, chips - bet)
+
+        elif dealer_score > 21:
+            res = f"🏆 VINTO (+{bet} 🪙)"
+            u["wins"] = u.get("wins", 0) + 1
+            u["chips"] = chips + bet
+
+        elif score == dealer_score:
+            res = "🤝 PAREGGIO (±0 🪙)"
+            u["chips"] = chips
+
+        else:
+            res = f"💥 PERSO (-{bet} 🪙)"
+            u["losses"] = u.get("losses", 0) + 1
+            u["chips"] = max(0, chips - bet)
 
         save_user(u)
-        continue
 
-    # =========================
-    # ❌ PERSO / VINTO BANCO / PAREGGIO
-    # =========================
-
-    if score > 21:
-        res = f"💥 PERSO (-{bet} 🪙)"
-        u["losses"] = u.get("losses", 0) + 1
-        u["chips"] = max(0, chips - bet)
-
-    elif dealer_score > 21:
-        res = f"🏆 VINTO (+{bet} 🪙)"
-        u["wins"] = u.get("wins", 0) + 1
-        u["chips"] = chips + bet
-
-    elif score == dealer_score:
-        res = "🤝 PAREGGIO (±0 🪙)"
-        u["chips"] = chips
-
-    else:
-        res = f"💥 PERSO (-{bet} 🪙)"
-        u["losses"] = u.get("losses", 0) + 1
-        u["chips"] = max(0, chips - bet)
-
-    save_user(u)
-
-    others_block += (
-        f"👤 {name}\n"
-        f"🃏 Mano: {hand_text}\n"
-        f"💯 Totale: {score}\n"
-        f"{res}\n"
-        f"🏦 Saldo: {u['chips']} 🪙\n\n"
-        "──────────────\n\n"
-    )
+        others_block += (
+            f"👤 {name}\n"
+            f"🃏 Mano: {hand_text}\n"
+            f"💯 Totale: {score}\n"
+            f"{res}\n"
+            f"🏦 Saldo: {u['chips']} 🪙\n\n"
+            "──────────────\n\n"
+        )
 
     # =========================
     # FINAL COMPOSITION
     # =========================
 
     result += winner_block + others_block
+
     # =========================
     # FINAL BUTTONS
     # =========================
+
     keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")
-        ],
-        [
-            InlineKeyboardButton("🏠 MENU", callback_data="menu")
-        ]
+        [InlineKeyboardButton("🎮 GIOCA DI NUOVO", callback_data="pvp")],
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
     if len(result) > 3900:
