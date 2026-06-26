@@ -1741,40 +1741,33 @@ async def dealer_phase(context, table_id):
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    dealer_hand = table.get("dealer", [])
-
-    # 🎬 Inizio turno banco
     await context.bot.send_message(
         chat_id=chat_id,
         message_thread_id=thread_id,
-        text=(
-            "🏦 TURNO DEL BANCO\n\n"
-            f"🃏 Carte iniziali: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-            f"💯 Totale: {card_value(dealer_hand)}"
-        )
+        text="🏦 Il Banco sta giocando..."
     )
 
-    await asyncio.sleep(1.5)
-
-    # 🎬 dealer pesca
-while card_value(table.get("dealer", [])) < 17:
-    if not table.get("deck"):
-        break
-
-    table["dealer"].append(table["deck"].pop())
     await asyncio.sleep(2)
 
-dealer_hand = table.get("dealer", [])
-dealer_score = card_value(dealer_hand)
+    # 🎬 dealer pesca
+    while card_value(table.get("dealer", [])) < 17:
+        if not table.get("deck"):
+            break
 
-# =========================
-# RESULT BUILD (DENTRO FUNZIONE!!)
-# =========================
-result = (
-    "🏆 RISULTATI PVP\n\n"
-    f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-    f"💯 Totale Banco: {dealer_score}\n\n"
-)
+        table["dealer"].append(table["deck"].pop())
+        await asyncio.sleep(2)
+
+    dealer_hand = table.get("dealer", [])
+    dealer_score = card_value(dealer_hand)
+
+    # =========================
+    # RESULT BUILD
+    # =========================
+    result = (
+        "🏆 RISULTATI PVP\n\n"
+        f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+        f"💯 Totale Banco: {dealer_score}\n\n"
+    )
 
     bet = table.get("bet", 200)
 
@@ -1788,7 +1781,7 @@ result = (
         hand_text = " ".join(hand) if hand else "—"
 
         u = get_user(str(uid))
-        chips = u.get("chips", 0)   # ✅ FIX SICURO
+        chips = u.get("chips", 0)
 
         # 💥 PERSO
         if score > 21:
@@ -1822,6 +1815,7 @@ result = (
             f"{res}\n"
             f"🏦 Saldo: {u['chips']} 🪙\n\n"
         )
+
     # =========================
     # FINAL BUTTONS
     # =========================
@@ -1841,24 +1835,21 @@ result = (
 
     try:
         await context.bot.send_message(
-            chat_id=table["chat_id"],
-            message_thread_id=table["thread_id"],
+            chat_id=chat_id,
+            message_thread_id=thread_id,
             text=result,
             reply_markup=keyboard
         )
     except Exception as e:
         print("❌ ERROR FINAL SEND:", e)
 
-    # =========================
-    # CLEANUP
-    # =========================
+    # 🧹 CLEANUP
     old_timer = table.get("timer_task")
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
     table["deleted"] = True
     pvp_tables.pop(table_id, None)
-   
 #=======================
 # UPDATE_TABLE
 #======================
