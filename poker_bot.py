@@ -1756,16 +1756,25 @@ async def dealer_phase(context, table_id):
 
     await asyncio.sleep(1.5)
 
-    # 🃏 Il banco pesca fino a 17
-    while card_value(dealer_hand) < 17:
-    # =========================
-    # RESULT BUILD
-    # =========================
-    result = (
-        "🏆 RISULTATI PVP\n\n"
-        f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
-        f"💯 Totale Banco: {dealer_score}\n\n"
-    )
+    # 🎬 dealer pesca
+while card_value(table.get("dealer", [])) < 17:
+    if not table.get("deck"):
+        break
+
+    table["dealer"].append(table["deck"].pop())
+    await asyncio.sleep(2)
+
+dealer_hand = table.get("dealer", [])
+dealer_score = card_value(dealer_hand)
+
+# =========================
+# RESULT BUILD (DENTRO FUNZIONE!!)
+# =========================
+result = (
+    "🏆 RISULTATI PVP\n\n"
+    f"🏦 Banco: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+    f"💯 Totale Banco: {dealer_score}\n\n"
+)
 
     bet = table.get("bet", 200)
 
