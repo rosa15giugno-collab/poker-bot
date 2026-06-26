@@ -2824,6 +2824,9 @@ async def cb_router(update, context):
     # =====================
     # 🎮 PVP
     # =====================
+    if data == "pvp":
+        return await pvp(update, context)
+    
     if data.startswith("pvp_join_"):
         table_id = data.split("_", 2)[2]
         return await pvp_join(update, context, table_id)
