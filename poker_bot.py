@@ -1427,17 +1427,18 @@ async def pvp(update, context):
     q = update.callback_query
     await q.answer()
 
-    table_id = CURRENT_PVP_TABLE
+    uid = str(update.effective_user.id)
 
-    # 🛑 tavolo già attivo
+    # 🧠 sicurezza: table_id sempre valido
+    table_id = CURRENT_PVP_TABLE or "default"
+
+    # 🛑 se tavolo esiste e NON è finito
     if table_id in pvp_tables:
         table = pvp_tables[table_id]
 
         if table.get("state") != "finished":
-            return await q.answer(
-                "🎮 Tavolo già aperto!",
-                show_alert=True
-            )
+            await q.answer("🎮 Tavolo già aperto!", show_alert=True)
+            return
 
     keyboard = InlineKeyboardMarkup([
         [
@@ -1463,7 +1464,24 @@ async def pvp(update, context):
     chat_id = q.message.chat.id
     thread_id = getattr(q.message, "message_thread_id", None)
 
-    # 🎬 INVIO MESSAGGIO
+    # 🧠 crea tavolo SOLO se non esiste
+    if table_id not in pvp_tables:
+        pvp_tables[table_id] = {
+            "players": [],
+            "hands": {},
+            "bets": {},
+            "dealer": [],
+            "deck": [],
+            "state": "waiting",
+            "turn_index": 0,
+            "names": {},
+            "bet": 500,
+            "chat_id": chat_id,
+            "thread_id": thread_id,
+            "message_id": None
+        }
+
+    # 🎬 messaggio tavolo
     msg = await context.bot.send_animation(
         chat_id=chat_id,
         message_thread_id=thread_id,
@@ -1471,28 +1489,16 @@ async def pvp(update, context):
         caption=(
             "🎬 PVP BLACKJACK\n\n"
             "👥 Tavolo aperto (2-6 giocatori)\n"
-            "💰 Puntata: 200 chips\n\n"
+            f"💰 Puntata: {pvp_tables[table_id]['bet']} chips\n\n"
             "⏳ Entra ora!"
         ),
         reply_markup=keyboard
     )
 
-    # 🧠 SALVATAGGIO TAVOLO
-    pvp_tables[table_id] = {
-        "players": [],
-        "hands": {},
-        "bets": {},
-        "dealer": [],
-        "deck": [],
-        "state": "waiting",
-        "turn_index": 0,
-        "names": {},
-        "bet": 500,
+    # 📌 aggiorna message id
+    pvp_tables[table_id]["message_id"] = msg.message_id
 
-        "chat_id": msg.chat.id,
-        "thread_id": getattr(msg, "message_thread_id", None),
-        "message_id": msg.message_id
-    }
+    return
 # =========================
 # ENTRATA TAVOLO PVP
 # =========================
@@ -2854,7 +2860,7 @@ async def cb_router(update, context):
     # 🎮 PVP
     # =====================
     if data == "pvp":
-        return await pvp(update, context)
+        return await pvp_,menu(update, context)
     
     if data.startswith("pvp_join_"):
         table_id = data.split("_", 2)[2]
