@@ -1912,15 +1912,29 @@ async def update_table(bot, t):
         text = render_table(t)
         keyboard = table_buttons(t)
 
+        # 🧠 TRY TEXT FIRST
         try:
-            await bot.edit_message_text(
+            return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
                 text=text,
                 reply_markup=keyboard
             )
-        except Exception as e:
-            print("update_table error:", e)
+        except Exception as e1:
+            print("edit_text fail:", e1)
+
+        # 📸 FALLBACK CAPTION (IMPORTANTISSIMO)
+        try:
+            return await bot.edit_message_caption(
+                chat_id=chat_id,
+                message_id=message_id,
+                caption=text,
+                reply_markup=keyboard
+            )
+        except Exception as e2:
+            print("edit_caption fail:", e2)
+
+        print("❌ update_table FAILED COMPLETELY")
     # =========================
     # 👤 PLAYERS LIST (SEMPLICE E CHIARA)
     # =========================
