@@ -2636,7 +2636,7 @@ handlers = {
     "bonus": daily_bonus,
     "shop": shop,
     "leaderboard": leaderboard,
-    "blackjack": blackjack,
+    "blackjack": blackjack_bet,
     "roulette": roulette,
     "pvp": pvp,
 }
@@ -2729,7 +2729,7 @@ async def cb_router(update, context):
         "shop": shop,
         "leaderboard": leaderboard,
         "slot": slot,
-        "blackjack": blackjack,
+        "blackjack": blackjack_bet,
         "roulette": roulette,
         "pvp": pvp,
     }
