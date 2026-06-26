@@ -1174,8 +1174,10 @@ async def blackjack_bet(update, context, amount):
     text = (
         "🃏 BLACKJACK\n\n"
         f"💰 Puntata: {amount}\n\n"
-        f"🃏 Tu:
-
+        f"🃏 TU: {' '.join(player)}\n"
+        f"🎩 BANCO: {dealer[0]} ❓\n"
+        f"📊 Totale: {card_value(player)}"
+    )
 
 # =========================
 # ➕ HIT
