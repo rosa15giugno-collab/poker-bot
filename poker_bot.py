@@ -1893,7 +1893,6 @@ async def dealer_phase(context, table_id):
 #=======================
 # UPDATE_TABLE
 #======================
-    
 async def update_table(bot, t):
     async with update_ui_lock:
 
@@ -1909,10 +1908,84 @@ async def update_table(bot, t):
         if not chat_id or not message_id:
             return
 
-        text = render_table(t)
+        players = t.get("players", [])
+        idx = t.get("turn_index", 0)
+        state = t.get("state", "waiting")
+
+        # =========================
+        # 🎯 GIOCATORE DI TURNO (SAFE)
+        # =========================
+        current_uid = players[idx] if (players and idx < len(players)) else None
+        current_name = (t.get("names") or {}).get(current_uid, "—")
+
+        # =========================
+        # 👤 PLAYERS LIST
+        # =========================
+        players_text = "👥 GIOCATORI:\n\n"
+
+        for uid in players:
+
+            hand = t.get("hands", {}).get(uid, [])
+            score = card_value(hand)
+            name = (t.get("names") or {}).get(uid, f"User {uid}")
+
+            # 🔥 FIX UID TYPE SAFETY
+            is_turn = str(uid) == str(current_uid)
+
+            if is_turn:
+                players_text += (
+                    "━━━━━━━━━━━━━━\n"
+                    "🔥 🎮 TURNO ORA 🔥\n"
+                    "━━━━━━━━━━━━━━\n"
+                    f"👑 {name}\n"
+                    f"🃏 {' '.join(hand) if hand else '—'} ({score})\n"
+                    "━━━━━━━━━━━━━━\n\n"
+                )
+            else:
+                players_text += (
+                    f"👤 {name}\n"
+                    f"   🃏 {' '.join(hand) if hand else '—'} ({score})\n\n"
+                )
+
+        # =========================
+        # 🏦 DEALER
+        # =========================
+        dealer = t.get("dealer", [])
+        dealer_score = card_value(dealer)
+
+        dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
+
+        if state == "waiting":
+            dealer_text += "\n⏳ In attesa giocatori..."
+        elif state == "playing":
+            dealer_text += "\n🎮 Partita in corso..."
+        elif state == "dealer":
+            dealer_text += "\n🎩 Il banco sta giocando..."
+
+        # =========================
+        # 🔥 LAST ACTION
+        # =========================
+        action_text = ""
+        if t.get("last_action"):
+            action_text = f"\n🔥 {t['last_action']}"
+
+        # =========================
+        # 🎮 FINAL TEXT
+        # =========================
+        text = (
+            "🎮 PVP BLACKJACK\n\n"
+            f"📊 Stato: {state.upper()}\n\n"
+            + players_text
+            + "\n"
+            + dealer_text
+            + action_text
+        )
+
         keyboard = table_buttons(t)
 
-        # 🧠 TRY TEXT FIRST
+        # =========================
+        # 📸 EDIT TEXT FIRST
+        # =========================
         try:
             return await bot.edit_message_text(
                 chat_id=chat_id,
@@ -1920,10 +1993,12 @@ async def update_table(bot, t):
                 text=text,
                 reply_markup=keyboard
             )
-        except Exception as e1:
-            print("edit_text fail:", e1)
+        except Exception as e:
+            print("edit_text fail:", e)
 
-        # 📸 FALLBACK CAPTION (IMPORTANTISSIMO)
+        # =========================
+        # 📸 FALLBACK CAPTION
+        # =========================
         try:
             return await bot.edit_message_caption(
                 chat_id=chat_id,
@@ -1931,87 +2006,11 @@ async def update_table(bot, t):
                 caption=text,
                 reply_markup=keyboard
             )
-        except Exception as e2:
-            print("edit_caption fail:", e2)
+        except Exception as e:
+            print("edit_caption fail:", e)
 
-        print("❌ update_table FAILED COMPLETELY")
-    # =========================
-    # 👤 PLAYERS LIST (SEMPLICE E CHIARA)
-    # =========================
-    players_text = "👥 GIOCATORI:\n"
+        print("❌ update_table FAILED COMPLETELY")  
 
-    for uid in players:
-        hand = t.get("hands", {}).get(uid, [])
-        score = card_value(hand)
-        name = (t.get("names") or {}).get(uid, f"User {uid}")
-
-        turn_marker = "👉" if idx < len(players) and uid == players[idx] else "  "
-
-        players_text += f"{turn_marker} {name}: {' '.join(hand) if hand else '—'} ({score})\n"
-
-    # =========================
-    # 🏦 DEALER (PIÙ CHIARO)
-    # =========================
-    dealer = t.get("dealer", [])
-    dealer_score = card_value(dealer)
-
-    dealer_text = f"\n🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
-
-    if state == "waiting":
-        dealer_text += "\n⏳ In attesa giocatori..."
-
-    elif state == "playing":
-        dealer_text += "\n🎮 Partita in corso..."
-
-    elif state == "dealer":
-        dealer_text += "\n🎩 Il banco sta giocando..."
-
-    # =========================
-    # 🔥 LAST ACTION (EVENTO LIVE)
-    # =========================
-    action_text = ""
-    if t.get("last_action"):
-        action_text = f"\n\n🔥 {t['last_action']}"
-
-    # =========================
-    # 🎮 HEADER
-    # =========================
-    text = (
-        "🎮 PVP BLACKJACK\n\n"
-        f"📊 Stato: {state.upper()}\n\n"
-        + players_text
-        + dealer_text
-        + action_text
-    )
-
-    keyboard = table_buttons(t)
-
-    # =========================
-    # 📸 UPDATE CAPTION FIRST
-    # =========================
-    try:
-        await bot.edit_message_caption(
-            chat_id=chat_id,
-            message_id=message_id,
-            caption=text,
-            reply_markup=keyboard
-        )
-        return
-    except Exception as e:
-        print("caption edit fail:", e)
-
-    # =========================
-    # 💬 FALLBACK TEXT
-    # =========================
-    try:
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=text,
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        print("text edit fail:", e)
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
@@ -2680,7 +2679,6 @@ async def fileid(update, context):
 # =========================
 # 🎮 CALLBACK ROUTER FIXED
 # =========================
-
 async def cb_router(update, context):
 
     q = update.callback_query
@@ -2690,7 +2688,7 @@ async def cb_router(update, context):
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
     # =====================
-    # ⚠️ CALLBACK ANSWER SAFE
+    # ⚠️ CALLBACK SAFE ANSWER (UNA SOLA VOLTA)
     # =====================
     try:
         await q.answer()
@@ -2710,6 +2708,15 @@ async def cb_router(update, context):
         return
 
     # =====================
+    # 🛒 SHOP HANDLERS (SAFE POSITION)
+    # =====================
+    SHOP_HANDLERS = {
+        "buy_vip": buy_vip,
+        "buy_slotboost": buy_slotboost,
+        "buy_bjpro": buy_bjpro,
+    }
+
+    # =====================
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
@@ -2722,9 +2729,6 @@ async def cb_router(update, context):
         "profile": profile,
         "bonus": daily_bonus,
         "shop": shop,
-        "buy_vip": buy_vip,
-        "buy_slotboost": buy_slotboost,
-        "buy_bjpro": buy_bjpro,
         "leaderboard": leaderboard,
         "slot": slot,
         "blackjack": blackjack,
@@ -2736,7 +2740,7 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     # =====================
-    # 🎰 SLOT BET
+    # 🎰 SLOT
     # =====================
     if data.startswith("spin_slot_"):
         try:
@@ -2774,8 +2778,9 @@ async def cb_router(update, context):
         return await select_number(update, context)
 
     if data.startswith("bet_"):
-        # roulette bet handler FIX (no globals)
-        return await bet(update, context)
+        # roulette safe parsing
+        bet_type = data.replace("bet_", "")
+        return await bet(update, context, bet_type)
 
     # =====================
     # 🎮 PVP
@@ -2797,14 +2802,8 @@ async def cb_router(update, context):
         return await pvp_stand(update, context, table_id)
 
     # =====================
-    # 🛒 SHOP SAFE ROUTER
+    # 🛒 SHOP ROUTER
     # =====================
-    SHOP_HANDLERS = {
-        "buy_vip": buy_vip,
-        "buy_slotboost": buy_slotboost,
-        "buy_bjpro": buy_bjpro,
-    }
-
     if data in SHOP_HANDLERS:
         return await SHOP_HANDLERS[data](update, context)
 
@@ -2814,11 +2813,6 @@ async def cb_router(update, context):
     print("❌ CALLBACK NON GESTITA:", data)
     return
 
-    # =====================
-    # ❌ FALLBACK
-    # =====================
-    print("❌ CALLBACK NON GESTITA:", data)
-    return
 # =========================
 # 🧠 TEXT HANDLER
 # =========================
