@@ -1759,7 +1759,7 @@ async def dealer_phase(context, table_id):
     # 🃏 Il banco pesca fino a 17
     while card_value(dealer_hand) < 17:
     # =========================
-    # RESULT BUILD (DENTRO FUNZIONE!!)
+    # RESULT BUILD
     # =========================
     result = (
         "🏆 RISULTATI PVP\n\n"
@@ -1779,9 +1779,9 @@ async def dealer_phase(context, table_id):
         hand_text = " ".join(hand) if hand else "—"
 
         u = get_user(str(uid))
-        chips = u["chips"]
+        chips = u.get("chips", 0)   # ✅ FIX SICURO
 
-        # 💥 SBALLATO
+        # 💥 PERSO
         if score > 21:
             res = f"💥 PERSO (-{bet} 🪙)"
             u["losses"] = u.get("losses", 0) + 1
@@ -1796,8 +1796,9 @@ async def dealer_phase(context, table_id):
         # 🤝 PAREGGIO
         elif score == dealer_score:
             res = "🤝 PAREGGIO (±0 🪙)"
+            u["chips"] = chips
 
-        # 😔 PERSO
+        # 💥 PERSO
         else:
             res = f"💥 PERSO (-{bet} 🪙)"
             u["losses"] = u.get("losses", 0) + 1
