@@ -1115,6 +1115,32 @@ async def spin_slot(update, context):
 
     return
     
+# =========================
+# 💰 START PARTITA BLACKJACK
+# =========================
+async def blackjack(update, context):
+    q = update.callback_query
+    await q.answer()
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100"),
+            InlineKeyboardButton("💰 500", callback_data="blackjack_bet_500")
+        ],
+        [
+            InlineKeyboardButton("💰 1000", callback_data="blackjack_bet_1000")
+        ],
+        [
+            InlineKeyboardButton("🏠 MENU", callback_data="menu")
+        ]
+    ])
+
+    await q.message.reply_text(
+        "🃏 BLACKJACK\n\n💰 Scegli la puntata:",
+        reply_markup=keyboard
+    )
+
+
 
 # =========================
 # 💰 START PARTITA BLACKJACK
@@ -2636,7 +2662,7 @@ handlers = {
     "bonus": daily_bonus,
     "shop": shop,
     "leaderboard": leaderboard,
-    "blackjack": blackjack_bet,
+    "blackjack": blackjack,
     "roulette": roulette,
     "pvp": pvp,
 }
@@ -2721,6 +2747,12 @@ async def cb_router(update, context):
         return await menu(update, context)
 
     # =====================
+    # 🃏 BLACKJACK MENU
+    # =====================
+    if data == "blackjack":
+        return await blackjack(update, context)
+
+    # =====================
     # 👤 HANDLERS BASE
     # =====================
     handlers = {
@@ -2728,8 +2760,6 @@ async def cb_router(update, context):
         "bonus": daily_bonus,
         "shop": shop,
         "leaderboard": leaderboard,
-        "slot": slot,
-        "blackjack": blackjack_bet,
         "roulette": roulette,
         "pvp": pvp,
     }
@@ -2775,18 +2805,26 @@ async def cb_router(update, context):
     if data.startswith("num_"):
         return await select_number(update, context)
 
-    if data in [
-        "bet_red",
-        "bet_black",
-        "bet_even",
-        "bet_odd",
-        "bet_zero",
-        "bet_number"
-    ]:
-        return await globals()[data](update, context)
+    if data == "bet_number":
+        return await bet_number(update, context)
 
     if data == "bet_number_value":
         return await bet_number_value(update, context)
+
+    if data == "bet_red":
+        return await bet_red(update, context)
+
+    if data == "bet_black":
+        return await bet_black(update, context)
+
+    if data == "bet_even":
+        return await bet_even(update, context)
+
+    if data == "bet_odd":
+        return await bet_odd(update, context)
+
+    if data == "bet_zero":
+        return await bet_zero(update, context)
     # =====================
     # 🎮 PVP
     # =====================
