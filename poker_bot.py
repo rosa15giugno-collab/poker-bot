@@ -2689,13 +2689,17 @@ async def cb_router(update, context):
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
-    # ⚠️ risposta callback UNA SOLA VOLTA (SAFE)
+    # =====================
+    # ⚠️ CALLBACK ANSWER SAFE
+    # =====================
     try:
         await q.answer()
     except:
         pass
 
-    # 🔒 BLOCCO TOPIC CASINO
+    # =====================
+    # 🔒 TOPIC CHECK
+    # =====================
     ALLOWED_OUTSIDE_TOPIC = {"menu", "go_menu", "shop", "bonus"}
 
     if not in_casino_topic(update) and data not in ALLOWED_OUTSIDE_TOPIC:
@@ -2732,7 +2736,7 @@ async def cb_router(update, context):
         return await handlers[data](update, context)
 
     # =====================
-    # 🎰 SLOT
+    # 🎰 SLOT BET
     # =====================
     if data.startswith("spin_slot_"):
         try:
@@ -2757,9 +2761,11 @@ async def cb_router(update, context):
 
         return await blackjack_bet(update, context, amount)
 
-    if data in ["hit", "stand"]:
-        if data in globals():
-            return await globals()[data](update, context)
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+        return await stand(update, context)
 
     # =====================
     # 🎲 ROULETTE
@@ -2768,9 +2774,8 @@ async def cb_router(update, context):
         return await select_number(update, context)
 
     if data.startswith("bet_"):
-        fn_name = data.split("_", 1)[0]
-        if fn_name in globals():
-            return await globals()[fn_name](update, context)
+        # roulette bet handler FIX (no globals)
+        return await bet(update, context)
 
     # =====================
     # 🎮 PVP
@@ -2792,10 +2797,22 @@ async def cb_router(update, context):
         return await pvp_stand(update, context, table_id)
 
     # =====================
-    # 🛒 SHOP
+    # 🛒 SHOP SAFE ROUTER
     # =====================
+    SHOP_HANDLERS = {
+        "buy_vip": buy_vip,
+        "buy_slotboost": buy_slotboost,
+        "buy_bjpro": buy_bjpro,
+    }
+
     if data in SHOP_HANDLERS:
         return await SHOP_HANDLERS[data](update, context)
+
+    # =====================
+    # ❌ FALLBACK
+    # =====================
+    print("❌ CALLBACK NON GESTITA:", data)
+    return
 
     # =====================
     # ❌ FALLBACK
