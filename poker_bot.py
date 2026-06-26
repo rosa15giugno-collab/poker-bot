@@ -2786,6 +2786,9 @@ async def cb_router(update, context):
         "bet_number"
     ]:
         return await globals()[data](update, context)
+
+    if data == "bet_number_value":
+        return await bet_number_value(update, context)
     # =====================
     # 🎮 PVP
     # =====================
