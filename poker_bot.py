@@ -2775,13 +2775,17 @@ async def cb_router(update, context):
     # 🎲 ROULETTE
     # =====================
     if data.startswith("num_"):
-        return await select_number(update, context)
+    return await select_number(update, context)
 
-    if data.startswith("bet_"):
-        # roulette safe parsing
-        bet_type = data.replace("bet_", "")
-        return await bet(update, context, bet_type)
-
+    if data in [
+        "bet_red",
+        "bet_black",
+        "bet_even",
+        "bet_odd",
+        "bet_zero",
+        "bet_number"
+    ]:
+    return await globals()[data](update, context)
     # =====================
     # 🎮 PVP
     # =====================
