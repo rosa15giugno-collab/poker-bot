@@ -93,8 +93,12 @@ COOLDOWN = {}
 pvp_tables = {}
 pvp_turn_index = {}
 pvp_deadlines = {}
+
 # 🔒 LOCK GLOBALE PvP (QUI)
 pvp_lock = asyncio.Lock()
+
+# LOCK BLACKJACK
+update_ui_lock = asyncio.Lock()
 
 # =========================
 # RENDER PVP TABLE
@@ -188,9 +192,11 @@ def card_value(hand):
 # =========================
 # SAFE EDIT (UNICO E STABILE)
 # =========================
-async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
+
+async def safe_edit(bot, msg, text, reply_markup=None, parse_mode=None):
+
     try:
-        # 📸 media (foto o animazione)
+        # 📸 MEDIA (photo / animation)
         if getattr(msg, "photo", None) or getattr(msg, "animation", None):
             return await msg.edit_caption(
                 caption=text,
@@ -198,7 +204,7 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
                 parse_mode=parse_mode
             )
 
-        # 💬 testo
+        # 💬 TESTO
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
@@ -208,25 +214,25 @@ async def safe_edit(msg, text, reply_markup=None, parse_mode=None):
     except BadRequest as e:
         if "Message is not modified" in str(e):
             return False
-        logger.error(f"safe_edit failed: {e}")
+        print(f"safe_edit BadRequest: {e}")
 
     except Exception as e:
-        logger.error(f"safe_edit fatal: {e}")
+        print(f"safe_edit error: {e}")
 
-    # 🔥 FALLBACK TOPIC SAFE
+    # 🔥 FALLBACK SICURO (IMPORTANTISSIMO FIX)
     try:
-        await msg.bot.send_message(
+        return await bot.send_message(
             chat_id=msg.chat.id,
-            message_thread_id=msg.message_thread_id,
+            message_thread_id=getattr(msg, "message_thread_id", None),
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
+
     except Exception as e2:
-        logger.error(f"fallback failed: {e2}")
+        print(f"safe_edit fallback failed: {e2}")
 
     return False
-
 
 # =========================
 # DATABASE INIT (UNICO)
@@ -1889,24 +1895,32 @@ async def dealer_phase(context, table_id):
 #======================
     
 async def update_table(bot, t):
-    if not t:
-        return
+    async with update_ui_lock:
 
-    if t.get("state") in ("finished", "deleted"):
-        return
+        if not t:
+            return
 
-    chat_id = t.get("chat_id")
-    message_id = t.get("message_id")
+        if t.get("state") == "finished" or t.get("deleted"):
+            return
 
-    if not chat_id or not message_id:
-        print("❌ update_table: chat_id o message_id mancanti")
-        return
+        chat_id = t.get("chat_id")
+        message_id = t.get("message_id")
 
-    players = t.get("players", [])
-    idx = t.get("turn_index", 0)
+        if not chat_id or not message_id:
+            return
 
-    state = t.get("state", "waiting")
+        text = render_table(t)
+        keyboard = table_buttons(t)
 
+        try:
+            await bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=text,
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            print("update_table error:", e)
     # =========================
     # 👤 PLAYERS LIST (SEMPLICE E CHIARA)
     # =========================
