@@ -2223,7 +2223,7 @@ async def bet_number(update, context):
         [InlineKeyboardButton(str(i), callback_data=f"num_{i}") for i in range(15, 20)],
         [InlineKeyboardButton(str(i), callback_data=f"num_{i}") for i in range(20, 25)],
         [InlineKeyboardButton(str(i), callback_data=f"num_{i}") for i in range(25, 30)],
-        [InlineKeyboardButton(str(i), callback_data=f"num_{i}") for i in range(30, 36)],
+        [InlineKeyboardButton(str(i), callback_data=f"num_{i}") for i in range(30, 37)],
     ]
 
     await q.message.reply_text(
