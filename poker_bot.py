@@ -532,6 +532,12 @@ async def profile(update, context):
 #  BONUS GIORNALIERO
 #=====================
 
+import time
+from telegram.error import RetryAfter
+
+# =========================
+# 🎁 DAILY BONUS
+# =========================
 async def daily_bonus(update, context):
 
     q = update.callback_query
@@ -545,8 +551,15 @@ async def daily_bonus(update, context):
 
     last = u.get("last_bonus", 0)
 
-    # ⛔ Cooldown
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
+    ])
+
+    # =====================
+    # ⛔ COOLDOWN CHECK
+    # =====================
     if now - last < cooldown:
+
         remaining = int(cooldown - (now - last))
 
         h = remaining // 3600
@@ -554,23 +567,33 @@ async def daily_bonus(update, context):
         s = remaining % 60
 
         text = (
-            "🎁 Bonus già riscattato!\n\n"
+            "🎁 BONUS GIORNALIERO\n\n"
+            "⛔ Già riscattato!\n\n"
             f"⏳ Riprova tra {h}h {m}m {s}s"
         )
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-        ])
+        try:
+            return await context.bot.send_photo(
+                chat_id=q.message.chat.id,
+                message_thread_id=q.message.message_thread_id,
+                photo=BONUS_PHOTO,
+                caption=text,
+                reply_markup=keyboard
+            )
 
-        return await context.bot.send_photo(
-            chat_id=q.message.chat.id,
-            message_thread_id=q.message.message_thread_id,
-            photo=BONUS_PHOTO,
-            caption=text,
-            reply_markup=keyboard
-        )
+        except RetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            return await context.bot.send_photo(
+                chat_id=q.message.chat.id,
+                message_thread_id=q.message.message_thread_id,
+                photo=BONUS_PHOTO,
+                caption=text,
+                reply_markup=keyboard
+            )
 
-    # 🎁 Premio
+    # =====================
+    # 🎁 BONUS OK
+    # =====================
     reward = 1000
     u["chips"] = int(u.get("chips", 0)) + reward
     u["last_bonus"] = now
@@ -582,18 +605,24 @@ async def daily_bonus(update, context):
         f"💎 Saldo attuale: {u['chips']}"
     )
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-    ])
+    try:
+        return await context.bot.send_photo(
+            chat_id=q.message.chat.id,
+            message_thread_id=q.message.message_thread_id,
+            photo=BONUS_PHOTO,
+            caption=text,
+            reply_markup=keyboard
+        )
 
-    await context.bot.send_photo(
-        chat_id=q.message.chat.id,
-        message_thread_id=q.message.message_thread_id,
-        photo=BONUS_PHOTO,
-        caption=text,
-        reply_markup=keyboard
-    )
-
+    except RetryAfter as e:
+        await asyncio.sleep(e.retry_after)
+        return await context.bot.send_photo(
+            chat_id=q.message.chat.id,
+            message_thread_id=q.message.message_thread_id,
+            photo=BONUS_PHOTO,
+            caption=text,
+            reply_markup=keyboard
+        )
 #======================
 # SHOP
 #======================
