@@ -1419,7 +1419,7 @@ async def pvp(update, context):
         "state": "waiting",
         "turn_index": 0,
         "names": {},
-        "bet": 500
+        "bet": 500,
 
         "chat_id": msg.chat.id,
         "thread_id": getattr(msg, "message_thread_id", None),
