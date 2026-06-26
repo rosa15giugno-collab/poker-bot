@@ -2775,7 +2775,7 @@ async def cb_router(update, context):
     # 🎲 ROULETTE
     # =====================
     if data.startswith("num_"):
-    return await select_number(update, context)
+        return await select_number(update, context)
 
     if data in [
         "bet_red",
@@ -2785,7 +2785,7 @@ async def cb_router(update, context):
         "bet_zero",
         "bet_number"
     ]:
-    return await globals()[data](update, context)
+        return await globals()[data](update, context)
     # =====================
     # 🎮 PVP
     # =====================
