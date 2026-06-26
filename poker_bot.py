@@ -22,7 +22,7 @@ from telegram.ext import (
     filters
 )
 
-from telegram.error import BadRequest
+from telegram.errfor import BadRequest
 
 def get_chat(update):
     msg = update.effective_message
@@ -2755,6 +2755,12 @@ async def cb_router(update, context):
         return await slot(update, context)
 
     # =====================
+    # 🃏 SLOT roulette
+    # =====================
+    if data == "roulette":
+        return await roulette(update, context)
+
+    # =====================
     # 🃏BLACKJACK MENU
     # =====================
     if data == "blackjack":
@@ -2792,6 +2798,7 @@ async def cb_router(update, context):
     # =====================
     # 🎲 ROULETTE
     # =====================
+    
     if data.startswith("num_"):
         return await select_number(update, context)
 
@@ -2843,6 +2850,7 @@ async def cb_router(update, context):
         "bonus": daily_bonus,
         "shop": shop,
         "leaderboard": leaderboard,
+        "pvp": pvp,
     }
 
     if data in handlers:
