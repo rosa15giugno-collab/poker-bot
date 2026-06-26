@@ -1562,24 +1562,19 @@ async def next_turn(context, table_id):
     if not table or table.get("state") != "playing":
         return
 
-    thread_id = table.get("thread_id")
-    chat_id = table.get("chat_id")
-
     players = table["players"]
 
-    # 🏁 fine giocatori → dealer phase
+    # 🏁 fine → dealer
     if table["turn_index"] >= len(players):
+        table["state"] = "dealer"
         return await dealer_phase(context, table_id)
 
     uid = players[table["turn_index"]]
+    name = table.get("names", {}).get(uid, f"User {uid}")
     hand = table["hands"].get(uid, [])
 
-    name = table.get("names", {}).get(uid, f"User {uid}")
-
-    # ⏱️ deadline turno
+    # ⏱️ timer
     table["deadline"] = time.time() + PVP_TIME
-
-    # 🎮 UI bottoni turno (solo se vuoi mantenerli nel tavolo live)
     table["current_turn_uid"] = uid
 
     # 🧠 stop timer precedente
@@ -1587,13 +1582,13 @@ async def next_turn(context, table_id):
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    # 🔥 invece di send_message → aggiorniamo SOLO la tavola
-    table["last_action"] = f"🎮 Turno di {name}"
+    # 🔥 LOG CHIARO (NON SOSTITUISCE UI)
+    table["last_action"] = f"🎮 Tocca a {name}"
 
-    # 📊 aggiorna UI LIVE
+    # 📊 aggiorna tavolo
     await update_table(context.bot, table)
 
-    # 🔥 nuovo timer
+    # ⏱️ avvia timer
     table["timer_task"] = asyncio.create_task(
         timer_auto(context, table_id)
     )
@@ -1661,18 +1656,23 @@ async def pvp_hit(update, context, table_id):
         table["hands"][uid].append(card)
 
         score = card_value(table["hands"][uid])
-
         name = table.get("names", {}).get(uid, uid)
 
-        # 🔥 LOG VISIVO (QUESTO SOSTITUISCE send_message turno)
+        # 🔥 log chiaro
         table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        # 💥 bust
+        # 💥 bust → cambio turno immediato
         if score > 21:
             table["last_action"] += " 💥 BUST"
             table["turn_index"] += 1
 
-        # 🔁 aggiorna SOLO UI tavolo
+            # 🔁 passa turno SUBITO
+            await next_turn(context, table_id)
+
+            # feedback solo utente
+            return await q.answer(f"💥 BUST | {score}", show_alert=False)
+
+        # 🔁 update tavolo (solo se NON bust)
         await update_table(context.bot, table)
 
         await q.answer(f"🃏 {card} | {score}", show_alert=False)
@@ -1725,11 +1725,11 @@ async def pvp_stand(update, context, table_id):
 # =========================
 async def dealer_phase(context, table_id):
     table = pvp_tables.get(table_id)
-    thread_id = table.get("thread_id")
 
     if not table:
         return
 
+    thread_id = table.get("thread_id")
     chat_id = table.get("chat_id")
 
     if not chat_id:
@@ -1741,25 +1741,23 @@ async def dealer_phase(context, table_id):
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
+    dealer_hand = table.get("dealer", [])
+
+    # 🎬 Inizio turno banco
     await context.bot.send_message(
         chat_id=chat_id,
         message_thread_id=thread_id,
-        text="🏦 Il Banco sta giocando..."
+        text=(
+            "🏦 TURNO DEL BANCO\n\n"
+            f"🃏 Carte iniziali: {' '.join(dealer_hand) if dealer_hand else '—'}\n"
+            f"💯 Totale: {card_value(dealer_hand)}"
+        )
     )
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1.5)
 
-    # 🎬 dealer pesca
-    while card_value(table.get("dealer", [])) < 17:
-        if not table.get("deck"):
-            break
-
-        table["dealer"].append(table["deck"].pop())
-        await asyncio.sleep(2)
-
-    dealer_hand = table.get("dealer", [])
-    dealer_score = card_value(dealer_hand)
-
+    # 🃏 Il banco pesca fino a 17
+    while card_value(dealer_hand) < 17:
     # =========================
     # RESULT BUILD (DENTRO FUNZIONE!!)
     # =========================
@@ -1769,40 +1767,51 @@ async def dealer_phase(context, table_id):
         f"💯 Totale Banco: {dealer_score}\n\n"
     )
 
+    bet = table.get("bet", 200)
+
     for uid in table.get("players", []):
 
         name = (table.get("names") or {}).get(uid, f"User {uid}")
 
-        hand = table.get("hands", {}).get(uid) or []
+        hand = table.get("hands", {}).get(uid, [])
         score = card_value(hand)
 
         hand_text = " ".join(hand) if hand else "—"
 
         u = get_user(str(uid))
+        chips = u["chips"]
 
+        # 💥 SBALLATO
         if score > 21:
-            res = "💥 PERSO"
+            res = f"💥 PERSO (-{bet} 🪙)"
             u["losses"] = u.get("losses", 0) + 1
+            u["chips"] = max(0, chips - bet)
 
+        # 🏆 VINTO
         elif dealer_score > 21 or score > dealer_score:
-            res = "🏆 VINTO"
+            res = f"🏆 VINTO (+{bet} 🪙)"
             u["wins"] = u.get("wins", 0) + 1
+            u["chips"] = chips + bet
 
+        # 🤝 PAREGGIO
         elif score == dealer_score:
-            res = "🤝 PAREGGIO"
+            res = "🤝 PAREGGIO (±0 🪙)"
 
+        # 😔 PERSO
         else:
-            res = "💥 PERSO"
+            res = f"💥 PERSO (-{bet} 🪙)"
             u["losses"] = u.get("losses", 0) + 1
+            u["chips"] = max(0, chips - bet)
 
         save_user(u)
 
         result += (
             f"👤 {name}\n"
-            f"🃏 {hand_text}\n"
-            f"💯 {score} → {res}\n\n"
+            f"🃏 Mano: {hand_text}\n"
+            f"💯 Totale: {score}\n"
+            f"{res}\n"
+            f"🏦 Saldo: {u['chips']} 🪙\n\n"
         )
-
     # =========================
     # FINAL BUTTONS
     # =========================
@@ -1848,7 +1857,7 @@ async def update_table(bot, t):
     if not t:
         return
 
-    if t.get("state") == "finished" or t.get("deleted"):
+    if t.get("state") in ("finished", "deleted"):
         return
 
     chat_id = t.get("chat_id")
@@ -1858,35 +1867,64 @@ async def update_table(bot, t):
         print("❌ update_table: chat_id o message_id mancanti")
         return
 
-    # =========================
-    # 🎮 BUILD UI
-    # =========================
-    text = render_table(t)
+    players = t.get("players", [])
+    idx = t.get("turn_index", 0)
 
-    players_text = "\n\n👥 MANI:\n"
+    state = t.get("state", "waiting")
 
-    for uid in t.get("players", []):
+    # =========================
+    # 👤 PLAYERS LIST (SEMPLICE E CHIARA)
+    # =========================
+    players_text = "👥 GIOCATORI:\n"
+
+    for uid in players:
         hand = t.get("hands", {}).get(uid, [])
         score = card_value(hand)
-
         name = (t.get("names") or {}).get(uid, f"User {uid}")
-        cards = " ".join(hand) if hand else "—"
 
-        players_text += f"• {name} → {cards} ({score})\n"
+        turn_marker = "👉" if idx < len(players) and uid == players[idx] else "  "
 
+        players_text += f"{turn_marker} {name}: {' '.join(hand) if hand else '—'} ({score})\n"
+
+    # =========================
+    # 🏦 DEALER (PIÙ CHIARO)
+    # =========================
     dealer = t.get("dealer", [])
     dealer_score = card_value(dealer)
 
-    text += players_text
-    text += f"\n🏦 Banco: {' '.join(dealer)} ({dealer_score})"
+    dealer_text = f"\n🏦 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
 
+    if state == "waiting":
+        dealer_text += "\n⏳ In attesa giocatori..."
+
+    elif state == "playing":
+        dealer_text += "\n🎮 Partita in corso..."
+
+    elif state == "dealer":
+        dealer_text += "\n🏦 Il banco sta giocando..."
+
+    # =========================
+    # 🔥 LAST ACTION (EVENTO LIVE)
+    # =========================
+    action_text = ""
     if t.get("last_action"):
-        text += f"\n\n🔥 {t['last_action']}"
+        action_text = f"\n\n🔥 {t['last_action']}"
+
+    # =========================
+    # 🎮 HEADER
+    # =========================
+    text = (
+        "🎮 PVP BLACKJACK\n\n"
+        f"📊 Stato: {state.upper()}\n\n"
+        + players_text
+        + dealer_text
+        + action_text
+    )
 
     keyboard = table_buttons(t)
 
     # =========================
-    # 📸 TRY CAPTION
+    # 📸 UPDATE CAPTION FIRST
     # =========================
     try:
         await bot.edit_message_caption(
@@ -2588,7 +2626,7 @@ async def cb_router(update, context):
 
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
-    # ⚠️ risposta callback UNA SOLA VOLTA
+    # ⚠️ risposta callback UNA SOLA VOLTA (SAFE)
     try:
         await q.answer()
     except:
@@ -2598,7 +2636,10 @@ async def cb_router(update, context):
     ALLOWED_OUTSIDE_TOPIC = {"menu", "go_menu", "shop", "bonus"}
 
     if not in_casino_topic(update) and data not in ALLOWED_OUTSIDE_TOPIC:
-        await q.answer("🎰 Vai nel topic CASINO per giocare!", show_alert=True)
+        try:
+            await q.answer("🎰 Vai nel topic CASINO per giocare!", show_alert=True)
+        except:
+            pass
         return
 
     # =====================
@@ -2654,7 +2695,8 @@ async def cb_router(update, context):
         return await blackjack_bet(update, context, amount)
 
     if data in ["hit", "stand"]:
-        return await globals()[data](update, context)
+        if data in globals():
+            return await globals()[data](update, context)
 
     # =====================
     # 🎲 ROULETTE
@@ -2663,7 +2705,9 @@ async def cb_router(update, context):
         return await select_number(update, context)
 
     if data.startswith("bet_"):
-        return await globals()[data](update, context)
+        fn_name = data.split("_", 1)[0]
+        if fn_name in globals():
+            return await globals()[fn_name](update, context)
 
     # =====================
     # 🎮 PVP
@@ -2685,7 +2729,7 @@ async def cb_router(update, context):
         return await pvp_stand(update, context, table_id)
 
     # =====================
-    # 🛒 SHOP (FIX)
+    # 🛒 SHOP
     # =====================
     if data in SHOP_HANDLERS:
         return await SHOP_HANDLERS[data](update, context)
@@ -2695,7 +2739,6 @@ async def cb_router(update, context):
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
-
 # =========================
 # 🧠 TEXT HANDLER
 # =========================
