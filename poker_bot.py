@@ -1848,11 +1848,11 @@ for uid in table.get("players", []):
         "──────────────\n\n"
     )
 
-# =========================
-# FINAL COMPOSITION
-# =========================
+    # =========================
+    # FINAL COMPOSITION
+    # =========================
 
-result += winner_block + others_block
+    result += winner_block + others_block
     # =========================
     # FINAL BUTTONS
     # =========================
