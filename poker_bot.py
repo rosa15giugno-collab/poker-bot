@@ -2877,15 +2877,15 @@ async def cb_router(update, context):
 async def text_handler(update, context):
     msg = update.message
 
-    if not msg:
+    if not msg or not msg.text:
         return
 
-    text = msg.text.lower()
+    text = msg.text.lower().strip()
 
     if "bonus" in text:
         await msg.reply_text("🎁 Usa /bonus per ricevere le chips!")
 
-    elif "slot" in text:
+    elif text == "slot":
         await msg.reply_text("🎰 Vai nella slot dal menu!")
 # =========================
 # 🧠 MAIN
