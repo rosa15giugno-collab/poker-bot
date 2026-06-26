@@ -1116,7 +1116,7 @@ async def spin_slot(update, context):
     return
     
 # =========================
-# 💰 START PARTITA BLACKJACK
+# 💰 START PARTITA BLACKJACK FIX FILEID
 # =========================
 async def blackjack(update, context):
     q = update.callback_query
@@ -1135,8 +1135,13 @@ async def blackjack(update, context):
         ]
     ])
 
-    await q.message.reply_text(
-        "🃏 BLACKJACK\n\n💰 Scegli la puntata:",
+    text = "🃏 BLACKJACK\n\n💰 Scegli la puntata:"
+
+    # 🔥 FIX CHIAVE: EDIT invece di reply_text
+    return await safe_edit(
+        context.bot,
+        q.message,
+        text,
         reply_markup=keyboard
     )
 
@@ -1163,8 +1168,12 @@ async def blackjack_bet(update, context, amount):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
-        return
+        return await safe_edit(
+            context.bot,
+            q.message,
+            text,
+            reply_markup=keyboard
+        )
 
     # 💰 DEDUCI CHIPS
     u["chips"] -= amount
@@ -1205,6 +1214,12 @@ async def blackjack_bet(update, context, amount):
         f"📊 Totale: {card_value(player)}"
     )
 
+    return await safe_edit(
+        context.bot,
+        q.message,
+        text,
+        reply_markup=keyboard
+    )
 # =========================
 # ➕ HIT
 # =========================
@@ -1216,8 +1231,7 @@ async def hit(update, context):
 
     # ❌ nessuna partita
     if uid not in bj_games:
-        await safe_edit(context.bot, q.message, "❌ Nessuna partita attiva.")
-        return
+        return await safe_edit(context.bot, q.message, "❌ Nessuna partita attiva.")
 
     game = bj_games[uid]
 
@@ -1234,18 +1248,15 @@ async def hit(update, context):
     bet = game["bet"]
 
     p_total = card_value(player)
-    d_total = card_value(dealer)
 
     # 💥 BUST
     if p_total > 21:
         u = get_user(uid)
 
-        # ⚠️ chips NON vengono toccate (già scalate in blackjack_bet)
-
         text = (
             "💥 SBALLATO!\n\n"
             f"🃏 TU: {' '.join(player)} ({p_total})\n"
-            f"🎩 BANCO: {' '.join(dealer)} ({d_total})\n\n"
+            f"🎩 BANCO: {' '.join(dealer)} ({card_value(dealer)})\n\n"
             f"💸 HAI PERSO -{bet} chips\n"
             f"🏦 SALDO: {u['chips']}"
         )
@@ -1257,14 +1268,13 @@ async def hit(update, context):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
-        return
+        return await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
 
     # 🃏 CONTINUA PARTITA
     text = (
         "🃏 BLACKJACK\n\n"
         f"🃏 TU: {' '.join(player)} ({p_total})\n"
-        f"🎩 Banco: {dealer[0] if dealer else '❓'}\n\n"
+        f"🎩 Banco: {dealer[0]}\n\n"
         "🎮 Scegli la tua mossa"
     )
 
@@ -1276,8 +1286,7 @@ async def hit(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
-    return
+    return await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
 
 
 # =========================
@@ -1301,7 +1310,7 @@ async def stand(update, context):
     dealer = game["dealer"]
     bet = game["bet"]
 
-    # 🃏 dealer play (regola standard casino)
+    # 🃏 dealer play (regola casino)
     while card_value(dealer) < 17:
         if not game["deck"]:
             game["deck"] = CARDS.copy()
@@ -1317,12 +1326,13 @@ async def stand(update, context):
     # =========================
     if p == 21 and len(player) == 2:
         win = int(bet * 2.5)
+        profit = win - bet
         u["chips"] += win
 
         risultato = (
             "🃏 BLACKJACK!\n"
-            f"💰 Vincita: +{win - bet} chips\n"
-            f"🏦 Saldo: {u['chips']}"
+            f"💰 Vincita: +{profit} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
         )
 
     # =========================
@@ -1330,23 +1340,24 @@ async def stand(update, context):
     # =========================
     elif d > 21 or p > d:
         win = bet * 2
+        profit = bet
         u["chips"] += win
 
         risultato = (
             "🎉 HAI VINTO!\n"
-            f"💰 Vincita: +{bet} chips\n"
-            f"🏦 Saldo: {u['chips']}"
+            f"💰 Vincita: +{profit} chips\n"
+            f"🏦 Saldo: {u['chips']} chips"
         )
 
     # =========================
     # 😔 SCONFITTA
     # =========================
     elif p < d:
-        # ❌ già scalato in blackjack_bet
+        # già scalato in blackjack_bet
         risultato = (
             "😔 HAI PERSO\n"
             f"💸 Perdita: -{bet} chips\n"
-            f"🏦 Saldo: {u['chips']}"
+            f"🏦 Saldo: {u['chips']} chips"
         )
 
     # =========================
@@ -1358,13 +1369,13 @@ async def stand(update, context):
         risultato = (
             "🤝 PAREGGIO\n"
             f"💰 Rimborso: +{bet} chips\n"
-            f"🏦 Saldo: {u['chips']}"
+            f"🏦 Saldo: {u['chips']} chips"
         )
 
-    # 💾 SALVATAGGIO
+    # 💾 SALVA UTENTE
     save_user(u)
 
-    # 🧹 CHIUSURA PARTITA
+    # 🧹 CHIUDI PARTITA
     bj_games.pop(uid, None)
 
     # 🎮 OUTPUT FINALE
@@ -2712,7 +2723,7 @@ async def cb_router(update, context):
     print("🔥 CALLBACK DEBUG:", repr(data), "USER:", uid)
 
     # =====================
-    # ⚠️ CALLBACK SAFE ANSWER (UNA SOLA VOLTA)
+    # SAFE ANSWER
     # =====================
     try:
         await q.answer()
@@ -2720,7 +2731,7 @@ async def cb_router(update, context):
         pass
 
     # =====================
-    # 🔒 TOPIC CHECK
+    # TOPIC CHECK
     # =====================
     ALLOWED_OUTSIDE_TOPIC = {"menu", "go_menu", "shop", "bonus"}
 
@@ -2732,40 +2743,36 @@ async def cb_router(update, context):
         return
 
     # =====================
-    # 🛒 SHOP HANDLERS (SAFE POSITION)
-    # =====================
-    SHOP_HANDLERS = {
-        "buy_vip": buy_vip,
-        "buy_slotboost": buy_slotboost,
-        "buy_bjpro": buy_bjpro,
-    }
-
-    # =====================
     # 🏠 MENU
     # =====================
     if data in ["menu", "go_menu"]:
         return await menu(update, context)
 
     # =====================
-    # 🃏 BLACKJACK MENU
+    # 🃏 SLOT MENU
+    # =====================
+    if data == "slot":
+        return await slot(update, context)
+
+    # =====================
+    # 🃏BLACKJACK MENU
     # =====================
     if data == "blackjack":
         return await blackjack(update, context)
 
-    # =====================
-    # 👤 HANDLERS BASE
-    # =====================
-    handlers = {
-        "profile": profile,
-        "bonus": daily_bonus,
-        "shop": shop,
-        "leaderboard": leaderboard,
-        "roulette": roulette,
-        "pvp": pvp,
-    }
+    if data.startswith("blackjack_bet_"):
+        try:
+            amount = int(data.split("_")[-1])
+        except:
+            amount = 100
 
-    if data in handlers:
-        return await handlers[data](update, context)
+        return await blackjack_bet(update, context, amount)
+
+    if data == "hit":
+        return await hit(update, context)
+
+    if data == "stand":
+        return await stand(update, context)
 
     # =====================
     # 🎰 SLOT
@@ -2781,23 +2788,6 @@ async def cb_router(update, context):
 
     if data == "spin_slot":
         return await spin_slot(update, context)
-
-    # =====================
-    # 🃏 BLACKJACK
-    # =====================
-    if data.startswith("blackjack_bet_"):
-        try:
-            amount = int(data.split("_")[-1])
-        except:
-            amount = 100
-
-        return await blackjack_bet(update, context, amount)
-
-    if data == "hit":
-        return await hit(update, context)
-
-    if data == "stand":
-        return await stand(update, context)
 
     # =====================
     # 🎲 ROULETTE
@@ -2825,6 +2815,7 @@ async def cb_router(update, context):
 
     if data == "bet_zero":
         return await bet_zero(update, context)
+
     # =====================
     # 🎮 PVP
     # =====================
@@ -2845,17 +2836,35 @@ async def cb_router(update, context):
         return await pvp_stand(update, context, table_id)
 
     # =====================
-    # 🛒 SHOP ROUTER
+    # BASE HANDLERS
     # =====================
+    handlers = {
+        "profile": profile,
+        "bonus": daily_bonus,
+        "shop": shop,
+        "leaderboard": leaderboard,
+    }
+
+    if data in handlers:
+        return await handlers[data](update, context)
+
+    # =====================
+    # SHOP HANDLERS
+    # =====================
+    SHOP_HANDLERS = {
+        "buy_vip": buy_vip,
+        "buy_slotboost": buy_slotboost,
+        "buy_bjpro": buy_bjpro,
+    }
+
     if data in SHOP_HANDLERS:
         return await SHOP_HANDLERS[data](update, context)
 
     # =====================
-    # ❌ FALLBACK
+    # FALLBACK
     # =====================
     print("❌ CALLBACK NON GESTITA:", data)
     return
-
 # =========================
 # 🧠 TEXT HANDLER
 # =========================
