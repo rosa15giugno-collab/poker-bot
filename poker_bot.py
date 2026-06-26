@@ -1,6 +1,6 @@
-import os   
+import os
 import random
-import sqlite3 
+import sqlite3
 import time
 import threading
 import asyncio
@@ -10,7 +10,8 @@ from collections import deque
 from telegram import (
     Update,
     InlineKeyboardButton,
-    InlineKeyboardMarkup, InputMediaPhoto
+    InlineKeyboardMarkup,
+    InputMediaPhoto
 )
 
 from telegram.ext import (
@@ -22,11 +23,8 @@ from telegram.ext import (
     filters
 )
 
-from telegram.errfor import BadRequest
-
-def get_chat(update):
-    msg = update.effective_message
-    return msg.chat.id, msg.message_thread_id
+# ✅ FIX IMPORT GIUSTO
+from telegram.error import BadRequest
 
 # =========================
 # 🧠 CONTEXT UTILS (TOPIC SAFE)
