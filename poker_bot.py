@@ -1116,34 +1116,8 @@ async def spin_slot(update, context):
     return
     
 
-    # =========================
-    #    🃏 BLACKJACK MENU
-    # =========================
-
-
-async def blackjack(update, context):
-    q = update.callback_query
-    await q.answer()
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 100", callback_data="blackjack_bet_100"),
-         InlineKeyboardButton("💰 500", callback_data="blackjack_bet_500")],
-        [InlineKeyboardButton("💰 1000", callback_data="blackjack_bet_1000")],
-        [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
-    ])
-
-    chat_id, thread_id = get_chat(update)
-
-    await context.bot.send_photo(
-        chat_id=chat_id,
-        message_thread_id=thread_id,
-        photo=PHOTO_BLACKJACK,
-        caption="🃏 BLACKJACK CASINO\n\n💰 Scegli la puntata:",
-        reply_markup=keyboard
-    )
-
 # =========================
-# 💰 START PARTITA
+# 💰 START PARTITA BLACKJACK
 # =========================
 async def blackjack_bet(update, context, amount):
     print("🔥 blackjack_bet:", amount)
@@ -1154,31 +1128,34 @@ async def blackjack_bet(update, context, amount):
     uid = str(update.effective_user.id)
     u = get_user(uid)
 
+    # ❌ CHIPS CHECK
     if u.get("chips", 0) < amount:
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        try:
-            return await q.message.edit_text(
-                "❌ Non hai abbastanza chips per questa puntata.",
-                reply_markup=keyboard
-            )
-        except:
-            return await q.message.reply_text(
-                "❌ Non hai abbastanza chips per questa puntata.",
-                reply_markup=keyboard
-            )
+        text = "❌ Non hai abbastanza chips per questa puntata."
 
+        try:
+            return await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
+        except:
+            return await q.message.reply_text(text, reply_markup=keyboard)
+
+    # 💰 DEDUCI CHIPS
     u["chips"] -= amount
     save_user(u)
 
+    # 🃏 CREA MAZZO
     deck = CARDS.copy()
     random.shuffle(deck)
 
     player = [deck.pop(), deck.pop()]
     dealer = [deck.pop(), deck.pop()]
+
+    # 🔄 RESET PARTITA UTENTE
+    if uid in bj_games:
+        del bj_games[uid]
 
     bj_games[uid] = {
         "deck": deck,
@@ -1187,6 +1164,7 @@ async def blackjack_bet(update, context, amount):
         "bet": amount
     }
 
+    # 🎮 KEYBOARD
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("➕ CARTA", callback_data="hit"),
@@ -1195,6 +1173,7 @@ async def blackjack_bet(update, context, amount):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
+    # 🧾 TESTO
     text = (
         "🃏 BLACKJACK\n\n"
         f"💰 Puntata: {amount}\n\n"
@@ -1203,7 +1182,8 @@ async def blackjack_bet(update, context, amount):
         f"📊 Totale: {card_value(player)}"
     )
 
-    await safe_edit(q.message, text, reply_markup=keyboard)
+    # 🔥 SAFE EDIT CORRETTO
+    await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
 
 
 # =========================
@@ -1216,7 +1196,7 @@ async def hit(update, context):
     uid = str(update.effective_user.id)
 
     if uid not in bj_games:
-        return await safe_edit(q.message, "❌ Nessuna partita attiva.")
+        return await safe_edit(context.bot, q.message, "❌ Nessuna partita attiva.")
 
     game = bj_games[uid]
 
@@ -1232,9 +1212,12 @@ async def hit(update, context):
 
     p_total = card_value(player)
 
-    # 💥 SBALLATO
+    # 💥 BUST
     if p_total > 21:
         u = get_user(uid)
+
+        u["chips"] -= bet
+        save_user(u)
 
         text = (
             "💥 SBALLATO!\n\n"
@@ -1251,13 +1234,13 @@ async def hit(update, context):
             [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
         ])
 
-        return await safe_edit(q.message, text, reply_markup=keyboard)
+        return await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
 
     # 🃏 CONTINUA
     text = (
         "🃏 BLACKJACK\n\n"
         f"🃏 TU: {' '.join(player)} ({p_total})\n"
-        f"🎩 Banco: {dealer[0]} ❓"
+        f"🎩 Banco: {dealer[0] if dealer else '❓'}"
     )
 
     keyboard = InlineKeyboardMarkup([
@@ -1268,7 +1251,7 @@ async def hit(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await safe_edit(q.message, text, reply_markup=keyboard)
+    await safe_edit(context.bot, q.message, text, reply_markup=keyboard)
 
 
 # =========================
@@ -1281,7 +1264,7 @@ async def stand(update, context):
     uid = str(update.effective_user.id)
 
     if uid not in bj_games:
-        return
+        return await safe_edit(context.bot, q.message, "❌ Nessuna partita attiva.")
 
     game = bj_games[uid]
     u = get_user(uid)
@@ -1290,6 +1273,7 @@ async def stand(update, context):
     dealer = game["dealer"]
     bet = game["bet"]
 
+    # 🃏 dealer play
     while card_value(dealer) < 17:
         if not game["deck"]:
             game["deck"] = CARDS.copy()
@@ -1300,7 +1284,9 @@ async def stand(update, context):
     p = card_value(player)
     d = card_value(dealer)
 
+    # =========================
     # 🃏 BLACKJACK NATURALE
+    # =========================
     if p == 21 and len(player) == 2:
         win = int(bet * 2.5)
         u["chips"] += win
@@ -1309,10 +1295,12 @@ async def stand(update, context):
         risultato = (
             "🃏 BLACKJACK!\n"
             f"💰 Vincita: +{profit} chips\n"
-            f"🏦 Saldo: {u['chips']} chips"
+            f"🏦 Saldo: {u['chips']}"
         )
 
+    # =========================
     # 🎉 VITTORIA
+    # =========================
     elif d > 21 or p > d:
         win = bet * 2
         u["chips"] += win
@@ -1321,19 +1309,26 @@ async def stand(update, context):
         risultato = (
             "🎉 HAI VINTO!\n"
             f"💰 Vincita: +{profit} chips\n"
-            f"🏦 Saldo: {u['chips']} chips"
+            f"🏦 Saldo: {u['chips']}"
         )
 
+    # =========================
     # 😔 SCONFITTA
+    # =========================
     elif p < d:
+        u["chips"] -= bet  # 🔥 FIX MANCANTE
+
         risultato = (
             "😔 HAI PERSO\n"
             f"💸 Perdita: -{bet} chips\n"
             f"🏦 Saldo: {u['chips']}"
         )
 
+    # =========================
     # 🤝 PAREGGIO
+    # =========================
     else:
+        # rimborsa puntata
         u["chips"] += bet
 
         risultato = (
@@ -1356,10 +1351,10 @@ async def stand(update, context):
         [InlineKeyboardButton("🏠 MENU", callback_data="menu")]
     ])
 
-    await safe_edit(q.message, testo, reply_markup=keyboard)
-#
+    await safe_edit(context.bot, q.message, testo, reply_markup=keyboard)
+#====================
 #  PVP
-#
+#=====================
 
 async def pvp(update, context):
     q = update.callback_query
