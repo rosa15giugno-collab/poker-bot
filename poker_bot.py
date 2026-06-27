@@ -912,13 +912,13 @@ async def leaderboard(update, context):
             ])
         )
     except:
-    try:
-        if q.message.photo or q.message.animation or q.message.video:
-            await q.message.edit_caption(text)
-        else:
-            await q.message.edit_text(text)
-    except:
-        pass
+        try:
+            if q.message.photo or q.message.animation or q.message.video:
+                await q.message.edit_caption(text)
+            else:
+                await q.message.edit_text(text)
+        except:
+            pass
 
 
 # =========================
