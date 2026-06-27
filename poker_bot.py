@@ -39,7 +39,7 @@ def get_ctx(update):
 # =====================
 CASINO_CHAT_ID = -1002229066951 #MONOPOLY
 CASINO_TOPIC_ID = 1476685        #TOPIC MONOPOLY
-CASINO_CHAT_ID = -1003441777740    #ADMIN ROSA
+#CASINO_CHAT_ID = -1003441777740    #ADMIN ROSA
 
 def in_casino_topic(update):
     try:
