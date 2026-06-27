@@ -1799,6 +1799,34 @@ async def pvp_hit(update, context, table_id):
             old_timer.cancel()
 
         # =========================
+        # 💥 BUST HANDLING
+        # =========================
+        if score > 21:
+            table["last_action"] += " 💥 BUST"
+
+            await update_table(context.bot, table)
+            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
+
+            # 🔒 anti doppio next_turn
+            if table.get("turn_locked"):
+                return
+
+            table["turn_locked"] = True
+
+            table["turn_index"] += 1
+
+            await next_turn(context, table_id)
+
+            table["turn_locked"] = False
+            return
+
+        # =========================
+        # 🔁 NORMAL TURN
+        # =========================
+        await update_table(context.bot, table)
+        await q.answer(f"🃏 {card} | {score}", show_alert=False)
+
+        # =========================
         # 💥 BUST
         # =========================
         if score > 21:
