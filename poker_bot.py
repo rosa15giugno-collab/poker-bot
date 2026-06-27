@@ -91,6 +91,7 @@ COOLDOWN = {}
 pvp_tables = {}
 pvp_turn_index = {}
 pvp_deadlines = {}
+GLOBAL_PVP_LOCK = asyncio.Lock()
 
 # 🔒 LOCK GLOBALE PvP (QUI)
 pvp_lock = asyncio.Lock()
@@ -1639,82 +1640,92 @@ async def pvp_start(update, context, table_id):
 # TURNO CON TIMER PVP
 # =========================
 async def next_turn(context, table_id):
-    table = pvp_tables.get(table_id)
+    async with GLOBAL_PVP_LOCK:
 
-    if not table or table.get("state") != "playing":
-        return
+        table = pvp_tables.get(table_id)
 
-    players = table["players"]
+        if not table or table.get("state") != "playing":
+            return
 
-    # 🏁 fine → dealer
-    if table["turn_index"] >= len(players):
-        table["state"] = "dealer"
-        return await dealer_phase(context, table_id)
+        players = table["players"]
 
-    uid = players[table["turn_index"]]
-    name = table.get("names", {}).get(uid, f"User {uid}")
-    hand = table["hands"].get(uid, [])
+        # 🏁 fine → dealer
+        if table["turn_index"] >= len(players):
+            table["state"] = "dealer"
+            return await dealer_phase(context, table_id)
 
-    # ⏱️ timer
-    table["deadline"] = time.time() + PVP_TIME
-    table["current_turn_uid"] = uid
+        uid = players[table["turn_index"]]
+        name = table.get("names", {}).get(uid, f"User {uid}")
 
-    # 🧠 stop timer precedente
-    old_timer = table.get("timer_task")
-    if old_timer and not old_timer.done():
-        old_timer.cancel()
+        # ⏱️ reset timer
+        table["deadline"] = time.time() + PVP_TIME
+        table["current_turn_uid"] = uid
 
-    # 🔥 LOG CHIARO (NON SOSTITUISCE UI)
-    table["last_action"] = f"🎮 Tocca a {name}"
+        # 🧠 stop timer precedente
+        old_timer = table.get("timer_task")
+        if old_timer and not old_timer.done():
+            old_timer.cancel()
 
-    # 📊 aggiorna tavolo
-    await update_table(context.bot, table)
+        # 🔥 stato turno
+        table["last_action"] = f"🎮 Tocca a {name}"
 
-    # ⏱️ avvia timer
-    table["timer_task"] = asyncio.create_task(
-        timer_auto(context, table_id)
-    )
-# =========================
-# TIMER AUTO AFK PVP (FIXED)
-# =========================
-async def timer_auto(context, table_id):
-    table = pvp_tables.get(table_id)
-    thread_id = table.get("thread_id")
+        # 📊 UI update safe
+        await update_table(context.bot, table)
 
-    if not table or table.get("state") != "playing":
-        return
-
-    # ⏱️ attesa “soft”
-    await asyncio.sleep(PVP_TIME)
-
-    # 🔒 se turno è già cambiato → IGNORA COMPLETAMENTE
-    if time.time() > table.get("deadline", 0):
-        return
-
-    # 🔥 sicurezza anti doppio trigger
-    if table.get("turn_index") >= len(table.get("players", [])):
-        return
-
-    # 🎯 avanza turno
-    table["turn_index"] += 1
-
-    chat_id = table.get("chat_id")
-
-    if chat_id:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            message_thread_id=thread_id,
-            text="⏱️ Tempo scaduto → STAND automatico"
+        # ⏱️ avvia timer AFK
+        table["timer_task"] = asyncio.create_task(
+            timer_auto(context, table_id)
         )
 
-    # 🔁 vai al prossimo turno
-    return await next_turn(context, table_id)
+
+# =========================
+# ⏱️ TIMER AUTO AFK (PRO SAFE)
+# =========================
+async def timer_auto(context, table_id):
+    await asyncio.sleep(PVP_TIME)
+
+    async with GLOBAL_PVP_LOCK:
+
+        table = pvp_tables.get(table_id)
+
+        if not table or table.get("state") != "playing":
+            return
+
+        # 🔒 se turno già cambiato → exit
+        if time.time() < table.get("deadline", 0):
+            return
+
+        if table["turn_index"] >= len(table["players"]):
+            return
+
+        uid = table["players"][table["turn_index"]]
+        name = table.get("names", {}).get(uid, f"User {uid}")
+
+        table["last_action"] = f"⏱️ {name} AFK → STAND automatico"
+
+        chat_id = table.get("chat_id")
+        thread_id = table.get("thread_id")
+
+        if chat_id:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                message_thread_id=thread_id,
+                text="⏱️ Tempo scaduto → STAND automatico"
+            )
+
+        # 🔁 passa turno in sicurezza
+        table["turn_index"] += 1
+
+        await next_turn(context, table_id)
 # =========================
 # HIT PVP (FIXED STABLE)
 # =========================
 async def pvp_hit(update, context, table_id):
-    async with pvp_lock:
+    async with GLOBAL_PVP_LOCK:
+
         q = update.callback_query
+        await q.answer()
+
         table = pvp_tables.get(table_id)
 
         if not table or table.get("state") != "playing":
@@ -1733,28 +1744,46 @@ async def pvp_hit(update, context, table_id):
         if not table.get("deck"):
             return await q.answer("Mazzo finito", show_alert=True)
 
-        # 🃏 carta
+        # 🧱 anti doppio click (extra sicurezza PRO)
+        now = time.time()
+        last = table.get("last_click", {})
+
+        if now - last.get(uid, 0) < 0.6:
+            return await q.answer("⏳ Troppo veloce", show_alert=False)
+
+        last[uid] = now
+        table["last_click"] = last
+
+        # 🃏 pesca carta
         card = table["deck"].pop()
         table["hands"][uid].append(card)
 
         score = card_value(table["hands"][uid])
         name = table.get("names", {}).get(uid, uid)
 
-        # 🔥 log chiaro
+        # 🔥 log azione
         table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        # 💥 bust → cambio turno immediato
+        # 💥 BUST
         if score > 21:
             table["last_action"] += " 💥 BUST"
+
+            # 🔁 aggiorna UI PRIMA di cambiare turno
+            await update_table(context.bot, table)
+
+            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
+
             table["turn_index"] += 1
 
-            # 🔁 passa turno SUBITO
-            await next_turn(context, table_id)
+            # 🔒 evita doppio next_turn
+            if not table.get("turn_locked"):
+                table["turn_locked"] = True
+                await next_turn(context, table_id)
+                table["turn_locked"] = False
 
-            # feedback solo utente
-            return await q.answer(f"💥 BUST | {score}", show_alert=False)
+            return
 
-        # 🔁 update tavolo (solo se NON bust)
+        # 🔁 NON BUST
         await update_table(context.bot, table)
 
         await q.answer(f"🃏 {card} | {score}", show_alert=False)
