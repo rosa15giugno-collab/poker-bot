@@ -37,8 +37,9 @@ def get_ctx(update):
 # =====================
 # 🔐 AUTH SYSTEM
 # =====================
-CASINO_CHAT_ID = -1002229066951
-CASINO_TOPIC_ID = 1476685
+CASINO_CHAT_ID = -1002229066951 #MONOPOLY
+CASINO_TOPIC_ID = 1476685        #TOPIC MONOPOLY
+CASINO_CHAT_ID = -1003441777740    #ADMIN ROSA
 
 def in_casino_topic(update):
     try:
@@ -1994,12 +1995,11 @@ async def update_table(bot, t):
 
         chat_id = t.get("chat_id")
         message_id = t.get("message_id")
-        thread_id = t.get("thread_id")
 
         if not chat_id or not message_id:
             return
 
-        # 🧱 UI RATE LIMIT (FONDAMENTALE PER 429)
+        # 🧱 RATE LIMIT UI (anti 429)
         now = time.time()
         if now - t.get("last_ui", 0) < 0.8:
             return
@@ -2009,14 +2009,10 @@ async def update_table(bot, t):
         idx = t.get("turn_index", 0)
         state = t.get("state", "waiting")
 
-        # =========================
-        # 🎯 PLAYER TURNO
-        # =========================
         current_uid = players[idx] if (players and idx < len(players)) else None
-        current_name = (t.get("names") or {}).get(current_uid, "—")
 
         # =========================
-        # 👥 PLAYERS
+        # 👥 PLAYERS LIST
         # =========================
         players_text = "👥 GIOCATORI:\n\n"
 
@@ -2079,31 +2075,33 @@ async def update_table(bot, t):
         keyboard = table_buttons(t)
 
         # =========================
-        # 🧠 SAFE EDIT (TEXT / CAPTION AUTO DETECT)
+        # 🧠 SAFE EDIT (NO THREAD_ID HERE!)
         # =========================
+
         try:
             return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                
                 text=text,
                 reply_markup=keyboard
             )
+
         except Exception as e:
             print("edit_text fail:", e)
 
-        try:
-            return await bot.edit_message_caption(
-                chat_id=chat_id,
-                message_id=message_id,
-                
-                caption=text,
-                reply_markup=keyboard
-            )
-        except Exception as e:
-            print("edit_caption fail:", e)
+            try:
+                return await bot.edit_message_caption(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    caption=text,
+                    reply_markup=keyboard
+                )
 
-        print("❌ update_table FAILED COMPLETELY")  
+            except Exception as e2:
+                print("edit_caption fail:", e2)
+
+        print("❌ update_table FAILED COMPLETELY")
+        return None
 
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
