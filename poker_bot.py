@@ -2041,6 +2041,7 @@ async def dealer_phase(context, table_id):
 # UPDATE_TABLE
 #======================
 async def update_table(bot, t):
+
     async with update_ui_lock:
 
         if not t:
@@ -2055,7 +2056,7 @@ async def update_table(bot, t):
         if not chat_id or not message_id:
             return
 
-        # 🧱 RATE LIMIT UI (anti 429)
+        # 🧱 RATE LIMIT UI (anti 429 + lag)
         now = time.time()
         if now - t.get("last_ui", 0) < 0.8:
             return
@@ -2067,6 +2068,92 @@ async def update_table(bot, t):
 
         current_uid = players[idx] if (players and idx < len(players)) else None
 
+        # =========================
+        # 👥 PLAYERS
+        # =========================
+        players_text = "👥 GIOCATORI:\n\n"
+
+        for uid in players:
+            hand = t.get("hands", {}).get(uid, [])
+            score = card_value(hand)
+            name = (t.get("names") or {}).get(uid, f"User {uid}")
+
+            is_turn = str(uid) == str(current_uid)
+
+            if is_turn:
+                players_text += (
+                    "━━━━━━━━━━━━━━\n"
+                    "🔥 🎮 TURNO ORA 🔥\n"
+                    "━━━━━━━━━━━━━━\n"
+                    f"👑 {name}\n"
+                    f"🃏 {' '.join(hand) if hand else '—'} ({score})\n"
+                    "━━━━━━━━━━━━━━\n\n"
+                )
+            else:
+                players_text += (
+                    f"👤 {name}\n"
+                    f"   🃏 {' '.join(hand) if hand else '—'} ({score})\n\n"
+                )
+
+        # =========================
+        # 🎩 DEALER
+        # =========================
+        dealer = t.get("dealer", [])
+        dealer_score = card_value(dealer)
+
+        if state in ("waiting", "playing"):
+            # 🟢 una carta visibile + una coperta
+            visible = dealer[0] if len(dealer) > 0 else "—"
+            dealer_text = f"🎩 BANCO: {visible} ❓"
+
+            if state == "waiting":
+                dealer_text += "\n⏳ In attesa giocatori..."
+            else:
+                dealer_text += "\n🎮 Partita in corso..."
+
+        elif state == "dealer":
+            # 🔥 reveal completo SOLO ora
+            dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
+            dealer_text += "\n🎩 Il banco sta giocando..."
+
+        elif state == "finished":
+            dealer_text = f"🎩 BANCO FINALE: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
+
+        # =========================
+        # 🔥 LAST ACTION
+        # =========================
+        action_text = ""
+        if t.get("last_action"):
+            action_text = f"\n🔥 {t['last_action']}"
+
+        # =========================
+        # 🎮 FINAL TEXT
+        # =========================
+        text = (
+            "🎮 PVP BLACKJACK\n\n"
+            f"📊 Stato: {state.upper()}\n\n"
+            + players_text
+            + "\n"
+            + dealer_text
+            + action_text
+        )
+
+        keyboard = table_buttons(t)
+
+        # =========================
+        # 📌 FILEID ONLY (NO TEXT EDIT)
+        # =========================
+        try:
+            return await bot.edit_message_caption(
+                chat_id=chat_id,
+                message_id=message_id,
+                caption=text,
+                reply_markup=keyboard
+            )
+
+        except Exception as e:
+            print("❌ update_table fail:", e)
+            return None
         # =========================
         # 👥 PLAYERS LIST
         # =========================
