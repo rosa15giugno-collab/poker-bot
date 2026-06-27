@@ -1519,35 +1519,19 @@ async def pvp_join(update, context, table_id):
         return await q.answer("Tavolo non esiste", show_alert=True)
 
     if table["state"] != "waiting":
-        return await q.answer(
-            "La partita è già iniziata",
-            show_alert=True
-        )
+        return await q.answer("La partita è già iniziata", show_alert=True)
 
-    # 🔒 anti-duplicazione
     if uid in table["players"]:
-        return await q.answer(
-            "Sei già dentro",
-            show_alert=True
-        )
+        return await q.answer("Sei già dentro", show_alert=True)
 
     if len(table["players"]) >= PVP_MAX:
-        return await q.answer(
-            "Tavolo pieno",
-            show_alert=True
-        )
+        return await q.answer("Tavolo pieno", show_alert=True)
 
-    # 👤 init names
     if "names" not in table:
         table["names"] = {}
 
-    # 👤 nome visualizzato
-    if q.from_user.username:
-        name = f"@{q.from_user.username}"
-    else:
-        name = q.from_user.first_name or "Giocatore"
+    name = f"@{q.from_user.username}" if q.from_user.username else (q.from_user.first_name or "Giocatore")
 
-    # 👤 salva player
     table["players"].append(uid)
     table["hands"][uid] = []
     table["bets"][uid] = 200
@@ -1555,32 +1539,40 @@ async def pvp_join(update, context, table_id):
 
     await q.answer("Entrato 🎯")
 
-    # 👥 lista giocatori
+    # 🔁 IMPORTANTISSIMO: aggiorna anche UI centrale
+    await update_table(context.bot, table)
+
     players_text = "\n".join(
         f"• {table['names'][pid]}"
         for pid in table["players"]
     )
 
-    # 🎬 aggiorna caption
+    text = (
+        "🎬 PVP BLACKJACK LIVE\n\n"
+        f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n\n"
+        f"{players_text}\n\n"
+        "⏳ In attesa avvio..."
+    )
+
     try:
         await q.message.edit_caption(
-            caption=(
-                "🎬 PVP BLACKJACK LIVE\n\n"
-                f"👥 Giocatori: {len(table['players'])}/{PVP_MAX}\n\n"
-                f"{players_text}\n\n"
-                "⏳ In attesa avvio..."
-            ),
+            caption=text,
             reply_markup=q.message.reply_markup
         )
     except Exception as e:
         print("EDIT CAPTION ERROR:", e)
+
+        # fallback sicuro
+        try:
+            await q.message.edit_text(text, reply_markup=q.message.reply_markup)
+        except Exception as e2:
+            print("EDIT TEXT FALLBACK ERROR:", e2)
 # =========================
 # START PARTITA PVP
 # =========================
 
 async def pvp_start(update, context, table_id):
     q = update.callback_query
-    await q.answer()
 
     table = pvp_tables.get(table_id)
 
@@ -1590,7 +1582,7 @@ async def pvp_start(update, context, table_id):
     if len(table["players"]) < PVP_MIN:
         return await q.answer("Servono almeno 2 giocatori", show_alert=True)
 
-    # 🧠 salva SEMPRE riferimenti messaggio (FONDAMENTALE)
+    # 🧠 salva riferimenti messaggio
     table["chat_id"] = q.message.chat.id
     table["message_id"] = q.message.message_id
     table["thread_id"] = getattr(q.message, "message_thread_id", None)
@@ -1604,32 +1596,34 @@ async def pvp_start(update, context, table_id):
     table["state"] = "playing"
     table["turn_index"] = 0
 
-    # 👤 deal players
+    # 👤 deal
     for uid in table["players"]:
         table["hands"][uid] = [deck.pop(), deck.pop()]
 
-    # 🏦 dealer
     table["dealer"] = [deck.pop(), deck.pop()]
 
-    # 🛑 stop timer precedente
+    # 🛑 stop timer
     old_timer = table.get("timer_task")
     if old_timer and not old_timer.done():
         old_timer.cancel()
 
-    # 🎬 animazione start
+    # 🎬 START UI (solo visual)
     try:
         await q.message.edit_caption(
             caption="🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo...",
             reply_markup=None
         )
-    except:
-        await q.message.edit_text(
-            "🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo..."
-        )
+    except Exception:
+        try:
+            await q.message.edit_text(
+                "🎬 DISTRIBUZIONE CARTE...\n\n🔥 Preparati al tavolo..."
+            )
+        except Exception:
+            pass
 
     await asyncio.sleep(1.2)
 
-    # 🔥 aggiorna tavolo
+    # 🔥 PRIMA UI SYNC
     await update_table(context.bot, table)
 
     await asyncio.sleep(0.3)
@@ -1721,115 +1715,102 @@ async def timer_auto(context, table_id):
 # HIT PVP (FIXED STABLE)
 # =========================
 async def pvp_hit(update, context, table_id):
-    async with GLOBAL_PVP_LOCK:
 
-        q = update.callback_query
-        await q.answer()
+    q = update.callback_query
+    await q.answer()
 
-        table = pvp_tables.get(table_id)
+    table = pvp_tables.get(table_id)
 
-        if not table or table.get("state") != "playing":
-            return await q.answer("Tavolo non valido", show_alert=True)
+    if not table or table.get("state") != "playing":
+        return await q.answer("Tavolo non valido", show_alert=True)
 
-        idx = table["turn_index"]
+    idx = table["turn_index"]
 
-        if idx >= len(table["players"]):
-            return await q.answer("Turno finito", show_alert=True)
+    if idx >= len(table["players"]):
+        return await q.answer("Turno finito", show_alert=True)
 
-        uid = str(table["players"][idx])
+    uid = str(table["players"][idx])
 
-        if str(q.from_user.id) != uid:
-            return await q.answer("⛔ Non è il tuo turno", show_alert=True)
+    if str(q.from_user.id) != uid:
+        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-        if not table.get("deck"):
-            return await q.answer("Mazzo finito", show_alert=True)
+    if not table.get("deck"):
+        return await q.answer("Mazzo finito", show_alert=True)
 
-        # 🧱 anti doppio click (extra sicurezza PRO)
-        now = time.time()
-        last = table.get("last_click", {})
+    # 🧱 anti spam
+    now = time.time()
+    last = table.get("last_click", {})
 
-        if now - last.get(uid, 0) < 0.6:
-            return await q.answer("⏳ Troppo veloce", show_alert=False)
+    if now - last.get(uid, 0) < 0.6:
+        return await q.answer("⏳ Troppo veloce", show_alert=False)
 
-        last[uid] = now
-        table["last_click"] = last
+    last[uid] = now
+    table["last_click"] = last
 
-        # 🃏 pesca carta
-        card = table["deck"].pop()
-        table["hands"][uid].append(card)
+    # 🃏 carta
+    card = table["deck"].pop()
+    table["hands"][uid].append(card)
 
-        score = card_value(table["hands"][uid])
-        name = table.get("names", {}).get(uid, uid)
+    score = card_value(table["hands"][uid])
+    name = table.get("names", {}).get(uid, uid)
 
-        # 🔥 log azione
-        table["last_action"] = f"🃏 {name} pesca {card} → {score}"
+    table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        # 💥 BUST
-        if score > 21:
-            table["last_action"] += " 💥 BUST"
+    # 💥 BUST
+    if score > 21:
+        table["last_action"] += " 💥 BUST"
 
-            # 🔁 aggiorna UI PRIMA di cambiare turno
-            await update_table(context.bot, table)
-
-            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
-
-            table["turn_index"] += 1
-
-            # 🔒 evita doppio next_turn
-            if not table.get("turn_locked"):
-                table["turn_locked"] = True
-                await next_turn(context, table_id)
-                table["turn_locked"] = False
-
-            return
-
-        # 🔁 NON BUST
         await update_table(context.bot, table)
 
-        await q.answer(f"🃏 {card} | {score}", show_alert=False)
+        await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
+
+        table["turn_index"] += 1
+
+        # 🔥 next_turn FUORI LOCK GLOBALE
+        await next_turn(context, table_id)
+
+        return
+
+    # 🔁 normale
+    await update_table(context.bot, table)
+
+    await q.answer(f"🃏 {card} | {score}", show_alert=False)
 # =========================
 # STAND PVP (FIXED STABLE)
 # =========================
 async def pvp_stand(update, context, table_id):
+
     q = update.callback_query
     table = pvp_tables.get(table_id)
 
     if not table or table.get("state") != "playing":
         return await q.answer("Tavolo non valido", show_alert=True)
 
-    if table.get("action_lock"):
-        return await q.answer("⏳ Attendi...", show_alert=True)
+    idx = table["turn_index"]
 
-    table["action_lock"] = True
+    if idx >= len(table["players"]):
+        return await q.answer("Turno finito", show_alert=True)
 
-    try:
-        idx = table["turn_index"]
+    uid = str(table["players"][idx])
 
-        if idx >= len(table["players"]):
-            return await q.answer("Turno finito", show_alert=True)
+    if str(q.from_user.id) != uid:
+        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-        uid = str(table["players"][idx])
+    # 🛑 stop timer subito
+    old_timer = table.get("timer_task")
+    if old_timer and not old_timer.done():
+        old_timer.cancel()
 
-        if str(q.from_user.id) != uid:
-            return await q.answer("⛔ Non è il tuo turno", show_alert=True)
+    await q.answer("STAND")
 
-        await q.answer("STAND")
+    # ➡️ passa turno
+    table["turn_index"] += 1
 
-        # 🛑 stop timer
-        old_timer = table.get("timer_task")
-        if old_timer and not old_timer.done():
-            old_timer.cancel()
+    # 🔥 aggiorna UI UNA sola volta
+    await update_table(context.bot, table)
 
-        # ➡️ next player
-        table["turn_index"] += 1
-
-        # 🔥 update UI
-        await update_table(context.bot, table)
-
-        return await next_turn(context, table_id)
-
-    finally:
-        table["action_lock"] = False
+    # 🔁 next turn
+    await next_turn(context, table_id)
 
 # =========================
 # DEALER PHASE PVP
