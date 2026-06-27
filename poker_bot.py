@@ -1635,25 +1635,31 @@ async def pvp_start(update, context, table_id):
 # TURNO CON TIMER PVP
 # =========================
 async def next_turn(context, table_id):
+
     async with GLOBAL_PVP_LOCK:
 
         table = pvp_tables.get(table_id)
         if not table or table.get("state") != "playing":
             return
 
-        players = table["players"]
+        players = table.get("players", [])
 
-        # 🏁 fine partita → dealer
+        # 🏁 FINE PARTITA → DEALER
         if table["turn_index"] >= len(players):
+
             table["state"] = "dealer"
 
-            # stop timer
+            # 🛑 stop timer
             old = table.get("timer_task")
             if old and not old.done():
                 old.cancel()
 
+            # 🔥 reset turn_locked
+            table["turn_locked"] = False
+
             return await dealer_phase(context, table_id)
 
+        # 🎮 PLAYER ATTUALE
         uid = players[table["turn_index"]]
         name = table.get("names", {}).get(uid, f"User {uid}")
 
@@ -1662,18 +1668,29 @@ async def next_turn(context, table_id):
         table["current_turn_uid"] = uid
         table["last_action"] = f"🎮 Tocca a {name}"
 
-        # 🧠 stop vecchio timer
+        # 🔒 reset lock turno
+        table["turn_locked"] = False
+
+        # 🧠 stop timer precedente
         old = table.get("timer_task")
         if old and not old.done():
             old.cancel()
 
-    # 📊 UI update fuori lock (IMPORTANTISSIMO)
-    await update_table(context.bot, table)
+    # =========================
+    # 📊 UI UPDATE (FAIL SAFE)
+    # =========================
+    try:
+        await update_table(context.bot, table)
+    except Exception as e:
+        print("update_table error in next_turn:", e)
 
-    # ⏱️ avvia timer nuovo
-    table["timer_task"] = asyncio.create_task(
-        timer_auto(context, table_id)
-    )
+    # =========================
+    # ⏱️ TIMER START (SAFE)
+    # =========================
+    async with GLOBAL_PVP_LOCK:
+        table["timer_task"] = asyncio.create_task(
+            timer_auto(context, table_id)
+        )
 # =========================
 # ⏱️ TIMER AUTO AFK (PRO SAFE)
 # =========================
@@ -2128,20 +2145,19 @@ async def update_table(bot, t):
         except Exception as e:
             print("edit_text fail:", e)
 
-            try:
-                return await bot.edit_message_caption(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    caption=text,
-                    reply_markup=keyboard
-                )
+        try:
+            return await bot.edit_message_caption(
+                chat_id=chat_id,
+                message_id=message_id,
+                caption=text,
+                reply_markup=keyboard
+            )
 
-            except Exception as e2:
-                print("edit_caption fail:", e2)
+        except Exception as e:
+            print("edit_caption fail:", e)
 
-        print("❌ update_table FAILED COMPLETELY")
+        print("❌ update_table FAILED BUT GAME CONTINUES")
         return None
-
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
