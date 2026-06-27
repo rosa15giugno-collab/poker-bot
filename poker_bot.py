@@ -1638,86 +1638,97 @@ async def next_turn(context, table_id):
     async with GLOBAL_PVP_LOCK:
 
         table = pvp_tables.get(table_id)
-
         if not table or table.get("state") != "playing":
             return
 
         players = table["players"]
 
-        # 🏁 fine → dealer
+        # 🏁 fine partita → dealer
         if table["turn_index"] >= len(players):
             table["state"] = "dealer"
+
+            # stop timer
+            old = table.get("timer_task")
+            if old and not old.done():
+                old.cancel()
+
             return await dealer_phase(context, table_id)
 
         uid = players[table["turn_index"]]
         name = table.get("names", {}).get(uid, f"User {uid}")
 
-        # ⏱️ reset timer
+        # ⏱️ setup turno
         table["deadline"] = time.time() + PVP_TIME
         table["current_turn_uid"] = uid
-
-        # 🧠 stop timer precedente
-        old_timer = table.get("timer_task")
-        if old_timer and not old_timer.done():
-            old_timer.cancel()
-
-        # 🔥 stato turno
         table["last_action"] = f"🎮 Tocca a {name}"
 
-        # 📊 UI update safe
-        await update_table(context.bot, table)
+        # 🧠 stop vecchio timer
+        old = table.get("timer_task")
+        if old and not old.done():
+            old.cancel()
 
-        # ⏱️ avvia timer AFK
-        table["timer_task"] = asyncio.create_task(
-            timer_auto(context, table_id)
-        )
+    # 📊 UI update fuori lock (IMPORTANTISSIMO)
+    await update_table(context.bot, table)
 
-
+    # ⏱️ avvia timer nuovo
+    table["timer_task"] = asyncio.create_task(
+        timer_auto(context, table_id)
+    )
 # =========================
 # ⏱️ TIMER AUTO AFK (PRO SAFE)
 # =========================
 async def timer_auto(context, table_id):
+
     await asyncio.sleep(PVP_TIME)
 
     async with GLOBAL_PVP_LOCK:
 
         table = pvp_tables.get(table_id)
-
         if not table or table.get("state") != "playing":
             return
 
-        # 🔒 se il turno è già cambiato → esci
-        if time.time() < table.get("deadline", 0):
-            return
-
         players = table.get("players", [])
+        idx = table.get("turn_index", 0)
 
-        if table["turn_index"] >= len(players):
+        if idx >= len(players):
             return
 
-        # 👤 player AFK
-        uid = players[table["turn_index"]]
+        uid = players[idx]
         name = table.get("names", {}).get(uid, f"User {uid}")
 
-        # 🔥 log AFK (visibile in UI)
-        table["last_action"] = f"⏱️ {name} è AFK → turno saltato"
+        # 🔒 controllo anti doppio trigger
+        if table.get("turn_locked"):
+            return
+
+        table["turn_locked"] = True
+
+        # 💥 AFK ACTION
+        table["last_action"] = f"⏱️ {name} AFK → STAND automatico"
 
         chat_id = table.get("chat_id")
         thread_id = table.get("thread_id")
 
-        # 📣 messaggio AFK nel gruppo
         if chat_id:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                message_thread_id=thread_id,
-                text=f"⏱️ {name} è AFK → salta il turno"
-            )
+            try:
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    message_thread_id=thread_id,
+                    text=f"⏱️ {name} è AFK → turno saltato"
+                )
+            except Exception as e:
+                print("AFK send error:", e)
 
-        # 🔁 skip player
+        # ➡️ skip player
         table["turn_index"] += 1
 
-        # 🔁 continua flusso normale
-        await next_turn(context, table_id)
+    # 🔥 UI update fuori lock
+    await update_table(context.bot, table)
+
+    # 🔁 next turn SICURO
+    await next_turn(context, table_id)
+
+    async with GLOBAL_PVP_LOCK:
+        table["turn_locked"] = False
 # =========================
 # HIT PVP (FIXED STABLE)
 # =========================
@@ -1726,61 +1737,76 @@ async def pvp_hit(update, context, table_id):
     q = update.callback_query
     await q.answer()
 
-    table = pvp_tables.get(table_id)
+    async with GLOBAL_PVP_LOCK:
 
-    if not table or table.get("state") != "playing":
-        return await q.answer("Tavolo non valido", show_alert=True)
+        table = pvp_tables.get(table_id)
 
-    idx = table["turn_index"]
+        if not table or table.get("state") != "playing":
+            return await q.answer("Tavolo non valido", show_alert=True)
 
-    if idx >= len(table["players"]):
-        return await q.answer("Turno finito", show_alert=True)
+        idx = table["turn_index"]
 
-    uid = str(table["players"][idx])
+        if idx >= len(table["players"]):
+            return await q.answer("Turno finito", show_alert=True)
 
-    if str(q.from_user.id) != uid:
-        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
+        uid = str(table["players"][idx])
 
-    if not table.get("deck"):
-        return await q.answer("Mazzo finito", show_alert=True)
+        if str(q.from_user.id) != uid:
+            return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-    # 🧱 anti spam
-    now = time.time()
-    last = table.get("last_click", {})
+        if not table.get("deck"):
+            return await q.answer("Mazzo finito", show_alert=True)
 
-    if now - last.get(uid, 0) < 0.6:
-        return await q.answer("⏳ Troppo veloce", show_alert=False)
+        # 🧱 anti spam click
+        now = time.time()
+        last = table.get("last_click", {})
 
-    last[uid] = now
-    table["last_click"] = last
+        if now - last.get(uid, 0) < 0.6:
+            return await q.answer("⏳ Troppo veloce", show_alert=False)
 
-    # 🃏 carta
-    card = table["deck"].pop()
-    table["hands"][uid].append(card)
+        last[uid] = now
+        table["last_click"] = last
 
-    score = card_value(table["hands"][uid])
-    name = table.get("names", {}).get(uid, uid)
+        # 🃏 carta
+        card = table["deck"].pop()
+        table["hands"][uid].append(card)
 
-    table["last_action"] = f"🃏 {name} pesca {card} → {score}"
+        score = card_value(table["hands"][uid])
+        name = table.get("names", {}).get(uid, uid)
 
-    # 💥 BUST
-    if score > 21:
-        table["last_action"] += " 💥 BUST"
+        table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        await update_table(context.bot, table)
+        # 🛑 stop timer corrente
+        old_timer = table.get("timer_task")
+        if old_timer and not old_timer.done():
+            old_timer.cancel()
 
-        await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
+        # =========================
+        # 💥 BUST
+        # =========================
+        if score > 21:
+            table["last_action"] += " 💥 BUST"
 
-        table["turn_index"] += 1
+            await update_table(context.bot, table)
+            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
 
-        # 🔥 next_turn FUORI LOCK GLOBALE
-        await next_turn(context, table_id)
+            table["turn_index"] += 1
 
-        return
+            # 🔒 evita doppio next_turn
+            if table.get("turn_locked"):
+                return
 
-    # 🔁 normale
+            table["turn_locked"] = True
+
+            await next_turn(context, table_id)
+
+            table["turn_locked"] = False
+            return
+
+    # =========================
+    # 🔁 NORMALE (FUORI LOCK)
+    # =========================
     await update_table(context.bot, table)
-
     await q.answer(f"🃏 {card} | {score}", show_alert=False)
 # =========================
 # STAND PVP (FIXED STABLE)
@@ -1788,36 +1814,49 @@ async def pvp_hit(update, context, table_id):
 async def pvp_stand(update, context, table_id):
 
     q = update.callback_query
-    table = pvp_tables.get(table_id)
+    await q.answer()
 
-    if not table or table.get("state") != "playing":
-        return await q.answer("Tavolo non valido", show_alert=True)
+    async with GLOBAL_PVP_LOCK:
 
-    idx = table["turn_index"]
+        table = pvp_tables.get(table_id)
 
-    if idx >= len(table["players"]):
-        return await q.answer("Turno finito", show_alert=True)
+        if not table or table.get("state") != "playing":
+            return await q.answer("Tavolo non valido", show_alert=True)
 
-    uid = str(table["players"][idx])
+        idx = table["turn_index"]
 
-    if str(q.from_user.id) != uid:
-        return await q.answer("⛔ Non è il tuo turno", show_alert=True)
+        if idx >= len(table["players"]):
+            return await q.answer("Turno finito", show_alert=True)
 
-    # 🛑 stop timer subito
-    old_timer = table.get("timer_task")
-    if old_timer and not old_timer.done():
-        old_timer.cancel()
+        uid = str(table["players"][idx])
 
-    await q.answer("STAND")
+        if str(q.from_user.id) != uid:
+            return await q.answer("⛔ Non è il tuo turno", show_alert=True)
 
-    # ➡️ passa turno
-    table["turn_index"] += 1
+        # 🛑 stop timer
+        old_timer = table.get("timer_task")
+        if old_timer and not old_timer.done():
+            old_timer.cancel()
 
-    # 🔥 aggiorna UI UNA sola volta
+        # 🔒 evita doppio avanzamento (AFK + manual)
+        if table.get("turn_locked"):
+            return await q.answer("⏳ Turno già processato", show_alert=False)
+
+        table["turn_locked"] = True
+
+        table["last_action"] = f"✋ {table['names'].get(uid, uid)} STAND"
+
+        # ➡️ next player
+        table["turn_index"] += 1
+
+    # 🔥 UI update fuori lock
     await update_table(context.bot, table)
 
-    # 🔁 next turn
+    # 🔁 next turn fuori lock (SAFE)
     await next_turn(context, table_id)
+
+    async with GLOBAL_PVP_LOCK:
+        table["turn_locked"] = False
 
 # =========================
 # DEALER PHASE PVP
