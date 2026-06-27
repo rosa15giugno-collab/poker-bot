@@ -1685,31 +1685,37 @@ async def timer_auto(context, table_id):
         if not table or table.get("state") != "playing":
             return
 
-        # 🔒 se turno già cambiato → exit
+        # 🔒 se il turno è già cambiato → esci
         if time.time() < table.get("deadline", 0):
             return
 
-        if table["turn_index"] >= len(table["players"]):
+        players = table.get("players", [])
+
+        if table["turn_index"] >= len(players):
             return
 
-        uid = table["players"][table["turn_index"]]
+        # 👤 player AFK
+        uid = players[table["turn_index"]]
         name = table.get("names", {}).get(uid, f"User {uid}")
 
-        table["last_action"] = f"⏱️ {name} AFK → STAND automatico"
+        # 🔥 log AFK (visibile in UI)
+        table["last_action"] = f"⏱️ {name} è AFK → turno saltato"
 
         chat_id = table.get("chat_id")
         thread_id = table.get("thread_id")
 
+        # 📣 messaggio AFK nel gruppo
         if chat_id:
             await context.bot.send_message(
                 chat_id=chat_id,
                 message_thread_id=thread_id,
-                text="⏱️ Tempo scaduto → STAND automatico"
+                text=f"⏱️ {name} è AFK → salta il turno"
             )
 
-        # 🔁 passa turno in sicurezza
+        # 🔁 skip player
         table["turn_index"] += 1
 
+        # 🔁 continua flusso normale
         await next_turn(context, table_id)
 # =========================
 # HIT PVP (FIXED STABLE)
