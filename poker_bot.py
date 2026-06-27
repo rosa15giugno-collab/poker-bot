@@ -2079,7 +2079,7 @@ async def update_table(bot, t):
             return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                message_thread_id=thread_id,
+                
                 text=text,
                 reply_markup=keyboard
             )
@@ -2090,7 +2090,7 @@ async def update_table(bot, t):
             return await bot.edit_message_caption(
                 chat_id=chat_id,
                 message_id=message_id,
-                message_thread_id=thread_id,
+                
                 caption=text,
                 reply_markup=keyboard
             )
