@@ -2007,32 +2007,37 @@ async def update_table(bot, t):
 
         chat_id = t.get("chat_id")
         message_id = t.get("message_id")
+        thread_id = t.get("thread_id")
 
         if not chat_id or not message_id:
             return
+
+        # 🧱 UI RATE LIMIT (FONDAMENTALE PER 429)
+        now = time.time()
+        if now - t.get("last_ui", 0) < 0.8:
+            return
+        t["last_ui"] = now
 
         players = t.get("players", [])
         idx = t.get("turn_index", 0)
         state = t.get("state", "waiting")
 
         # =========================
-        # 🎯 GIOCATORE DI TURNO (SAFE)
+        # 🎯 PLAYER TURNO
         # =========================
         current_uid = players[idx] if (players and idx < len(players)) else None
         current_name = (t.get("names") or {}).get(current_uid, "—")
 
         # =========================
-        # 👤 PLAYERS LIST
+        # 👥 PLAYERS
         # =========================
         players_text = "👥 GIOCATORI:\n\n"
 
         for uid in players:
-
             hand = t.get("hands", {}).get(uid, [])
             score = card_value(hand)
             name = (t.get("names") or {}).get(uid, f"User {uid}")
 
-            # 🔥 FIX UID TYPE SAFETY
             is_turn = str(uid) == str(current_uid)
 
             if is_turn:
@@ -2051,7 +2056,7 @@ async def update_table(bot, t):
                 )
 
         # =========================
-        # 🏦 DEALER
+        # 🎩 DEALER
         # =========================
         dealer = t.get("dealer", [])
         dealer_score = card_value(dealer)
@@ -2087,25 +2092,24 @@ async def update_table(bot, t):
         keyboard = table_buttons(t)
 
         # =========================
-        # 📸 EDIT TEXT FIRST
+        # 🧠 SAFE EDIT (TEXT / CAPTION AUTO DETECT)
         # =========================
         try:
             return await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
+                message_thread_id=thread_id,
                 text=text,
                 reply_markup=keyboard
             )
         except Exception as e:
             print("edit_text fail:", e)
 
-        # =========================
-        # 📸 FALLBACK CAPTION
-        # =========================
         try:
             return await bot.edit_message_caption(
                 chat_id=chat_id,
                 message_id=message_id,
+                message_thread_id=thread_id,
                 caption=text,
                 reply_markup=keyboard
             )
