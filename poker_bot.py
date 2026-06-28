@@ -1505,10 +1505,10 @@ async def pvp(update, context):
         reply_markup=keyboard
     )
 
-    pvp_tables[table_id]["message_obj"] = msg
+    # 📌 salva messaggio
     pvp_tables[table_id]["message_id"] = msg.message_id
 
-        return
+    return
 # =========================
 # ENTRATA TAVOLO PVP
 # =========================
