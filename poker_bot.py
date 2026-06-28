@@ -2120,14 +2120,12 @@ async def update_table(bot, t):
         dealer_score = card_value(dealer)
 
         if state == "playing":
-            # 1 carta scoperta + resto coperto
             if len(dealer) > 0:
                 dealer_visible = [dealer[0]] + ["🂠"] * (len(dealer) - 1)
             else:
                 dealer_visible = []
 
             dealer_text = f"🎩 BANCO: {' '.join(dealer_visible) if dealer_visible else '—'}"
-
         else:
             dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
 
@@ -2160,9 +2158,10 @@ async def update_table(bot, t):
         keyboard = table_buttons(t)
 
     # =========================
-    # 📌 SAFE EDIT OUTSIDE LOCK (IMPORTANTISSIMO)
+    # 📌 SAFE EDIT OUTSIDE LOCK
     # =========================
-     try:
+
+    try:
         msg = await safe_edit(
             bot,
             type("M", (), {
