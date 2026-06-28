@@ -1764,6 +1764,10 @@ async def pvp_hit(update, context, table_id):
     q = update.callback_query
     await q.answer()
 
+    bust = False
+    card = None
+    score = 0
+
     async with GLOBAL_PVP_LOCK:
 
         table = pvp_tables.get(table_id)
@@ -1784,7 +1788,7 @@ async def pvp_hit(update, context, table_id):
         if not table.get("deck"):
             return await q.answer("Mazzo finito", show_alert=True)
 
-        # 🧱 anti spam click
+        # 🧱 Anti spam
         now = time.time()
         last = table.get("last_click", {})
 
@@ -1794,7 +1798,12 @@ async def pvp_hit(update, context, table_id):
         last[uid] = now
         table["last_click"] = last
 
-        # 🃏 carta
+        # 🛑 Stop timer corrente
+        old = table.get("timer_task")
+        if old and not old.done():
+            old.cancel()
+
+        # 🃏 Pesca carta
         card = table["deck"].pop()
         table["hands"][uid].append(card)
 
@@ -1803,66 +1812,34 @@ async def pvp_hit(update, context, table_id):
 
         table["last_action"] = f"🃏 {name} pesca {card} → {score}"
 
-        # 🛑 stop timer corrente
-        old_timer = table.get("timer_task")
-        if old_timer and not old_timer.done():
-            old_timer.cancel()
-
-        # =========================
-        # 💥 BUST HANDLING
-        # =========================
         if score > 21:
+            bust = True
             table["last_action"] += " 💥 BUST"
-
-            await update_table(context.bot, table)
-            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
-
-            # 🔒 anti doppio next_turn
-            if table.get("turn_locked"):
-                return
-
-            table["turn_locked"] = True
-
             table["turn_index"] += 1
 
-            await next_turn(context, table_id)
+    # ==========================
+    # FUORI DAL LOCK
+    # ==========================
 
-            table["turn_locked"] = False
-            return
-
-        # =========================
-        # 🔁 NORMAL TURN
-        # =========================
+    try:
         await update_table(context.bot, table)
-        await q.answer(f"🃏 {card} | {score}", show_alert=False)
+    except Exception as e:
+        print("update_table error:", e)
 
-        # =========================
-        # 💥 BUST
-        # =========================
-        if score > 21:
-            table["last_action"] += " 💥 BUST"
+    if bust:
 
-            await update_table(context.bot, table)
-            await q.answer(f"💥 BUST | {card} | {score}", show_alert=True)
+        await q.answer(
+            f"💥 BUST | {card} | {score}",
+            show_alert=True
+        )
 
-            table["turn_index"] += 1
+        await next_turn(context, table_id)
+        return
 
-            # 🔒 evita doppio next_turn
-            if table.get("turn_locked"):
-                return
-
-            table["turn_locked"] = True
-
-            await next_turn(context, table_id)
-
-            table["turn_locked"] = False
-            return
-
-    # =========================
-    # 🔁 NORMALE (FUORI LOCK)
-    # =========================
-    await update_table(context.bot, table)
-    await q.answer(f"🃏 {card} | {score}", show_alert=False)
+    await q.answer(
+        f"🃏 {card} | {score}",
+        show_alert=False
+    )
 # =========================
 # STAND PVP (FIXED STABLE)
 # =========================
@@ -2143,12 +2120,18 @@ async def update_table(bot, t):
         dealer_score = card_value(dealer)
 
         if state == "playing":
-            # mostra solo 1 carta + copertura
-            dealer_visible = [dealer[0]] + ["🂠"] * (len(dealer) - 1) if dealer else []
-        else:
-            dealer_visible = dealer
+            # 👇 1 carta scoperta + coperta
+            if len(dealer) > 0:
+                dealer_visible = [dealer[0]] + ["🂠"] * (len(dealer) - 1)
+            else:
+                dealer_visible = []
 
-        dealer_text = f"🎩 BANCO: {' '.join(dealer_visible) if dealer_visible else '—'} ({dealer_score})"
+            # ❌ NON mostrare punteggio reale
+            dealer_text = f"🎩 BANCO: {' '.join(dealer_visible) if dealer_visible else '—'}"
+
+        else:
+            # 🎯 solo quando finisce la mano si vede tutto
+            dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
 
         if state == "waiting":
             dealer_text += "\n⏳ In attesa giocatori..."
