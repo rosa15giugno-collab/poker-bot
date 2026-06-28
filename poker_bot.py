@@ -1687,10 +1687,19 @@ async def next_turn(context, table_id):
     # =========================
     # ⏱️ TIMER START (SAFE)
     # =========================
+
+    new_timer = asyncio.create_task(
+        timer_auto(context, table_id)
+    )
+
     async with GLOBAL_PVP_LOCK:
-        table["timer_task"] = asyncio.create_task(
-            timer_auto(context, table_id)
-        )
+
+        table = pvp_tables.get(table_id)
+
+        if table and table.get("state") == "playing":
+            table["timer_task"] = new_timer
+        else:
+            new_timer.cancel()
 # =========================
 # ⏱️ TIMER AUTO AFK (PRO SAFE)
 # =========================
@@ -1739,13 +1748,14 @@ async def timer_auto(context, table_id):
         table["turn_index"] += 1
 
     # 🔥 UI update fuori lock
-    await update_table(context.bot, table)
+    # 🔥 UI update fuori lock
+    try:
+        await update_table(context.bot, table)
+    except Exception as e:
+        print("timer_auto update error:", e)
 
     # 🔁 next turn SICURO
     await next_turn(context, table_id)
-
-    async with GLOBAL_PVP_LOCK:
-        table["turn_locked"] = False
 # =========================
 # HIT PVP (FIXED STABLE)
 # =========================
@@ -2084,20 +2094,23 @@ async def update_table(bot, t):
         if not chat_id or not message_id:
             return
 
-        # 🧱 RATE LIMIT UI (anti 429 + lag)
+        # 🧱 RATE LIMIT UI (anti spam + lag + 429)
         now = time.time()
-        if now - t.get("last_ui", 0) < 0.8:
+        last_ui = t.get("last_ui", 0)
+
+        if now - last_ui < 0.8:
             return
+
         t["last_ui"] = now
 
         players = t.get("players", [])
         idx = t.get("turn_index", 0)
         state = t.get("state", "waiting")
 
-        current_uid = players[idx] if (players and idx < len(players)) else None
+        current_uid = players[idx] if players and idx < len(players) else None
 
         # =========================
-        # 👥 PLAYERS
+        # 👥 PLAYERS LIST
         # =========================
         players_text = "👥 GIOCATORI:\n\n"
 
@@ -2120,32 +2133,29 @@ async def update_table(bot, t):
             else:
                 players_text += (
                     f"👤 {name}\n"
-                    f"   🃏 {' '.join(hand) if hand else '—'} ({score})\n\n"
+                    f"🃏 {' '.join(hand) if hand else '—'} ({score})\n\n"
                 )
 
         # =========================
-        # 🎩 DEALER
+        # 🎩 DEALER (fileid safe: 1 carta coperta in playing)
         # =========================
         dealer = t.get("dealer", [])
         dealer_score = card_value(dealer)
 
-        if state in ("waiting", "playing"):
-            # 🟢 una carta visibile + una coperta
-            visible = dealer[0] if len(dealer) > 0 else "—"
-            dealer_text = f"🎩 BANCO: {visible} ❓"
+        if state == "playing":
+            # mostra solo 1 carta + copertura
+            dealer_visible = [dealer[0]] + ["🂠"] * (len(dealer) - 1) if dealer else []
+        else:
+            dealer_visible = dealer
 
-            if state == "waiting":
-                dealer_text += "\n⏳ In attesa giocatori..."
-            else:
-                dealer_text += "\n🎮 Partita in corso..."
+        dealer_text = f"🎩 BANCO: {' '.join(dealer_visible) if dealer_visible else '—'} ({dealer_score})"
 
+        if state == "waiting":
+            dealer_text += "\n⏳ In attesa giocatori..."
+        elif state == "playing":
+            dealer_text += "\n🎮 Partita in corso..."
         elif state == "dealer":
-            # 🔥 reveal completo SOLO ora
-            dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
             dealer_text += "\n🎩 Il banco sta giocando..."
-
-        elif state == "finished":
-            dealer_text = f"🎩 BANCO FINALE: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
 
         # =========================
         # 🔥 LAST ACTION
@@ -2168,9 +2178,18 @@ async def update_table(bot, t):
 
         keyboard = table_buttons(t)
 
-        # =========================
-        # 📌 FILEID ONLY (NO TEXT EDIT)
-        # =========================
+    # =========================
+    # 📌 SAFE EDIT OUTSIDE LOCK
+    # =========================
+    try:
+        return await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=keyboard
+        )
+
+    except Exception:
         try:
             return await bot.edit_message_caption(
                 chat_id=chat_id,
@@ -2178,9 +2197,8 @@ async def update_table(bot, t):
                 caption=text,
                 reply_markup=keyboard
             )
-
-        except Exception as e:
-            print("❌ update_table fail:", e)
+        except Exception as e2:
+            print("❌ update_table FAILED:", e2)
             return None
         # =========================
         # 👥 PLAYERS LIST
@@ -3131,12 +3149,16 @@ def main():
     app.add_handler(CallbackQueryHandler(cb_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
+    # 🧠 ERROR HANDLER (AGGIUNTO)
+    app.add_error_handler(error_handler)
+
     print("🟢 CASINO ONLINE FIXED")
 
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
+
 
 
 if __name__ == "__main__":
