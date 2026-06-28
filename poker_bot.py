@@ -1648,14 +1648,15 @@ async def next_turn(context, table_id):
         if table["turn_index"] >= len(players):
 
             table["state"] = "dealer"
+            table["turn_locked"] = False
 
             # 🛑 stop timer
             old = table.get("timer_task")
             if old and not old.done():
                 old.cancel()
 
-            # 🔥 reset turn_locked
-            table["turn_locked"] = False
+            # 🔥 aggiornamento UI prima del dealer
+            await update_table(context.bot, table)
 
             return await dealer_phase(context, table_id)
 
@@ -1675,6 +1676,21 @@ async def next_turn(context, table_id):
         old = table.get("timer_task")
         if old and not old.done():
             old.cancel()
+
+    # =========================
+    # 📊 UI UPDATE (FUORI LOCK)
+    # =========================
+    try:
+        await update_table(context.bot, table)
+    except Exception as e:
+        print("update_table error:", e)
+
+    # =========================
+    # ⏱️ TIMER START
+    # =========================
+    table["timer_task"] = asyncio.create_task(
+        timer_auto(context, table_id)
+    )
 
     # =========================
     # 📊 UI UPDATE (FAIL SAFE)
@@ -1747,15 +1763,24 @@ async def timer_auto(context, table_id):
         # ➡️ skip player
         table["turn_index"] += 1
 
-    # 🔥 UI update fuori lock
-    # 🔥 UI update fuori lock
-    try:
-        await update_table(context.bot, table)
-    except Exception as e:
-        print("timer_auto update error:", e)
+        # 🛑 se ultimo player → vai subito dealer e STOP
+        if table["turn_index"] >= len(table.get("players", [])):
+            table["state"] = "dealer"
 
-    # 🔁 next turn SICURO
-    await next_turn(context, table_id)
+            try:
+                await update_table(context.bot, table)
+            except Exception as e:
+                print("timer_auto update error:", e)
+
+            return await next_turn(context, table_id)
+
+        # 🔁 normale flow
+        try:
+            await update_table(context.bot, table)
+        except Exception as e:
+            print("timer_auto update error:", e)
+
+        await next_turn(context, table_id)
 # =========================
 # HIT PVP (FIXED STABLE)
 # =========================
