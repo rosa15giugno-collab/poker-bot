@@ -193,41 +193,49 @@ def card_value(hand):
 # SAFE EDIT (UNICO E STABILE)
 # =========================
 
-from telegram.error import BadRequest
-
 async def safe_edit(bot, msg, text, reply_markup=None, parse_mode=None):
 
+    # =========================
+    # 1️⃣ PROVA EDIT TEXT
+    # =========================
     try:
-        # =========================
-        # 📌 CAPTION MODE (fileid)
-        # =========================
-        if msg.caption is not None:
-            return await msg.edit_caption(
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-
-        # =========================
-        # 💬 TEXT MODE
-        # =========================
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode
         )
-
-    except BadRequest as e:
-
-        if "Message is not modified" in str(e):
-            return True
-
-        print(f"safe_edit BadRequest: {e}")
-        return False
-
     except Exception as e:
-        print(f"safe_edit error: {e}")
-        return False
+        if "Message is not modified" not in str(e):
+            print(f"edit_text failed: {e}")
+
+    # =========================
+    # 2️⃣ PROVA EDIT CAPTION
+    # =========================
+    try:
+        return await msg.edit_caption(
+            caption=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+    except Exception as e:
+        if "Message is not modified" not in str(e):
+            print(f"edit_caption failed: {e}")
+
+    # =========================
+    # 3️⃣ FALLBACK SEND MESSAGE
+    # =========================
+    try:
+        return await bot.send_message(
+            chat_id=msg.chat.id,
+            message_thread_id=getattr(msg, "message_thread_id", None),
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+    except Exception as e:
+        print(f"safe_edit fallback failed: {e}")
+
+    return None
 # =========================
 # DATABASE INIT (UNICO)
 # =========================
@@ -1497,10 +1505,10 @@ async def pvp(update, context):
         reply_markup=keyboard
     )
 
-    # 📌 aggiorna message id
+    pvp_tables[table_id]["message_obj"] = msg
     pvp_tables[table_id]["message_id"] = msg.message_id
 
-    return
+        return
 # =========================
 # ENTRATA TAVOLO PVP
 # =========================
@@ -2162,17 +2170,17 @@ async def update_table(bot, t):
     # =========================
 
     try:
-        msg = await safe_edit(
+        msg = t.get("message_obj")
+
+        if not msg:
+            return None
+
+        return await safe_edit(
             bot,
-            type("M", (), {
-                "chat": type("C", (), {"id": chat_id, "message_thread_id": None})(),
-                "chat_id": chat_id,
-                "message_thread_id": None
-            })(),
+            msg,
             text,
             reply_markup=keyboard
         )
-        return msg
 
     except Exception as e:
         print("❌ update_table FINAL FAIL:", e)
