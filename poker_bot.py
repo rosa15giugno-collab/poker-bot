@@ -193,17 +193,24 @@ def card_value(hand):
 # SAFE EDIT (UNICO E STABILE)
 # =========================
 
+from telegram.error import BadRequest
+
 async def safe_edit(bot, msg, text, reply_markup=None, parse_mode=None):
+
     try:
-        # 📸 MEDIA (photo / animation)
-        if getattr(msg, "photo", None) or getattr(msg, "animation", None):
+        # =========================
+        # 📌 CAPTION MODE (fileid)
+        # =========================
+        if msg.caption is not None:
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode
             )
 
-        # 💬 TESTO
+        # =========================
+        # 💬 TEXT MODE
+        # =========================
         return await msg.edit_text(
             text=text,
             reply_markup=reply_markup,
@@ -211,29 +218,16 @@ async def safe_edit(bot, msg, text, reply_markup=None, parse_mode=None):
         )
 
     except BadRequest as e:
-        # messaggio identico → ignoriamo
+
         if "Message is not modified" in str(e):
-            return False
+            return True
+
         print(f"safe_edit BadRequest: {e}")
+        return False
 
     except Exception as e:
         print(f"safe_edit error: {e}")
-
-    # 🔥 FALLBACK SICURO (FIXATO)
-    try:
-        return await bot.send_message(
-            chat_id=msg.chat.id,
-            message_thread_id=msg.message_thread_id if hasattr(msg, "message_thread_id") else None,
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode
-        )
-
-    except Exception as e2:
-        print(f"safe_edit fallback failed: {e2}")
-
-    return False
-
+        return False
 # =========================
 # DATABASE INIT (UNICO)
 # =========================
@@ -1654,39 +1648,32 @@ async def next_turn(context, table_id):
             old = table.get("timer_task")
             if old and not old.done():
                 old.cancel()
-                table["timer_task"] = None
+            table["timer_task"] = None
 
-    # =========================
-    # 🔥 DEALER FLOW (FUORI LOCK)
-    # =========================
-    if table["state"] == "dealer":
-        try:
+            # 🔥 salva stato PRIMA di uscire
             await update_table(context.bot, table)
-        except Exception as e:
-            print("update_table error:", e)
 
-        return await dealer_phase(context, table_id)
+            # 👉 dealer immediato
+            return await dealer_phase(context, table_id)
 
-    # =========================
-    # 🎮 PLAYER ATTUALE
-    # =========================
-    uid = players[table["turn_index"]]
-    name = table.get("names", {}).get(uid, f"User {uid}")
+        # 🎮 PLAYER ATTUALE
+        uid = players[table["turn_index"]]
+        name = table.get("names", {}).get(uid, f"User {uid}")
 
-    # ⏱️ setup turno
-    table["deadline"] = time.time() + PVP_TIME
-    table["current_turn_uid"] = uid
-    table["last_action"] = f"🎮 Tocca a {name}"
-    table["turn_locked"] = False
+        # ⏱️ setup turno
+        table["deadline"] = time.time() + PVP_TIME
+        table["current_turn_uid"] = uid
+        table["last_action"] = f"🎮 Tocca a {name}"
+        table["turn_locked"] = False
 
-    # 🧠 stop vecchio timer
-    old = table.get("timer_task")
-    if old and not old.done():
-        old.cancel()
+        # 🧠 stop timer precedente
+        old = table.get("timer_task")
+        if old and not old.done():
+            old.cancel()
         table["timer_task"] = None
 
     # =========================
-    # 📊 UI UPDATE (UNA SOLA VOLTA)
+    # 📊 UI UPDATE
     # =========================
     try:
         await update_table(context.bot, table)
@@ -1694,11 +1681,12 @@ async def next_turn(context, table_id):
         print("update_table error:", e)
 
     # =========================
-    # ⏱️ TIMER START (UNO SOLO)
+    # ⏱️ TIMER START (SOLO SE NON DEALER)
     # =========================
-    table["timer_task"] = asyncio.create_task(
-        timer_auto(context, table_id)
-    )
+    if table.get("state") == "playing":
+        table["timer_task"] = asyncio.create_task(
+            timer_auto(context, table_id)
+        )
 # =========================
 # ⏱️ TIMER AUTO AFK (PRO SAFE)
 # =========================
@@ -1721,7 +1709,7 @@ async def timer_auto(context, table_id):
         uid = players[idx]
         name = table.get("names", {}).get(uid, f"User {uid}")
 
-        # 🔒 controllo anti doppio trigger
+        # 🔒 anti doppio trigger
         if table.get("turn_locked"):
             return
 
@@ -1746,24 +1734,28 @@ async def timer_auto(context, table_id):
         # ➡️ skip player
         table["turn_index"] += 1
 
-        # 🛑 se ultimo player → vai subito dealer e STOP
+        # =========================
+        # 🏁 CHECK FINE PARTITA (QUI È IL FIX VERO)
+        # =========================
         if table["turn_index"] >= len(table.get("players", [])):
+
             table["state"] = "dealer"
+            table["turn_locked"] = False
 
-            try:
-                await update_table(context.bot, table)
-            except Exception as e:
-                print("timer_auto update error:", e)
+            old = table.get("timer_task")
+            if old and not old.done():
+                old.cancel()
+                table["timer_task"] = None
 
-            return await next_turn(context, table_id)
-
-        # 🔁 normale flow
-        try:
             await update_table(context.bot, table)
-        except Exception as e:
-            print("timer_auto update error:", e)
 
-        await next_turn(context, table_id)
+            return await dealer_phase(context, table_id)
+
+    # =========================
+    # 🔁 NORMAL FLOW
+    # =========================
+    await update_table(context.bot, table)
+    await next_turn(context, table_id)
 # =========================
 # HIT PVP (FIXED STABLE)
 # =========================
@@ -2068,23 +2060,23 @@ async def update_table(bot, t):
     async with update_ui_lock:
 
         if not t:
-            return
+            return None
 
         if t.get("state") == "finished" or t.get("deleted"):
-            return
+            return None
 
         chat_id = t.get("chat_id")
         message_id = t.get("message_id")
 
         if not chat_id or not message_id:
-            return
+            return None
 
-        # 🧱 RATE LIMIT UI (anti spam + lag + 429)
+        # 🧱 RATE LIMIT UI (anti spam + 429)
         now = time.time()
         last_ui = t.get("last_ui", 0)
 
         if now - last_ui < 0.8:
-            return
+            return None
 
         t["last_ui"] = now
 
@@ -2122,23 +2114,21 @@ async def update_table(bot, t):
                 )
 
         # =========================
-        # 🎩 DEALER (fileid safe: 1 carta coperta in playing)
+        # 🎩 DEALER (FILEID SAFE)
         # =========================
         dealer = t.get("dealer", [])
         dealer_score = card_value(dealer)
 
         if state == "playing":
-            # 👇 1 carta scoperta + coperta
+            # 1 carta scoperta + resto coperto
             if len(dealer) > 0:
                 dealer_visible = [dealer[0]] + ["🂠"] * (len(dealer) - 1)
             else:
                 dealer_visible = []
 
-            # ❌ NON mostrare punteggio reale
             dealer_text = f"🎩 BANCO: {' '.join(dealer_visible) if dealer_visible else '—'}"
 
         else:
-            # 🎯 solo quando finisce la mano si vede tutto
             dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
 
         if state == "waiting":
@@ -2170,7 +2160,7 @@ async def update_table(bot, t):
         keyboard = table_buttons(t)
 
     # =========================
-    # 📌 SAFE EDIT OUTSIDE LOCK
+    # 📌 SAFE EDIT OUTSIDE LOCK (IMPORTANTISSIMO)
     # =========================
     try:
         return await bot.edit_message_text(
@@ -2180,7 +2170,7 @@ async def update_table(bot, t):
             reply_markup=keyboard
         )
 
-    except Exception:
+    except Exception as e:
         try:
             return await bot.edit_message_caption(
                 chat_id=chat_id,
@@ -2189,99 +2179,8 @@ async def update_table(bot, t):
                 reply_markup=keyboard
             )
         except Exception as e2:
-            print("❌ update_table FAILED:", e2)
+            print("❌ update_table FAILED:", e, e2)
             return None
-        # =========================
-        # 👥 PLAYERS LIST
-        # =========================
-        players_text = "👥 GIOCATORI:\n\n"
-
-        for uid in players:
-            hand = t.get("hands", {}).get(uid, [])
-            score = card_value(hand)
-            name = (t.get("names") or {}).get(uid, f"User {uid}")
-
-            is_turn = str(uid) == str(current_uid)
-
-            if is_turn:
-                players_text += (
-                    "━━━━━━━━━━━━━━\n"
-                    "🔥 🎮 TURNO ORA 🔥\n"
-                    "━━━━━━━━━━━━━━\n"
-                    f"👑 {name}\n"
-                    f"🃏 {' '.join(hand) if hand else '—'} ({score})\n"
-                    "━━━━━━━━━━━━━━\n\n"
-                )
-            else:
-                players_text += (
-                    f"👤 {name}\n"
-                    f"   🃏 {' '.join(hand) if hand else '—'} ({score})\n\n"
-                )
-
-        # =========================
-        # 🎩 DEALER
-        # =========================
-        dealer = t.get("dealer", [])
-        dealer_score = card_value(dealer)
-
-        dealer_text = f"🎩 BANCO: {' '.join(dealer) if dealer else '—'} ({dealer_score})"
-
-        if state == "waiting":
-            dealer_text += "\n⏳ In attesa giocatori..."
-        elif state == "playing":
-            dealer_text += "\n🎮 Partita in corso..."
-        elif state == "dealer":
-            dealer_text += "\n🎩 Il banco sta giocando..."
-
-        # =========================
-        # 🔥 LAST ACTION
-        # =========================
-        action_text = ""
-        if t.get("last_action"):
-            action_text = f"\n🔥 {t['last_action']}"
-
-        # =========================
-        # 🎮 FINAL TEXT
-        # =========================
-        text = (
-            "🎮 PVP BLACKJACK\n\n"
-            f"📊 Stato: {state.upper()}\n\n"
-            + players_text
-            + "\n"
-            + dealer_text
-            + action_text
-        )
-
-        keyboard = table_buttons(t)
-
-        # =========================
-        # 🧠 SAFE EDIT (NO THREAD_ID HERE!)
-        # =========================
-
-        try:
-            return await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-
-        except Exception as e:
-            print("edit_text fail:", e)
-
-        try:
-            return await bot.edit_message_caption(
-                chat_id=chat_id,
-                message_id=message_id,
-                caption=text,
-                reply_markup=keyboard
-            )
-
-        except Exception as e:
-            print("edit_caption fail:", e)
-
-        print("❌ update_table FAILED BUT GAME CONTINUES")
-        return None
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
