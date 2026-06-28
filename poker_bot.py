@@ -1633,6 +1633,30 @@ async def pvp_start(update, context, table_id):
 
     # ▶️ primo turno
     return await next_turn(context, table_id)
+
+
+table = pvp_tables[table_id]
+
+# 🚀 AVVIO PARTITA
+table["state"] = "playing"
+table["turn_index"] = 0
+table["turn_locked"] = False
+
+# 🧠 mescola mazzo
+random.shuffle(table["deck"])
+
+# 🃏 inizializza mano dealer
+table["dealer"] = [table["deck"].pop(), table["deck"].pop()]
+
+# 🎮 assegna prima carta ai player
+for uid in table["players"]:
+    table["hands"][uid] = [table["deck"].pop(), table["deck"].pop()]
+
+# 🔥 update UI prima turno
+await update_table(context.bot, table)
+
+# 🚀 AVVIA PRIMO TURNO (QUESTO è ciò che ti manca)
+await next_turn(context, table_id)
 # =========================
 # TURNO CON TIMER PVP
 # =========================
