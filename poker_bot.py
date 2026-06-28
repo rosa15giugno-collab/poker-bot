@@ -3137,6 +3137,12 @@ async def text_handler(update, context):
 
     elif text == "slot":
         await msg.reply_text("🎰 Vai nella slot dal menu!")
+
+# =========================
+# ERROR HANDLER
+# =========================
+async def error_handler(update, context):
+    print("❌ BOT ERROR:", repr(context.error))
 # =========================
 # 🧠 MAIN
 # =========================
