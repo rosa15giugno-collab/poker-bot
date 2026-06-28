@@ -2162,25 +2162,22 @@ async def update_table(bot, t):
     # =========================
     # 📌 SAFE EDIT OUTSIDE LOCK (IMPORTANTISSIMO)
     # =========================
-    try:
-        return await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=text,
+     try:
+        msg = await safe_edit(
+            bot,
+            type("M", (), {
+                "chat": type("C", (), {"id": chat_id, "message_thread_id": None})(),
+                "chat_id": chat_id,
+                "message_thread_id": None
+            })(),
+            text,
             reply_markup=keyboard
         )
+        return msg
 
     except Exception as e:
-        try:
-            return await bot.edit_message_caption(
-                chat_id=chat_id,
-                message_id=message_id,
-                caption=text,
-                reply_markup=keyboard
-            )
-        except Exception as e2:
-            print("❌ update_table FAILED:", e, e2)
-            return None
+        print("❌ update_table FINAL FAIL:", e)
+        return None
 # =========================
 # BUTTONS (IMPORTANTISSIMO)
 # =========================
