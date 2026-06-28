@@ -1654,31 +1654,39 @@ async def next_turn(context, table_id):
             old = table.get("timer_task")
             if old and not old.done():
                 old.cancel()
-
-            # 🔥 aggiornamento UI prima del dealer
-            await update_table(context.bot, table)
-
-            return await dealer_phase(context, table_id)
-
-        # 🎮 PLAYER ATTUALE
-        uid = players[table["turn_index"]]
-        name = table.get("names", {}).get(uid, f"User {uid}")
-
-        # ⏱️ setup turno
-        table["deadline"] = time.time() + PVP_TIME
-        table["current_turn_uid"] = uid
-        table["last_action"] = f"🎮 Tocca a {name}"
-
-        # 🔒 reset lock turno
-        table["turn_locked"] = False
-
-        # 🧠 stop timer precedente
-        old = table.get("timer_task")
-        if old and not old.done():
-            old.cancel()
+                table["timer_task"] = None
 
     # =========================
-    # 📊 UI UPDATE (FUORI LOCK)
+    # 🔥 DEALER FLOW (FUORI LOCK)
+    # =========================
+    if table["state"] == "dealer":
+        try:
+            await update_table(context.bot, table)
+        except Exception as e:
+            print("update_table error:", e)
+
+        return await dealer_phase(context, table_id)
+
+    # =========================
+    # 🎮 PLAYER ATTUALE
+    # =========================
+    uid = players[table["turn_index"]]
+    name = table.get("names", {}).get(uid, f"User {uid}")
+
+    # ⏱️ setup turno
+    table["deadline"] = time.time() + PVP_TIME
+    table["current_turn_uid"] = uid
+    table["last_action"] = f"🎮 Tocca a {name}"
+    table["turn_locked"] = False
+
+    # 🧠 stop vecchio timer
+    old = table.get("timer_task")
+    if old and not old.done():
+        old.cancel()
+        table["timer_task"] = None
+
+    # =========================
+    # 📊 UI UPDATE (UNA SOLA VOLTA)
     # =========================
     try:
         await update_table(context.bot, table)
@@ -1686,36 +1694,11 @@ async def next_turn(context, table_id):
         print("update_table error:", e)
 
     # =========================
-    # ⏱️ TIMER START
+    # ⏱️ TIMER START (UNO SOLO)
     # =========================
     table["timer_task"] = asyncio.create_task(
         timer_auto(context, table_id)
     )
-
-    # =========================
-    # 📊 UI UPDATE (FAIL SAFE)
-    # =========================
-    try:
-        await update_table(context.bot, table)
-    except Exception as e:
-        print("update_table error in next_turn:", e)
-
-    # =========================
-    # ⏱️ TIMER START (SAFE)
-    # =========================
-
-    new_timer = asyncio.create_task(
-        timer_auto(context, table_id)
-    )
-
-    async with GLOBAL_PVP_LOCK:
-
-        table = pvp_tables.get(table_id)
-
-        if table and table.get("state") == "playing":
-            table["timer_task"] = new_timer
-        else:
-            new_timer.cancel()
 # =========================
 # ⏱️ TIMER AUTO AFK (PRO SAFE)
 # =========================
